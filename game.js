@@ -1014,20 +1014,19 @@ class SquidGameWatch {
       try { localStorage.setItem(STORAGE_KEYS.HIGH_B, String(this.highScoreB)); } catch (_) {}
     }
 
-    // 200点・500点到達でダイバーが1名増える（1UPボーナス・最大3名まで）
+    // 200点到達時、および以降は500点ごと（500, 1000, 1500, 2000...）にダイバーが1名増える（+1UP・最大3名）
     const crossed200 = !this.bonus200Triggered && prev < 200 && this.score >= 200;
-    const crossed500 = !this.bonus500Triggered && prev < 500 && this.score >= 500;
-    const crossed1000 = Math.floor(prev / 1000) < Math.floor(this.score / 1000);
+    const crossedEvery500 = Math.floor(prev / 500) < Math.floor(this.score / 500);
 
-    if (crossed200 || crossed500 || crossed1000) {
+    if (crossed200 || crossedEvery500) {
       if (crossed200) this.bonus200Triggered = true;
-      if (crossed500) this.bonus500Triggered = true;
       if (this.lives < 3) {
         this.lives += 1;
       }
       this.bonusTimer = 2.0;
       this.sound.bonusLifeFanfare();
-      this._setStatusText(`🎉 ${this.score >= 500 ? '500' : '200'} PTS BONUS! ダイバーが1名復活 (+1UP)！`);
+      const milestone = crossedEvery500 ? Math.floor(this.score / 500) * 500 : 200;
+      this._setStatusText(`🎉 ${milestone} PTS BONUS! ダイバーが1名復活 (+1UP)！`);
     }
   }
 
