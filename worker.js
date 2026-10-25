@@ -17,8 +17,8 @@
 
 // KV未設定時でもエラーにならず動作するエッジメモリフォールバック
 const memStore = globalThis.__SQUID_MEM_STORE || (globalThis.__SQUID_MEM_STORE = {
-  LEADERBOARD: "[]",
-  PLAYER_STATS: "{}"
+  SQUID_LEADERBOARD: "[]",
+  SQUID_PLAYER_STATS: "{}"
 });
 
 function getStorage(env) {
@@ -98,12 +98,12 @@ export async function handleApiRequest(request, env) {
         });
       }
 
-      const rawLb = await store.get("LEADERBOARD");
+      const rawLb = await store.get("SQUID_LEADERBOARD");
       let leaderboard = rawLb ? JSON.parse(rawLb) : [];
 
       // --- アベレージ・累計ランキングモード ---
       if (mode === "average") {
-        const statsData = await store.get("PLAYER_STATS");
+        const statsData = await store.get("SQUID_PLAYER_STATS");
         const stats = statsData ? JSON.parse(statsData) : {};
 
         const avgRanking = Object.values(stats)
@@ -234,7 +234,7 @@ export async function handleApiRequest(request, env) {
 
       // --- PLAYER_STATS 更新 ---
       if (playerId) {
-        const statsData = await store.get("PLAYER_STATS");
+        const statsData = await store.get("SQUID_PLAYER_STATS");
         const stats = statsData ? JSON.parse(statsData) : {};
         const prev = stats[playerId] || { total: 0, count: 0, best: 0 };
 
@@ -251,14 +251,14 @@ export async function handleApiRequest(request, env) {
         const allStats = Object.entries(stats);
         if (allStats.length > 5000) {
           allStats.sort((a, b) => b[1].best - a[1].best);
-          await store.put("PLAYER_STATS", JSON.stringify(Object.fromEntries(allStats.slice(0, 5000))));
+          await store.put("SQUID_PLAYER_STATS", JSON.stringify(Object.fromEntries(allStats.slice(0, 5000))));
         } else {
-          await store.put("PLAYER_STATS", JSON.stringify(stats));
+          await store.put("SQUID_PLAYER_STATS", JSON.stringify(stats));
         }
       }
 
       // --- LEADERBOARD 更新 ---
-      const lbData = await store.get("LEADERBOARD");
+      const lbData = await store.get("SQUID_LEADERBOARD");
       let leaderboard = lbData ? JSON.parse(lbData) : [];
 
       const newEntry = {
@@ -296,7 +296,7 @@ export async function handleApiRequest(request, env) {
       });
 
       leaderboard = leaderboard.slice(0, 150);
-      await store.put("LEADERBOARD", JSON.stringify(leaderboard));
+      await store.put("SQUID_LEADERBOARD", JSON.stringify(leaderboard));
 
       const rank = leaderboard.findIndex(e => e.name === name && (e.gameMode || "A") === gameMode) + 1;
 
