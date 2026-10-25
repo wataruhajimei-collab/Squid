@@ -3,6 +3,12 @@
   "main": "worker.js",
   "compatibility_date": "2024-09-23",
   "keep_vars": true,
+  "kv_namespaces": [
+    {
+      "binding": "SQUID_KV",
+      "id": "aae3c5b824ab406f9a07375af74fb593"
+    }
+  ],
   "assets": {
     "directory": ".",
     "binding": "ASSETS"
