@@ -11,8 +11,8 @@
 // Cloudflare Worker API エンドポイント候補（同一オリジン `/api/scores` を最優先し、単体Worker URLへ自動フォールバック）
 const API_ENDPOINTS = [
   '/api/scores',
-  'https://squid-api.wataruhajimei.workers.dev',
-  'https://squid-ranking.wataruhajimei.workers.dev'
+  'https://squid.wataruhajimei.workers.dev/api/scores',
+  'https://squid-api.wataruhajimei.workers.dev'
 ];
 
 const STORAGE_KEYS = {
