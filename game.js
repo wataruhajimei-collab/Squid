@@ -1014,7 +1014,7 @@ class SquidGameWatch {
       try { localStorage.setItem(STORAGE_KEYS.HIGH_B, String(this.highScoreB)); } catch (_) {}
     }
 
-    // 200点・500点到達でミス帳消し（潜水夫が3人に完全復活する本家ボーナス仕様！）
+    // 200点・500点到達でダイバーが1名増える（1UPボーナス・最大3名まで）
     const crossed200 = !this.bonus200Triggered && prev < 200 && this.score >= 200;
     const crossed500 = !this.bonus500Triggered && prev < 500 && this.score >= 500;
     const crossed1000 = Math.floor(prev / 1000) < Math.floor(this.score / 1000);
@@ -1022,10 +1022,12 @@ class SquidGameWatch {
     if (crossed200 || crossed500 || crossed1000) {
       if (crossed200) this.bonus200Triggered = true;
       if (crossed500) this.bonus500Triggered = true;
-      this.lives = 3;
+      if (this.lives < 3) {
+        this.lives += 1;
+      }
       this.bonusTimer = 2.0;
       this.sound.bonusLifeFanfare();
-      this._setStatusText(`🎉 ${this.score >= 500 ? '500' : '200'} PTS BONUS! 潜水夫が全員復活 (3 LIVES)！`);
+      this._setStatusText(`🎉 ${this.score >= 500 ? '500' : '200'} PTS BONUS! ダイバーが1名復活 (+1UP)！`);
     }
   }
 
