@@ -1358,28 +1358,8 @@ class SquidGameWatch {
     }
     ctx.stroke();
 
-    // --- 右奥の沈没船シルエット（背景プリント） ---
-    ctx.save();
-    ctx.strokeStyle = 'rgba(42, 88, 98, 0.25)';
-    ctx.fillStyle = 'rgba(42, 88, 98, 0.10)';
-    ctx.lineWidth = 3;
-    // 傾いたマスト
-    ctx.beginPath();
-    ctx.moveTo(570, 290);
-    ctx.lineTo(635, 115);
-    ctx.moveTo(582, 165);
-    ctx.lineTo(662, 195);
-    ctx.stroke();
-    // 沈没船の船尾楼
-    ctx.beginPath();
-    ctx.moveTo(510, 385);
-    ctx.lineTo(695, 340);
-    ctx.lineTo(710, 445);
-    ctx.lineTo(490, 445);
-    ctx.closePath();
-    ctx.fill();
-    ctx.stroke();
-    ctx.restore();
+    // --- 右奥〜宝箱の後ろにそびえる大きな沈没帆船（ガレオン船・カラー印刷層） ---
+    this._drawSunkenGalleon(ctx);
 
     // --- 左側〜海底の岩礁と海藻プリント ---
     ctx.fillStyle = 'rgba(54, 78, 52, 0.34)';
@@ -1448,6 +1428,226 @@ class SquidGameWatch {
     ctx.lineTo(cx + 22, cy + 64);
     ctx.moveTo(cx + 64, cy + 16);
     ctx.lineTo(cx + 64, cy + 64);
+    ctx.stroke();
+
+    ctx.restore();
+  }
+
+  // 宝物の後ろに描かれる大型沈没帆船（ガレオン船）の緻密な背景イラスト
+  _drawSunkenGalleon(ctx) {
+    ctx.save();
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    const hullFill = 'rgba(96, 62, 34, 0.34)';
+    const hullDark = 'rgba(68, 42, 22, 0.46)';
+    const hullStroke = 'rgba(58, 38, 20, 0.58)';
+    const rigStroke = 'rgba(44, 72, 78, 0.44)';
+    const sailFill = 'rgba(52, 92, 102, 0.22)';
+    const sailStroke = 'rgba(42, 78, 88, 0.40)';
+
+    // 1. 2本の巨大な傾いたマスト（メインマスト＆ミズンマスト）とバウスプリット（斜檣）
+    ctx.strokeStyle = hullStroke;
+    ctx.lineWidth = 5.5;
+    ctx.beginPath();
+    // メインマスト（中央〜やや右）
+    ctx.moveTo(482, 365);
+    ctx.lineTo(448, 114);
+    // フォアマスト（左寄り）
+    ctx.moveTo(395, 378);
+    ctx.lineTo(368, 152);
+    // ミズンマスト（船尾側・宝箱の真後ろ）
+    ctx.moveTo(628, 325);
+    ctx.lineTo(662, 116);
+    // 左へ突き出たバウスプリット（船首斜檣）
+    ctx.moveTo(358, 366);
+    ctx.lineTo(288, 326);
+    ctx.stroke();
+
+    // マスト上の見張り台（クロウズネスト）
+    ctx.fillStyle = hullDark;
+    ctx.beginPath();
+    ctx.ellipse(455, 162, 16, 6, -0.1, 0, Math.PI * 2);
+    ctx.ellipse(374, 192, 13, 5, -0.1, 0, Math.PI * 2);
+    ctx.ellipse(654, 164, 14, 5, 0.12, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    // 2. 横帆桁（ヤード）と破れた帆（セイル）
+    ctx.fillStyle = sailFill;
+    ctx.strokeStyle = sailStroke;
+    ctx.lineWidth = 2.5;
+
+    // メインマストの帆（上下2段の破れた帆）
+    ctx.beginPath();
+    ctx.moveTo(398, 180);
+    ctx.lineTo(516, 168);
+    ctx.quadraticCurveTo(526, 208, 502, 232);
+    ctx.lineTo(476, 214);
+    ctx.lineTo(452, 238);
+    ctx.lineTo(426, 218);
+    ctx.quadraticCurveTo(392, 212, 398, 180);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(388, 250);
+    ctx.lineTo(526, 236);
+    ctx.quadraticCurveTo(536, 282, 508, 305);
+    ctx.lineTo(482, 284);
+    ctx.lineTo(444, 310);
+    ctx.lineTo(402, 292);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    // フォアマストの破れた帆
+    ctx.beginPath();
+    ctx.moveTo(328, 214);
+    ctx.lineTo(420, 204);
+    ctx.quadraticCurveTo(426, 248, 404, 268);
+    ctx.lineTo(372, 250);
+    ctx.lineTo(340, 272);
+    ctx.quadraticCurveTo(322, 244, 328, 214);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    // 船尾ミズンマストの三角帆（ラティーンセイル）と帆桁
+    ctx.beginPath();
+    ctx.moveTo(605, 198);
+    ctx.lineTo(704, 174);
+    ctx.quadraticCurveTo(698, 236, 672, 264);
+    ctx.lineTo(642, 242);
+    ctx.lineTo(614, 258);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    // 帆桁（太い横木）
+    ctx.strokeStyle = hullStroke;
+    ctx.lineWidth = 3.5;
+    ctx.beginPath();
+    ctx.moveTo(392, 180); ctx.lineTo(522, 167);
+    ctx.moveTo(382, 250); ctx.lineTo(532, 235);
+    ctx.moveTo(324, 214); ctx.lineTo(424, 203);
+    ctx.moveTo(600, 199); ctx.lineTo(708, 173);
+    ctx.stroke();
+
+    // 3. 縄梯子（シュラウド・ラットライン）と索具
+    ctx.strokeStyle = rigStroke;
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    // メインマストの縄梯子
+    for (let i = -2; i <= 2; i++) {
+      ctx.moveTo(455, 166);
+      ctx.lineTo(476 + i * 14, 362);
+    }
+    for (let y = 188; y <= 348; y += 20) {
+      const t = (y - 166) / (362 - 166);
+      const cx = 455 + (476 - 455) * t;
+      const halfW = 28 * t;
+      ctx.moveTo(cx - halfW, y);
+      ctx.lineTo(cx + halfW, y);
+    }
+    // ミズンマストの縄梯子
+    for (let i = -1; i <= 1; i++) {
+      ctx.moveTo(654, 168);
+      ctx.lineTo(632 + i * 14, 326);
+    }
+    ctx.stroke();
+
+    // 4. 巨大な帆船の船体（ハル）と高くそびえる船尾楼（スターンキャッスル）
+    ctx.fillStyle = hullFill;
+    ctx.strokeStyle = hullStroke;
+    ctx.lineWidth = 3.2;
+    ctx.beginPath();
+    ctx.moveTo(342, 356); // 船首上端
+    ctx.lineTo(418, 366); // 前甲板
+    ctx.lineTo(432, 378); // 中央甲板（ウェスト）
+    ctx.lineTo(548, 368); // 後甲板への段差
+    ctx.lineTo(568, 336); // クォーターデッキ（後甲板）
+    ctx.lineTo(618, 326);
+    ctx.lineTo(632, 286); // 高くそびえる船尾楼（プープデッキ）
+    ctx.lineTo(712, 272); // 船尾最上段
+    ctx.quadraticCurveTo(718, 355, 696, 442); // 船尾の曲線
+    ctx.lineTo(368, 442); // 竜骨（船底）
+    ctx.quadraticCurveTo(346, 405, 342, 356);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    // 船体の木目プランクライン（板張り）
+    ctx.strokeStyle = 'rgba(58, 36, 18, 0.38)';
+    ctx.lineWidth = 2;
+    const plankYs = [388, 406, 424];
+    for (const py of plankYs) {
+      ctx.beginPath();
+      ctx.moveTo(354, py);
+      ctx.quadraticCurveTo(525, py + 8, 704, py - 24);
+      ctx.stroke();
+    }
+
+    // 船尾楼の手すり欄干（バラストレード）と舵輪（ラダーホイール）
+    ctx.strokeStyle = hullStroke;
+    ctx.lineWidth = 2.2;
+    ctx.beginPath();
+    ctx.moveTo(632, 276);
+    ctx.lineTo(710, 262);
+    for (let x = 638; x <= 706; x += 11) {
+      const yTop = 276 - ((x - 632) / 78) * 14;
+      ctx.moveTo(x, yTop);
+      ctx.lineTo(x, yTop + 10);
+    }
+    ctx.stroke();
+
+    // 甲板上の舵輪（シップホイール）
+    ctx.beginPath();
+    ctx.arc(592, 320, 12, 0, Math.PI * 2);
+    for (let a = 0; a < Math.PI * 2; a += Math.PI / 4) {
+      ctx.moveTo(592, 320);
+      ctx.lineTo(592 + Math.cos(a) * 15, 320 + Math.sin(a) * 15);
+    }
+    ctx.stroke();
+
+    // 船尾キャビンの豪華なアーチ飾り窓（4連ギャラリーウィンドウ）
+    ctx.fillStyle = 'rgba(218, 178, 78, 0.38)';
+    ctx.strokeStyle = hullStroke;
+    ctx.lineWidth = 2;
+    for (let w = 0; w < 4; w++) {
+      const wx = 636 + w * 17;
+      const wy = 304 - w * 2.5;
+      ctx.beginPath();
+      ctx.roundRect(wx, wy, 12, 22, [6, 6, 2, 2]);
+      ctx.fill();
+      ctx.stroke();
+    }
+
+    // 船腹に並ぶ大砲の砲門（ガンポート 6門）
+    ctx.fillStyle = hullDark;
+    for (let g = 0; g < 6; g++) {
+      const gx = 386 + g * 38;
+      const gy = 392 - g * 2.2;
+      ctx.beginPath();
+      ctx.rect(gx, gy, 14, 12);
+      ctx.fill();
+      ctx.stroke();
+      // 突き出た大砲の砲身
+      ctx.beginPath();
+      ctx.arc(gx + 7, gy + 6, 3.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // 船首から垂れ下がる錨（アンカー）
+    ctx.strokeStyle = hullStroke;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(366, 368);
+    ctx.lineTo(366, 412);
+    ctx.moveTo(358, 384);
+    ctx.lineTo(374, 384);
+    ctx.arc(366, 404, 12, 0.2 * Math.PI, 0.8 * Math.PI);
     ctx.stroke();
 
     ctx.restore();
@@ -1759,35 +1959,35 @@ class SquidGameWatch {
 
   _drawSquidTentacles(ctx) {
     // 4本の触腕それぞれのセグメント座標定義
-    // 各セグメントは太い曲線＋吸盤突起で描かれ、最後のセグメント(maxLen-1)はダイバーを捕まえる触腕先端になる
+    // 根本（胴体側）を太く（w1: 32〜36px）、先端に向かって細く（w2: 4.5px）テーパーさせ、片側に吸盤（◎）を並べる
     const paths = [
       // 足0 (左端: 4セグメント -> pos 2 [x:194, y:294] を襲う)
       [
-        { x1: 496, y1: 198, x2: 422, y2: 214, w: 15 },
-        { x1: 414, y1: 216, x2: 340, y2: 238, w: 13 },
-        { x1: 332, y1: 241, x2: 266, y2: 268, w: 11 },
-        { x1: 258, y1: 272, x2: 210, y2: 292, w: 10, isTip: true }
+        { x1: 498, y1: 196, x2: 422, y2: 214, w1: 32, w2: 24, curve: -8, suckerDir: 1 },
+        { x1: 420, y1: 215, x2: 340, y2: 238, w1: 24, w2: 17, curve: 7, suckerDir: 1 },
+        { x1: 338, y1: 239, x2: 266, y2: 268, w1: 17, w2: 11, curve: -6, suckerDir: 1 },
+        { x1: 264, y1: 269, x2: 208, y2: 292, w1: 11, w2: 4.5, curve: 6, suckerDir: 1, isTip: true }
       ],
       // 足1 (中左: 5セグメント -> pos 3 [x:304, y:344] を襲う)
       [
-        { x1: 522, y1: 210, x2: 472, y2: 236, w: 15 },
-        { x1: 465, y1: 240, x2: 420, y2: 266, w: 13.5 },
-        { x1: 413, y1: 270, x2: 374, y2: 296, w: 12 },
-        { x1: 368, y1: 300, x2: 338, y2: 324, w: 10.5 },
-        { x1: 332, y1: 328, x2: 312, y2: 344, w: 10, isTip: true }
+        { x1: 526, y1: 208, x2: 472, y2: 236, w1: 34, w2: 26, curve: -7, suckerDir: 1 },
+        { x1: 470, y1: 237, x2: 420, y2: 266, w1: 26, w2: 19.5, curve: 6, suckerDir: 1 },
+        { x1: 418, y1: 268, x2: 374, y2: 296, w1: 19.5, w2: 14, curve: -6, suckerDir: 1 },
+        { x1: 372, y1: 298, x2: 338, y2: 324, w1: 14, w2: 9.5, curve: 5, suckerDir: 1 },
+        { x1: 336, y1: 326, x2: 310, y2: 344, w1: 9.5, w2: 4.2, curve: -5, suckerDir: 1, isTip: true }
       ],
       // 足2 (中右: 4セグメント -> pos 4 [x:420, y:362] を襲う)
       [
-        { x1: 556, y1: 218, x2: 522, y2: 254, w: 15 },
-        { x1: 517, y1: 260, x2: 484, y2: 296, w: 13 },
-        { x1: 479, y1: 302, x2: 452, y2: 332, w: 11 },
-        { x1: 447, y1: 338, x2: 430, y2: 358, w: 10, isTip: true }
+        { x1: 558, y1: 216, x2: 522, y2: 254, w1: 32, w2: 23.5, curve: -6, suckerDir: 1 },
+        { x1: 520, y1: 256, x2: 484, y2: 296, w1: 23.5, w2: 16.5, curve: 6, suckerDir: 1 },
+        { x1: 482, y1: 298, x2: 452, y2: 332, w1: 16.5, w2: 11, curve: -5, suckerDir: 1 },
+        { x1: 450, y1: 334, x2: 428, y2: 358, w1: 11, w2: 4.5, curve: 5, suckerDir: 1, isTip: true }
       ],
       // 足3 (右端/宝箱前: 3セグメント -> pos 5 [x:534, y:368] を襲う)
       [
-        { x1: 590, y1: 222, x2: 580, y2: 270, w: 15 },
-        { x1: 578, y1: 278, x2: 564, y2: 322, w: 12.5 },
-        { x1: 560, y1: 328, x2: 546, y2: 362, w: 10.5, isTip: true }
+        { x1: 592, y1: 220, x2: 580, y2: 270, w1: 31, w2: 21, curve: 7, suckerDir: -1 },
+        { x1: 579, y1: 272, x2: 564, y2: 322, w1: 21, w2: 13, curve: -6, suckerDir: -1 },
+        { x1: 563, y1: 324, x2: 546, y2: 362, w1: 13, w2: 4.5, curve: 6, suckerDir: -1, isTip: true }
       ]
     ];
 
@@ -1800,33 +2000,113 @@ class SquidGameWatch {
         const isLit = t.len > sIdx;
 
         this._drawSegment(ctx, isLit, (c) => {
-          c.lineWidth = seg.w;
-          c.lineCap = 'round';
-          c.beginPath();
-          const mx = (seg.x1 + seg.x2) * 0.5 + (sIdx % 2 === 0 ? -6 : 6);
-          const my = (seg.y1 + seg.y2) * 0.5 - 4;
-          c.moveTo(seg.x1, seg.y1);
-          c.quadraticCurveTo(mx, my, seg.x2, seg.y2);
-          c.stroke();
-
-          // イカの吸盤ドット
-          c.beginPath();
-          c.arc(mx + 4, my + 7, seg.w * 0.32, 0, Math.PI * 2);
-          c.arc(seg.x2 + 3, seg.y2 + 5, seg.w * 0.28, 0, Math.PI * 2);
-          c.fill();
-
-          // 先端セグメントはイカの触腕フック（二股の捕獲先端）を描く
-          if (seg.isTip) {
-            c.lineWidth = 6.5;
-            c.beginPath();
-            c.moveTo(seg.x2, seg.y2);
-            c.lineTo(seg.x2 - 14, seg.y2 - 6);
-            c.moveTo(seg.x2, seg.y2);
-            c.lineTo(seg.x2 - 8, seg.y2 + 12);
-            c.stroke();
-          }
+          this._drawTaperedTentacleSegment(c, seg);
         });
       }
+    }
+  }
+
+  // 根本が太く先端が細いイカの足セグメント＋リアルな輪っか状の吸盤（◎）を描画
+  _drawTaperedTentacleSegment(c, seg) {
+    const { x1, y1, x2, y2, w1, w2, curve = 0, suckerDir = 1, isTip = false } = seg;
+    const dx = x2 - x1;
+    const dy = y2 - y1;
+    const len = Math.hypot(dx, dy) || 1;
+    const nx = -dy / len;
+    const ny = dx / len;
+
+    // ベジェ制御点
+    const cx = (x1 + x2) * 0.5 + nx * curve;
+    const cy = (y1 + y2) * 0.5 + ny * curve;
+
+    const steps = 10;
+    const upperPts = [];
+    const lowerPts = [];
+    const spinePts = [];
+
+    for (let i = 0; i <= steps; i++) {
+      const t = i / steps;
+      const inv = 1 - t;
+      // 2次ベジェ曲線上の座標
+      const px = inv * inv * x1 + 2 * inv * t * cx + t * t * x2;
+      const py = inv * inv * y1 + 2 * inv * t * cy + t * t * y2;
+
+      // 接線ベクトルと法線ベクトル
+      const tx = 2 * inv * (cx - x1) + 2 * t * (x2 - cx);
+      const ty = 2 * inv * (cy - y1) + 2 * t * (y2 - cy);
+      const tLen = Math.hypot(tx, ty) || 1;
+      const pnx = -ty / tLen;
+      const pny = tx / tLen;
+
+      // 根本(w1)から先端(w2)への滑らかなテーパー半径
+      const r = (w1 * (1 - t) + w2 * t) * 0.5;
+
+      spinePts.push({ px, py, pnx, pny, r, tx: tx / tLen, ty: ty / tLen });
+      upperPts.push([px + pnx * r, py + pny * r]);
+      lowerPts.push([px - pnx * r, py - pny * r]);
+    }
+
+    // 1. テーパーのかかった触腕本体ポリゴンを描画
+    c.beginPath();
+    c.moveTo(upperPts[0][0], upperPts[0][1]);
+    for (let i = 1; i <= steps; i++) {
+      c.lineTo(upperPts[i][0], upperPts[i][1]);
+    }
+    // 先端の丸みまたはカールした細先
+    const endSp = spinePts[steps];
+    c.arc(endSp.px, endSp.py, Math.max(2, w2 * 0.5), Math.atan2(endSp.pny, endSp.pnx), Math.atan2(-endSp.pny, -endSp.pnx), false);
+    for (let i = steps; i >= 0; i--) {
+      c.lineTo(lowerPts[i][0], lowerPts[i][1]);
+    }
+    const startSp = spinePts[0];
+    c.arc(startSp.px, startSp.py, w1 * 0.5, Math.atan2(-startSp.pny, -startSp.pnx), Math.atan2(startSp.pny, startSp.pnx), false);
+    c.closePath();
+    c.fill();
+
+    // 2. 触腕の縁に沿って並ぶ「吸盤（カップ＋中央穴 ◎）」を3個ずつ描画
+    const suckerSteps = [2, 5, 8];
+    const holeCenters = [];
+
+    for (const idx of suckerSteps) {
+      const sp = spinePts[idx];
+      const sRadius = Math.max(3.2, sp.r * 0.44 + 1.4);
+      const offsetDist = sp.r + sRadius * 0.62;
+      const sx = sp.px + sp.pnx * suckerDir * offsetDist;
+      const sy = sp.py + sp.pny * suckerDir * offsetDist;
+
+      // 吸盤の根元の短い柄と外輪カップ
+      c.beginPath();
+      c.arc(sx, sy, sRadius, 0, Math.PI * 2);
+      c.fill();
+
+      if (sRadius >= 3.6) {
+        holeCenters.push({ sx, sy, hr: sRadius * 0.44 });
+      }
+    }
+
+    // 吸盤の中央のくぼみ（白抜きリングにして吸盤らしさを際立たせる）
+    if (holeCenters.length > 0) {
+      c.save();
+      c.globalCompositeOperation = 'destination-out';
+      c.beginPath();
+      for (const h of holeCenters) {
+        c.moveTo(h.sx + h.hr, h.sy);
+        c.arc(h.sx, h.sy, h.hr, 0, Math.PI * 2);
+      }
+      c.fill();
+      c.restore();
+    }
+
+    // 3. 先端セグメント（isTip）は細くカールした触腕フックを描く
+    if (isTip) {
+      c.lineWidth = Math.max(3.5, w2 * 0.85);
+      c.lineCap = 'round';
+      c.beginPath();
+      c.moveTo(x2, y2);
+      c.quadraticCurveTo(x2 - 12, y2 - 4, x2 - 17, y2 - 11);
+      c.moveTo(x2, y2);
+      c.quadraticCurveTo(x2 - 8, y2 + 9, x2 - 14, y2 + 14);
+      c.stroke();
     }
   }
 
