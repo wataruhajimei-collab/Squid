@@ -560,6 +560,55 @@ html, body {
   text-align: center;
 }
 
+/* --- Start Card (Launch Name Entry Screen) --- */
+.start-card {
+  text-align: center;
+  border-width: 3px;
+}
+
+.start-header-badge {
+  align-self: center;
+  background: var(--gold-mid);
+  color: #241509;
+  font-size: 10px;
+  font-weight: 900;
+  padding: 3px 12px;
+  border-radius: 999px;
+  letter-spacing: 1.2px;
+}
+
+.start-logo-title {
+  font-size: 34px;
+  font-weight: 900;
+  color: var(--gold-light);
+  letter-spacing: 4px;
+  text-shadow: 0 3px 8px rgba(0, 0, 0, 0.7);
+  margin: 2px 0;
+}
+
+.start-subtitle {
+  font-size: 12.5px;
+  color: #e9d8b4;
+  font-weight: 700;
+}
+
+.start-form {
+  border: 1.5px solid rgba(223, 194, 130, 0.35);
+}
+
+.start-name-error {
+  color: #ff6b6b;
+  font-size: 12px;
+  font-weight: 800;
+  text-align: center;
+  padding-top: 2px;
+}
+
+.input-shake {
+  border-color: #ff4747 !important;
+  box-shadow: 0 0 8px rgba(255, 71, 71, 0.7);
+}
+
 /* --- Result Card --- */
 .result-card {
   text-align: center;

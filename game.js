@@ -200,7 +200,9 @@ class SquidGameWatch {
     this.demoAiTimer = 0;
 
     // プレイヤー情報 & 位置情報
-    this.playerName = localStorage.getItem(STORAGE_KEYS.NAME) || 'DIVER';
+    const savedName = localStorage.getItem(STORAGE_KEYS.NAME) || '';
+    this.playerName = (savedName && savedName !== 'DIVER') ? savedName : '';
+    this.hasConfirmedName = Boolean(this.playerName);
     this.customPlace = localStorage.getItem(STORAGE_KEYS.PLACE) || '';
     this.detectedGeo = {
       city: '',
@@ -214,11 +216,34 @@ class SquidGameWatch {
 
     this._lastTime = performance.now();
     this._bindUI();
+    this._initStartModal();
     this._updateProfilePill();
     this._detectPlayerLocation();
     this._resetDemoState();
 
     requestAnimationFrame(ts => this._loop(ts));
+  }
+
+  _initStartModal() {
+    const startNameIn = document.getElementById('start-name-input');
+    const startPlaceIn = document.getElementById('start-place-input');
+    if (startNameIn) startNameIn.value = this.playerName;
+    if (startPlaceIn) startPlaceIn.value = this.customPlace;
+  }
+
+  openStartModal() {
+    const startModal = document.getElementById('start-modal');
+    const startNameIn = document.getElementById('start-name-input');
+    const startPlaceIn = document.getElementById('start-place-input');
+    const errEl = document.getElementById('start-name-error');
+    if (startNameIn) {
+      startNameIn.value = this.playerName;
+      startNameIn.classList.remove('input-shake');
+    }
+    if (startPlaceIn) startPlaceIn.value = this.customPlace;
+    if (errEl) errEl.classList.add('hidden');
+    startModal?.classList.remove('hidden');
+    setTimeout(() => startNameIn?.focus(), 60);
   }
 
   /* --------------------------------------------------------------------------
@@ -324,6 +349,52 @@ class SquidGameWatch {
       if (this.sound.enabled) this.sound.step();
     });
 
+    // 初回スタート（名前入力）モーダル
+    const startModal = document.getElementById('start-modal');
+    const startNameIn = document.getElementById('start-name-input');
+    const startPlaceIn = document.getElementById('start-place-input');
+    const startErr = document.getElementById('start-name-error');
+
+    const tryStartFromModal = (mode) => {
+      const rawName = (startNameIn?.value || '').trim();
+      if (!rawName) {
+        if (startErr) startErr.classList.remove('hidden');
+        if (startNameIn) {
+          startNameIn.classList.add('input-shake');
+          startNameIn.focus();
+        }
+        return;
+      }
+      if (startErr) startErr.classList.add('hidden');
+      startNameIn?.classList.remove('input-shake');
+      this._savePlayerProfile(rawName, startPlaceIn?.value);
+      this.hasConfirmedName = true;
+      startModal?.classList.add('hidden');
+      this.startGame(mode);
+    };
+
+    startNameIn?.addEventListener('input', () => {
+      if (startNameIn.value.trim()) {
+        startErr?.classList.add('hidden');
+        startNameIn.classList.remove('input-shake');
+      }
+    });
+    startNameIn?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        tryStartFromModal('A');
+      }
+    });
+
+    document.getElementById('start-btn-a')?.addEventListener('click', () => tryStartFromModal('A'));
+    document.getElementById('start-btn-b')?.addEventListener('click', () => tryStartFromModal('B'));
+    document.getElementById('start-open-ranking')?.addEventListener('click', () => {
+      this.openRankingModal();
+    });
+    document.getElementById('start-open-help')?.addEventListener('click', () => {
+      document.getElementById('help-modal')?.classList.remove('hidden');
+    });
+
     // 遊び方モーダル
     const helpModal = document.getElementById('help-modal');
     document.getElementById('help-btn')?.addEventListener('click', () => {
@@ -417,7 +488,7 @@ class SquidGameWatch {
   }
 
   _isAnyModalOpen() {
-    const modals = ['result-modal', 'profile-modal', 'help-modal', 'ranking-modal'];
+    const modals = ['start-modal', 'result-modal', 'profile-modal', 'help-modal', 'ranking-modal'];
     return modals.some(id => {
       const el = document.getElementById(id);
       return el && !el.classList.contains('hidden');
@@ -425,12 +496,15 @@ class SquidGameWatch {
   }
 
   _savePlayerProfile(nameVal, placeVal) {
-    const cleanName = String(nameVal || '').trim().substring(0, 12) || 'DIVER';
+    const cleanName = String(nameVal || '').trim().substring(0, 12);
     const cleanPlace = String(placeVal || '').trim().substring(0, 20);
-    this.playerName = cleanName;
+    if (cleanName) {
+      this.playerName = cleanName;
+      this.hasConfirmedName = true;
+    }
     this.customPlace = cleanPlace;
     try {
-      localStorage.setItem(STORAGE_KEYS.NAME, cleanName);
+      if (cleanName) localStorage.setItem(STORAGE_KEYS.NAME, cleanName);
       localStorage.setItem(STORAGE_KEYS.PLACE, cleanPlace);
     } catch (_) {}
     this._updateProfilePill();
@@ -439,10 +513,15 @@ class SquidGameWatch {
   _updateProfilePill() {
     const nameEl = document.getElementById('display-player-name');
     const cityEl = document.getElementById('display-player-city');
-    if (nameEl) nameEl.textContent = this.playerName;
+    if (nameEl) nameEl.textContent = this.playerName || '名前未設定';
+    const flag = countryToFlag(this.detectedGeo.country);
+    const placeText = this.customPlace || this.detectedGeo.display || 'Japan';
     if (cityEl) {
-      const placeText = this.customPlace || this.detectedGeo.display || 'Japan';
-      cityEl.textContent = `${countryToFlag(this.detectedGeo.country)} ${placeText}`;
+      cityEl.textContent = `${flag} ${placeText}`;
+    }
+    const startGeoEl = document.getElementById('start-geo-info');
+    if (startGeoEl) {
+      startGeoEl.textContent = `📍 自動検出された地域: ${flag} ${this.detectedGeo.display || 'Japan'}`;
     }
   }
 
@@ -796,6 +875,11 @@ class SquidGameWatch {
   }
 
   startGame(mode = 'A') {
+    // まだ名前を入力していない場合は必ず名前入力モーダルを開く
+    if (!this.playerName || !this.hasConfirmedName) {
+      this.openStartModal();
+      return;
+    }
     this.sound.init();
     this.gameMode = mode === 'B' ? 'B' : 'A';
     this.state = 'PLAYING';

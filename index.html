@@ -12,7 +12,7 @@
   <link rel="apple-touch-icon" href="icon.svg">
   <link rel="manifest" href="manifest.json">
   <title>SQUID - GAME &amp; WATCH WIDE SCREEN</title>
-  <link rel="stylesheet" href="style.css?v=1.0">
+  <link rel="stylesheet" href="style.css?v=1.1">
 </head>
 <body>
   <div id="debug-error" style="display:none;position:fixed;top:0;left:0;z-index:99999;background:#b91c1c;color:#fff;width:100%;padding:6px 10px;font-size:12px;white-space:pre-wrap;"></div>
@@ -125,6 +125,39 @@
         </button>
       </div>
     </main>
+
+    <!-- 初回スタート＆プレイヤー名入力モーダル（起動時に表示） -->
+    <div id="start-modal" class="modal-backdrop">
+      <div class="modal-card start-card">
+        <div class="start-header-badge">NINTENDO GAME &amp; WATCH TRIBUTE</div>
+        <h1 class="start-logo-title">🦑 SQUID</h1>
+        <p class="start-subtitle">海底の財宝を奪還せよ！名前を入れてスタート</p>
+
+        <div class="result-player-form start-form">
+          <div class="form-row">
+            <label for="start-name-input">🤿 名前 (NAME)</label>
+            <input type="text" id="start-name-input" maxlength="12" placeholder="名前を入力してください" autocomplete="nickname">
+          </div>
+          <div class="form-row">
+            <label for="start-place-input">📍 地名 (AREA)</label>
+            <input type="text" id="start-place-input" maxlength="20" placeholder="空欄で自動記録">
+          </div>
+          <div class="detected-geo-info" id="start-geo-info">
+            📍 現在地を自動検出中...
+          </div>
+          <div id="start-name-error" class="start-name-error hidden">⚠️ 名前を入力してからスタートしてください！</div>
+        </div>
+
+        <div class="modal-btn-row">
+          <button id="start-btn-a" class="primary-retro-btn">▶ GAME A スタート</button>
+          <button id="start-btn-b" class="primary-retro-btn accent-b">▶ GAME B スタート</button>
+        </div>
+        <div class="modal-btn-row secondary-row">
+          <button id="start-open-ranking" class="secondary-retro-btn">🏆 グローバルランキング</button>
+          <button id="start-open-help" class="secondary-retro-btn">？ 遊び方</button>
+        </div>
+      </div>
+    </div>
 
     <!-- ゲームオーバー / スコア結果モーダル -->
     <div id="result-modal" class="modal-backdrop hidden">
@@ -282,6 +315,6 @@
     </div>
   </div>
 
-  <script src="game.js?v=1.0"></script>
+  <script src="game.js?v=1.1"></script>
 </body>
 </html>
