@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="SQUID">
+  <meta name="theme-color" content="#6b1515">
+  <meta name="description" content="任天堂ゲーム&ウォッチの名作『オクトパス』にそっくりな液晶風スマホゲーム『スクイッド (SQUID)』グローバルランキング＆地域記録対応">
+  <link rel="icon" type="image/svg+xml" href="icon.svg">
+  <link rel="apple-touch-icon" href="icon.svg">
+  <link rel="manifest" href="manifest.json">
+  <title>SQUID - GAME &amp; WATCH WIDE SCREEN</title>
+  <link rel="stylesheet" href="style.css?v=1.0">
+</head>
+<body>
+  <div id="debug-error" style="display:none;position:fixed;top:0;left:0;z-index:99999;background:#b91c1c;color:#fff;width:100%;padding:6px 10px;font-size:12px;white-space:pre-wrap;"></div>
+  <script>
+    window.onerror = function(msg, url, line, col, error) {
+      var el = document.getElementById('debug-error');
+      if (el) {
+        el.style.display = 'block';
+        el.innerText += '\n' + msg + ' (' + line + ':' + col + ')';
+      }
+    };
+  </script>
+
+  <div id="app" class="console-shell">
+    <!-- 上部：プレイヤー情報＆地名バッジ・ツールバー -->
+    <header class="top-bar">
+      <button id="profile-btn" class="profile-pill" title="プレイヤー名と地名の設定">
+        <span class="pill-icon">🤿</span>
+        <span id="display-player-name" class="pill-name">DIVER</span>
+        <span class="pill-sep">|</span>
+        <span class="pill-pin">📍</span>
+        <span id="display-player-city" class="pill-city">Detecting...</span>
+        <span class="pill-edit">✎</span>
+      </button>
+
+      <div class="top-actions">
+        <button id="sound-btn" class="icon-pill" aria-label="Sound Toggle" title="サウンド ON/OFF">🔊</button>
+        <button id="help-btn" class="icon-pill" aria-label="How to Play" title="遊び方">？</button>
+        <button id="open-ranking-btn" class="ranking-pill" title="グローバルランキング">
+          <span>🏆</span>
+          <span id="lbl-ranking-top">RANKING</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- メイン筐体：GAME & WATCH WIDE SCREEN フェイスプレート -->
+    <main class="handheld-unit">
+      <div class="metal-plate">
+        <!-- プレート上部ヘッダーロゴ -->
+        <div class="plate-header">
+          <div class="gw-brand-box">
+            <span class="gw-brand-top">NINTENDO SYMPATHY EDITION</span>
+            <span class="gw-brand-main">GAME &amp; WATCH</span>
+          </div>
+          <div class="gw-series-tag">WIDE SCREEN</div>
+          <div class="gw-title-badge">SQUID</div>
+        </div>
+
+        <!-- 液晶画面ベゼル -->
+        <div class="lcd-bezel">
+          <div class="lcd-glass-frame" id="lcd-touch-zone">
+            <canvas id="lcdCanvas" width="720" height="480"></canvas>
+            <!-- 画面左右タップガイド（プレイ開始直後に薄く表示） -->
+            <div id="touch-hint-overlay" class="touch-hint-overlay hidden">
+              <div class="touch-zone-left">◀ 船へ戻る</div>
+              <div class="touch-zone-right">進む・宝を取る ▶</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- プレート下部ステータス＆モデル名 -->
+        <div class="plate-footer">
+          <div class="model-code">MODEL SQ-22</div>
+          <div id="live-status-text" class="live-status-text">PRESS [GAME A] OR [GAME B] TO DIVE!</div>
+          <div class="score-rule-hint">TREASURE +1 / BOAT RETURN +3</div>
+        </div>
+      </div>
+
+      <!-- ゲーム&ウォッチ特有のシルバー楕円システムボタン群 -->
+      <div class="system-buttons-bar">
+        <div class="sys-btn-group">
+          <button id="btn-game-a" class="sys-oval-btn active-mode">
+            <span class="oval-cap"></span>
+            <span class="oval-label">GAME A</span>
+          </button>
+          <button id="btn-game-b" class="sys-oval-btn">
+            <span class="oval-cap"></span>
+            <span class="oval-label">GAME B</span>
+          </button>
+          <button id="btn-time" class="sys-oval-btn">
+            <span class="oval-cap"></span>
+            <span class="oval-label">TIME</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- 下部：スマホ親指操作に最適化した大型ゲームウォッチ赤ボタン -->
+      <div class="control-deck">
+        <button id="btn-left" class="gw-action-btn left-btn" aria-label="Left / Return to Boat">
+          <div class="btn-rim">
+            <div class="btn-face">
+              <span class="btn-arrow">◀</span>
+              <span class="btn-caption" id="lbl-btn-left">LEFT / 船へ</span>
+            </div>
+          </div>
+        </button>
+
+        <div class="center-grip-emblem">
+          <div class="emblem-squid">🦑</div>
+          <div class="emblem-sub">200 / 500 PTS<br>LIFE BONUS</div>
+        </div>
+
+        <button id="btn-right" class="gw-action-btn right-btn" aria-label="Right / Dive & Grab Treasure">
+          <div class="btn-rim">
+            <div class="btn-face">
+              <span class="btn-arrow">▶</span>
+              <span class="btn-caption" id="lbl-btn-right">RIGHT / 宝へ</span>
+            </div>
+          </div>
+        </button>
+      </div>
+    </main>
+
+    <!-- ゲームオーバー / スコア結果モーダル -->
+    <div id="result-modal" class="modal-backdrop hidden">
+      <div class="modal-card result-card">
+        <div class="result-badge" id="result-mode-badge">GAME A</div>
+        <h2 class="result-heading" id="result-heading">GAME OVER</h2>
+        <div class="result-score-box">
+          <div class="result-score-label">FINAL SCORE</div>
+          <div class="result-score-value" id="result-score-val">0</div>
+          <div class="result-sub-stats" id="result-sub-stats">持ち帰った宝袋: 0個</div>
+        </div>
+
+        <!-- プレイヤー名・地名の確認＆即時送信ボックス -->
+        <div class="result-player-form">
+          <div class="form-row">
+            <label for="result-name-input">🤿 名前 (NAME)</label>
+            <input type="text" id="result-name-input" maxlength="12" placeholder="DIVER">
+          </div>
+          <div class="form-row">
+            <label for="result-place-input">📍 地名 (AREA)</label>
+            <input type="text" id="result-place-input" maxlength="20" placeholder="自動取得 (例: Tokyo)">
+          </div>
+          <div id="submit-status-msg" class="submit-status-msg">スコアを送信中...</div>
+        </div>
+
+        <div class="modal-btn-row">
+          <button id="result-retry-a" class="primary-retro-btn">▶ GAME A で再挑戦</button>
+          <button id="result-retry-b" class="primary-retro-btn accent-b">▶ GAME B で挑戦</button>
+        </div>
+        <div class="modal-btn-row secondary-row">
+          <button id="result-open-ranking" class="secondary-retro-btn">🏆 世界ランキングを見る</button>
+          <button id="result-close-btn" class="secondary-retro-btn">閉じる</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- プレイヤー名＆地名設定モーダル -->
+    <div id="profile-modal" class="modal-backdrop hidden">
+      <div class="modal-card profile-card">
+        <h2 class="modal-title">🤿 プレイヤー＆地名設定</h2>
+        <p class="modal-desc">グローバルランキングに記録される名前と地名を設定できます（地名は空欄ならアクセス元から自動記録されます）。</p>
+        <div class="result-player-form">
+          <div class="form-row">
+            <label for="profile-name-input">🤿 名前 (NAME)</label>
+            <input type="text" id="profile-name-input" maxlength="12" placeholder="DIVER">
+          </div>
+          <div class="form-row">
+            <label for="profile-place-input">📍 地名 (CITY / AREA)</label>
+            <input type="text" id="profile-place-input" maxlength="20" placeholder="自動検出 (例: Yokohama)">
+          </div>
+          <div class="detected-geo-info" id="detected-geo-info">
+            自動検出された地名: 取得中...
+          </div>
+        </div>
+        <div class="modal-btn-row">
+          <button id="profile-save-btn" class="primary-retro-btn">保存して閉じる</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 遊び方モーダル -->
+    <div id="help-modal" class="modal-backdrop hidden">
+      <div class="modal-card help-card">
+        <h2 class="modal-title">🦑 SQUID（スクイッド）の遊び方</h2>
+        <div class="help-content">
+          <div class="help-item">
+            <span class="help-badge">1</span>
+            <div>
+              <strong>海底の宝箱を目指そう（RIGHT ▶ ボタン）</strong><br>
+              船から潜水夫をおろし、巨大イカ（スクイッド）の伸び縮みする4本の足をかわして右下の宝箱まで進みます。
+            </div>
+          </div>
+          <div class="help-item">
+            <span class="help-badge">2</span>
+            <div>
+              <strong>財宝を袋に詰めよう（宝箱の前で RIGHT ▶）</strong><br>
+              宝箱の前で <strong>RIGHT ▶</strong> を押すたびに財宝を1つかき集め、<strong>+1点</strong>！何度でも連続で取れますが、欲張るとイカの足に捕まります！
+            </div>
+          </div>
+          <div class="help-item">
+            <span class="help-badge">3</span>
+            <div>
+              <strong>船へ生還してボーナス！（LEFT ◀ ボタン）</strong><br>
+              財宝を1つ以上持って左上の船まで無事に戻ると、袋を掲げて <strong>+3点ボーナス</strong>！
+            </div>
+          </div>
+          <div class="help-item">
+            <span class="help-badge">★</span>
+            <div>
+              <strong>200点・500点で潜水夫が全員復活！</strong><br>
+              船の上に座っている潜水夫の人数が残りライフ（3人）です。200点と500点に達するとミスが帳消しになり3人に復活します！
+            </div>
+          </div>
+        </div>
+        <div class="modal-btn-row">
+          <button id="help-close-btn" class="primary-retro-btn">わかった！</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- グローバルランキングモーダル -->
+    <div id="ranking-modal" class="modal-backdrop hidden">
+      <div class="modal-card ranking-card">
+        <div class="ranking-header-row">
+          <h2 class="modal-title">🏆 GLOBAL RANKING</h2>
+          <button id="ranking-refresh-btn" class="icon-pill small" title="最新に更新">↻</button>
+        </div>
+
+        <!-- メインタブ：個人ハイスコア / 地域別 / 平均 -->
+        <div class="lb-tabs">
+          <button class="lb-tab active" id="tab-player">🤿 HIGH SCORE</button>
+          <button class="lb-tab" id="tab-region">🌏 地域別 (CITY)</button>
+          <button class="lb-tab" id="tab-avg">📊 AVERAGE</button>
+        </div>
+
+        <!-- モードフィルター（個人ハイスコア時のみ表示） -->
+        <div class="lb-subfilters" id="lb-mode-filters">
+          <button class="subfilter-btn active" data-filter="ALL">ALL</button>
+          <button class="subfilter-btn" data-filter="A">GAME A</button>
+          <button class="subfilter-btn" data-filter="B">GAME B</button>
+        </div>
+
+        <!-- テーブルヘッダー -->
+        <div class="lb-table-header" id="lb-header-player">
+          <span class="col-rank">#</span>
+          <span class="col-name">DIVER / 📍地名</span>
+          <span class="col-mode">MODE</span>
+          <span class="col-score">SCORE</span>
+          <span class="col-date">DATE</span>
+        </div>
+        <div class="lb-table-header hidden" id="lb-header-region">
+          <span class="col-rank">#</span>
+          <span class="col-city">📍 CITY / REGION</span>
+          <span class="col-best">BEST</span>
+          <span class="col-avg">AVG</span>
+          <span class="col-count">DIVERS</span>
+        </div>
+        <div class="lb-table-header hidden" id="lb-header-avg">
+          <span class="col-rank">#</span>
+          <span class="col-name">DIVER / 📍地名</span>
+          <span class="col-avg">AVG</span>
+          <span class="col-best">BEST</span>
+          <span class="col-count">GAMES</span>
+        </div>
+
+        <!-- リスト本体 -->
+        <div id="ranking-list" class="ranking-list">
+          <div class="loading-box">Loading Global Ranking...</div>
+        </div>
+
+        <div class="modal-btn-row">
+          <button id="ranking-close-btn" class="secondary-retro-btn">閉じる (BACK)</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="game.js?v=1.0"></script>
+</body>
+</html>

@@ -1,0 +1,6 @@
+.git
+.github
+*.md
+push.ps1
+scratch
+*.tmp

@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="casing" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#8b1e1e"/>
+      <stop offset="100%" stop-color="#4e0e0e"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#f2dfb3"/>
+      <stop offset="50%" stop-color="#d4b46e"/>
+      <stop offset="100%" stop-color="#9e7b36"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="108" fill="url(#casing)"/>
+  <rect x="28" y="28" width="456" height="456" rx="84" fill="none" stroke="url(#gold)" stroke-width="14"/>
+  <rect x="62" y="76" width="388" height="292" rx="28" fill="#98a786" stroke="#2c3325" stroke-width="12"/>
+  <!-- Giant Squid LCD Silhouette -->
+  <g fill="#1c2319">
+    <!-- Triangle Fin & Mantle -->
+    <polygon points="315,102 385,148 358,158 345,215 285,215 272,158 245,148"/>
+    <!-- Eyes -->
+    <circle cx="300" cy="196" r="10" fill="#98a786"/>
+    <circle cx="330" cy="196" r="10" fill="#98a786"/>
+    <circle cx="300" cy="196" r="5" fill="#1c2319"/>
+    <circle cx="330" cy="196" r="5" fill="#1c2319"/>
+    <!-- Tentacles -->
+    <path d="M286,215 Q220,235 160,260 Q140,270 150,285 Q172,275 292,228 Z"/>
+    <path d="M302,215 Q250,265 205,318 Q195,332 212,338 Q232,320 312,228 Z"/>
+    <path d="M325,215 Q300,275 285,332 Q280,345 298,345 Q312,325 335,228 Z"/>
+    <path d="M342,215 Q368,268 380,325 Q385,340 400,332 Q390,270 350,220 Z"/>
+    <!-- Diver Silhouette -->
+    <circle cx="132" cy="212" r="18"/>
+    <rect x="116" y="232" width="32" height="44" rx="8"/>
+  </g>
+  <!-- Bottom Label -->
+  <rect x="136" y="396" width="240" height="54" rx="12" fill="url(#gold)"/>
+  <text x="256" y="433" font-family="Arial Black, Impact, sans-serif" font-size="36" font-weight="900" fill="#231815" text-anchor="middle" letter-spacing="4">SQUID</text>
+</svg>
