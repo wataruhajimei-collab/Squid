@@ -1,6 +1,6 @@
 /* ============================================================================
-   SQUID - GAME & WATCH WIDE SCREEN (MODEL SQ-22)
-   Authentic 1981 Handheld Console Styling for Smartphone & Desktop
+   SQUID - ROGAN & WATCH WABISABI SCREEN (MODEL 1972-54)
+   Authentic 1980s Showa Pocket LCD Console Styling for Smartphone & Desktop
    ============================================================================ */
 
 :root {
@@ -347,30 +347,25 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  width: 100%;
   margin-top: 5px;
-  font-size: 9.5px;
+  font-size: 10px;
   font-weight: 800;
   letter-spacing: 0.5px;
+  white-space: nowrap;
   flex-shrink: 0;
 }
 
 .model-code {
-  opacity: 0.78;
-}
-
-.live-status-text {
-  color: #6b1515;
-  font-weight: 900;
-  text-align: center;
-  flex: 1;
-  padding: 0 4px;
+  opacity: 0.85;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  flex-shrink: 0;
 }
 
 .score-rule-hint {
-  opacity: 0.82;
+  opacity: 0.88;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 /* --- System Oval Buttons (GAME A / GAME B / TIME) --- */
@@ -747,13 +742,14 @@ html, body {
 
 .secondary-retro-btn {
   flex: 1;
-  padding: 9px 12px;
+  padding: 9px 8px;
   border-radius: 10px;
   border: 1.5px solid var(--gold-dark);
   background: rgba(255, 255, 255, 0.08);
   color: var(--gold-light);
-  font-size: 12px;
+  font-size: 11.5px;
   font-weight: 800;
+  white-space: nowrap;
   cursor: pointer;
 }
 

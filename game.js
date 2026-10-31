@@ -2,8 +2,8 @@
 
 /**
  * ============================================================================
- * SQUID (スクイッド) - Game & Watch Wide Screen (Model SQ-22)
- * Faithful tribute to 1981 Nintendo Game & Watch "Octopus" (OC-22)
+ * SQUID (スクイッド) - ROGAN & WATCH WABISABI SCREEN (MODEL 1972-54)
+ * Showa 80s Pocket LCD Game Tribute
  * With Cloudflare Global Ranking & Player Location Recording
  * ============================================================================
  */
@@ -140,7 +140,7 @@ class PiezoSoundEngine {
 }
 
 /* ============================================================================
-   2. MAIN GAME ENGINE (SQUID - OC-22 Exact Mechanics + LCD Renderer)
+   2. MAIN GAME ENGINE (SQUID - MODEL 1972-54 Mechanics + LCD Renderer)
    ============================================================================ */
 class SquidGameWatch {
   constructor() {
@@ -945,7 +945,7 @@ class SquidGameWatch {
       return;
     }
 
-    // 捕まり中・船上荷下ろし中・ボーナス演出中は入力を受け付けない（本家OC-22仕様）
+    // 捕まり中・船上荷下ろし中・ボーナス演出中は入力を受け付けない（実機仕様）
     if (this.state !== 'PLAYING') return;
 
     if (navigator.vibrate) {
@@ -969,7 +969,7 @@ class SquidGameWatch {
         this.sound.step();
         this._checkCollisionImmediate();
       } else if (this.diverPos === 1) {
-        // 本家オクトパス仕様：財宝袋(hasBag)を持っている時だけ船上(pos=0)へ上がって+3点ボーナス！
+        // 財宝袋(hasBag)を持っている時だけ船上(pos=0)へ上がって+3点ボーナス！
         if (this.hasBag) {
           this.diverPos = 0;
           this.state = 'UNLOADING';
@@ -1066,7 +1066,7 @@ class SquidGameWatch {
      -------------------------------------------------------------------------- */
   _getTickInterval() {
     if (this.state === 'TIME') return 0.42;
-    // 本家オクトパス同様、スコアが100点刻みで上がるごとに少しずつ加速し、100点台突入直後に少し緩む波を作る
+    // スコアが100点刻みで上がるごとに少しずつ加速し、100点台突入直後に少し緩む波を作る
     const base = this.gameMode === 'B' ? 0.31 : 0.43;
     const withinHundred = this.score % 100;
     const hundredTier = Math.min(5, Math.floor(this.score / 100));
@@ -1193,7 +1193,7 @@ class SquidGameWatch {
         t.dir = 1;
         t.wait = isGameB ? 0 : 1;
       } else {
-        // GAME B または高スコア時は、縮む途中で再び伸び始める「フェイント（切り返し）」が時折発生！（本家オクトパス名物）
+        // GAME B または高スコア時は、縮む途中で再び伸び始める「フェイント（切り返し）」が時折発生！
         const feintChance = isGameB ? 0.22 : (this.score >= 100 ? 0.12 : 0.04);
         if (t.dir === -1 && t.len >= 1 && t.len < t.maxLen - 1 && Math.random() < feintChance) {
           t.dir = 1;

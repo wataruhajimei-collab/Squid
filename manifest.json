@@ -1,7 +1,7 @@
 {
-  "name": "SQUID - Game & Watch Wide Screen",
+  "name": "SQUID - ROGAN & WATCH WABISABI SCREEN",
   "short_name": "SQUID",
-  "description": "1981年の名作液晶ゲーム『オクトパス』にインスパイアされたスマホ向け電子LSIゲーム『スクイッド』",
+  "description": "昭和80年代ポケットゲーム風のスマホ向け電子LSI液晶ゲーム『スクイッド』",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#1a1412",

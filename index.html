@@ -8,12 +8,12 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="SQUID">
   <meta name="theme-color" content="#6b1515">
-  <meta name="description" content="任天堂ゲーム&ウォッチの名作『オクトパス』にそっくりな液晶風スマホゲーム『スクイッド (SQUID)』グローバルランキング＆地域記録対応">
+  <meta name="description" content="昭和80年代ポケットゲーム風の液晶スマホゲーム『スクイッド (SQUID)』グローバルランキング＆地域記録対応">
   <link rel="icon" type="image/svg+xml" href="icon.svg">
   <link rel="apple-touch-icon" href="icon.svg">
   <link rel="manifest" href="manifest.json">
-  <title>SQUID - GAME &amp; WATCH WIDE SCREEN</title>
-  <link rel="stylesheet" href="style.css?v=1.2">
+  <title>SQUID - ROGAN &amp; WATCH WABISABI SCREEN</title>
+  <link rel="stylesheet" href="style.css?v=1.3">
 </head>
 <body>
   <div id="debug-error" style="display:none;position:fixed;top:0;left:0;z-index:99999;background:#b91c1c;color:#fff;width:100%;padding:6px 10px;font-size:12px;white-space:pre-wrap;"></div>
@@ -49,7 +49,7 @@
       </div>
     </header>
 
-    <!-- メイン筐体：GAME & WATCH WIDE SCREEN フェイスプレート -->
+    <!-- メイン筐体：ROGAN & WATCH WABISABI SCREEN フェイスプレート -->
     <main class="handheld-unit">
       <div class="metal-plate">
         <!-- プレート上部ヘッダーロゴ -->
@@ -80,12 +80,11 @@
         <!-- プレート下部ステータス＆モデル名 -->
         <div class="plate-footer">
           <div class="model-code">MODEL 1972-54</div>
-          <div id="live-status-text" class="live-status-text">PRESS [GAME A] OR [GAME B] TO DIVE!</div>
           <div class="score-rule-hint">TREASURE +1 / BOAT RETURN +3</div>
         </div>
       </div>
 
-      <!-- ゲーム&ウォッチ特有のシルバー楕円システムボタン群 -->
+      <!-- 昭和80年代ポケットゲーム特有のシルバー楕円システムボタン群 -->
       <div class="system-buttons-bar">
         <div class="sys-btn-group">
           <button id="btn-game-a" class="sys-oval-btn active-mode">
@@ -103,7 +102,7 @@
         </div>
       </div>
 
-      <!-- 下部：スマホ親指操作に最適化した大型ゲームウォッチ赤ボタン -->
+      <!-- 下部：スマホ親指操作に最適化した大型赤ボタン -->
       <div class="control-deck">
         <button id="btn-left" class="gw-action-btn left-btn" aria-label="Left / Return to Boat">
           <div class="btn-rim">
@@ -133,7 +132,7 @@
     <!-- 初回スタート＆プレイヤー名入力モーダル（起動時に表示） -->
     <div id="start-modal" class="modal-backdrop">
       <div class="modal-card start-card">
-        <div class="start-header-badge">NINTENDO GAME &amp; WATCH TRIBUTE</div>
+        <div class="start-header-badge">SHOWA 80s POCKET GAME TRIBUTE</div>
         <h1 class="start-logo-title">🦑 SQUID</h1>
         <p class="start-subtitle">海底の財宝を奪還せよ！名前を入れてスタート</p>
 
@@ -319,6 +318,6 @@
     </div>
   </div>
 
-  <script src="game.js?v=1.4"></script>
+  <script src="game.js?v=1.5"></script>
 </body>
 </html>
