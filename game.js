@@ -292,6 +292,90 @@ class SquidGameWatch {
         phase: rand() * Math.PI * 2
       });
     }
+
+    // GAME C: 袋に詰めた金貨の量・袋の揺れ・飛び交う金貨パーティクル
+    this.bagGoldCount = 0;
+    this.bagStuffBounce = 0;
+    this.goldCoinsInFlight = [];
+
+    // GAME C: 流れる多層雲・羽ばたく海鳥・星空・季節＆天候パーティクル・海中魚群・リアル海藻
+    this.skyClouds = [
+      { x: 75,  y: 28, rx: 56, ry: 14, speed: 6.5,  layer: 0, puffs: [[-24, 3, 0.72], [0, -2, 1.0], [26, 4, 0.78]] },
+      { x: 215, y: 48, rx: 68, ry: 15, speed: 9.2,  layer: 1, puffs: [[-30, 4, 0.76], [-4, -3, 1.0], [24, 2, 0.84], [44, 6, 0.62]] },
+      { x: 385, y: 34, rx: 52, ry: 13, speed: 5.8,  layer: 0, puffs: [[-20, 2, 0.75], [4, -2, 0.96], [25, 3, 0.72]] },
+      { x: 520, y: 54, rx: 64, ry: 15, speed: 11.4, layer: 1, puffs: [[-28, 3, 0.80], [0, -3, 1.0], [28, 3, 0.82]] },
+      { x: 660, y: 38, rx: 58, ry: 14, speed: 7.8,  layer: 0, puffs: [[-22, 3, 0.74], [2, -2, 0.98], [26, 4, 0.76]] }
+    ];
+
+    this.skyBirds = [
+      { x: 180, y: 34, vx: 22,   vy: 0.4, wingSpeed: 7.5, phase: 0.0, scale: 0.95 },
+      { x: 162, y: 41, vx: 21.5, vy: 0.3, wingSpeed: 7.8, phase: 1.2, scale: 0.82 },
+      { x: 148, y: 30, vx: 22.3, vy: 0.5, wingSpeed: 7.2, phase: 2.4, scale: 0.76 },
+      { x: 540, y: 24, vx: -18,  vy: 0.2, wingSpeed: 6.8, phase: 3.1, scale: 0.70 },
+      { x: 558, y: 29, vx: -18.4, vy: 0.3, wingSpeed: 7.1, phase: 4.5, scale: 0.62 }
+    ];
+
+    this.skyStars = [];
+    for (let i = 0; i < 48; i++) {
+      const u1 = ((i * 73 + 19) % 97) / 97;
+      const u2 = ((i * 41 + 53) % 89) / 89;
+      this.skyStars.push({
+        x: 12 + u1 * 696,
+        y: 6 + u2 * 88,
+        r: 0.7 + (i % 3) * 0.45,
+        twinkleSpeed: 2.0 + (i % 5) * 0.7,
+        phase: i * 1.13
+      });
+    }
+
+    // 季節・天候パーティクル（春の桜花びら・秋の紅葉・冬の雪結晶・雨粒）
+    this.weatherParticles = [];
+    for (let i = 0; i < 42; i++) {
+      this.weatherParticles.push({
+        x: rand() * 720,
+        y: rand() * 115,
+        vx: -14 - rand() * 18,
+        vy: 18 + rand() * 22,
+        rot: rand() * Math.PI * 2,
+        rotSpeed: (rand() - 0.5) * 4.5,
+        size: 2.5 + rand() * 2.8,
+        phase: rand() * Math.PI * 2
+      });
+    }
+
+    // 海中を回遊する小魚の群れ＆マリンスノー
+    this.underwaterFish = [
+      { x: 240, y: 175, vx: 19,  scale: 0.85, phase: 0.0, hue: 198 },
+      { x: 226, y: 183, vx: 19,  scale: 0.72, phase: 0.9, hue: 202 },
+      { x: 252, y: 187, vx: 19,  scale: 0.68, phase: 1.8, hue: 195 },
+      { x: 460, y: 248, vx: -15, scale: 0.78, phase: 2.5, hue: 188 },
+      { x: 476, y: 255, vx: -15, scale: 0.66, phase: 3.4, hue: 192 }
+    ];
+
+    this.marineSnow = [];
+    for (let i = 0; i < 36; i++) {
+      this.marineSnow.push({
+        x: 20 + rand() * 680,
+        y: 118 + rand() * 320,
+        r: 0.7 + rand() * 1.2,
+        speedY: 3.5 + rand() * 5.5,
+        phase: rand() * Math.PI * 2
+      });
+    }
+
+    // 海底の超リアルな揺れる海藻（ジャイアントケルプ・カジメ・紅藻）の株データ
+    this.kelpPlants = [
+      { baseX: 74,  baseY: 422, height: 108, blades: 11, hue: 96,  sat: 64, light: 28, freq: 1.45, phase: 0.2, kind: 'kelp' },
+      { baseX: 92,  baseY: 425, height: 76,  blades: 8,  hue: 122, sat: 58, light: 24, freq: 1.68, phase: 1.4, kind: 'kelp' },
+      { baseX: 112, baseY: 426, height: 58,  blades: 7,  hue: 348, sat: 62, light: 30, freq: 1.85, phase: 2.7, kind: 'red' },
+      { baseX: 252, baseY: 438, height: 118, blades: 12, hue: 88,  sat: 68, light: 30, freq: 1.38, phase: 0.9, kind: 'kelp' },
+      { baseX: 268, baseY: 440, height: 84,  blades: 9,  hue: 114, sat: 56, light: 25, freq: 1.62, phase: 2.1, kind: 'kelp' },
+      { baseX: 374, baseY: 442, height: 124, blades: 13, hue: 102, sat: 65, light: 27, freq: 1.32, phase: 1.7, kind: 'kelp' },
+      { baseX: 392, baseY: 444, height: 74,  blades: 8,  hue: 42,  sat: 72, light: 32, freq: 1.74, phase: 3.3, kind: 'amber' },
+      { baseX: 500, baseY: 440, height: 112, blades: 11, hue: 92,  sat: 62, light: 26, freq: 1.48, phase: 2.8, kind: 'kelp' },
+      { baseX: 516, baseY: 442, height: 68,  blades: 8,  hue: 352, sat: 58, light: 28, freq: 1.90, phase: 4.1, kind: 'red' },
+      { baseX: 598, baseY: 440, height: 92,  blades: 10, hue: 108, sat: 60, light: 26, freq: 1.54, phase: 3.9, kind: 'kelp' }
+    ];
   }
 
   _initStartModal() {
@@ -972,6 +1056,9 @@ class SquidGameWatch {
 
     this.diverPos = 0;
     this.hasBag = false;
+    this.bagGoldCount = 0;
+    this.bagStuffBounce = 0;
+    this.goldCoinsInFlight = [];
     this.grabAnimPhase = 0;
     this.grabAnimTimer = 0;
     this.unloadTicksLeft = 0;
@@ -1077,13 +1164,42 @@ class SquidGameWatch {
     }
     this.hasBag = true;
     this.treasuresGrabbed += 1;
+    this.bagGoldCount = (this.bagGoldCount || 0) + 1;
+    this.bagStuffBounce = 1.0;
     this.grabAnimPhase = 1;
     this.grabAnimTimer = 0.22;
     this.squidFlushBoost = Math.min(1.0, this.squidFlushBoost + 0.45);
     this._spawnDiverBubbleBurst(9);
+    this._spawnGoldStuffingBurst();
     this.sound.grabTreasure();
     this._addScore(1);
     this._setStatusText(`💰 財宝ゲット (+1点)！ 続けて取るか LEFT ◀ で船へ戻ろう！`);
+  }
+
+  // 宝箱(616,392)からダイバーの手を経由して腰の宝袋の口(512,392)へ金貨・宝石を次々と詰め込むパーティクルを生成
+  _spawnGoldStuffingBurst() {
+    if (!this.goldCoinsInFlight) this.goldCoinsInFlight = [];
+    const types = ['coin', 'coin', 'coin', 'ingot', 'ruby', 'emerald', 'coin'];
+    for (let i = 0; i < 12; i++) {
+      const kind = types[i % types.length];
+      this.goldCoinsInFlight.push({
+        kind,
+        t: -i * 0.028, // 時間差で連続して袋へ吸い込まれる
+        duration: 0.36 + (i % 3) * 0.04,
+        startX: 610 + (Math.random() - 0.5) * 18,
+        startY: 392 + (Math.random() - 0.5) * 10,
+        ctrlX: 564 + (Math.random() - 0.5) * 18,
+        ctrlY: 344 - Math.random() * 20,
+        endX: 512 + (Math.random() - 0.5) * 8,
+        endY: 394 + (Math.random() - 0.5) * 5,
+        rot: Math.random() * Math.PI * 2,
+        rotSpeed: (Math.random() - 0.5) * 18,
+        r: kind === 'ingot' ? 4.4 : (3.1 + (i % 3) * 0.65)
+      });
+    }
+    if (this.goldCoinsInFlight.length > 48) {
+      this.goldCoinsInFlight.splice(0, this.goldCoinsInFlight.length - 48);
+    }
   }
 
   _addScore(pts) {
@@ -1205,10 +1321,148 @@ class SquidGameWatch {
     }
   }
 
+  // GAME C: 時間帯・季節・天候の滑らかな連続変化パラメータを算出
+  _getEnvAtmosphere() {
+    // 時間経過(bioTime)とスコア進行の両方で、時間帯・季節・天候がゆっくり美しく巡る
+    const prog = this.bioTime * 0.042 + (this.score || 0) * 0.018;
+
+    // 時間帯 (0: 朝焼け Dawn -> 1: 真昼 Day -> 2: 夕焼け Sunset -> 3: 月夜・満天の星 Night)
+    const todCycle = ((prog * 0.85) + 0.85) % 4;
+    const todIdx = Math.floor(todCycle);
+    const todFrac = todCycle - todIdx;
+    const todSmooth = todFrac * todFrac * (3 - 2 * todFrac);
+
+    // 季節 (0: 春・桜吹雪 -> 1: 夏・入道雲と陽光の煌めき -> 2: 秋・黄金色の風と紅葉 -> 3: 冬・澄んだ空と雪結晶)
+    const seasonCycle = (prog * 0.32) % 4;
+    const seasonIdx = Math.floor(seasonCycle);
+    const seasonFrac = seasonCycle - seasonIdx;
+
+    // 天候 (0: 快晴 -> 1: そよ風と流れ雲 -> 2: 通り雨と水面の雨紋 -> 3: 雨上がりの七色の虹)
+    const weatherCycle = (prog * 0.51 + 0.25) % 4;
+    const weatherIdx = Math.floor(weatherCycle);
+    const weatherFrac = weatherCycle - weatherIdx;
+
+    // 雨の強さ (weatherIdx === 2 の前後で滑らかにフェードイン・アウト)
+    let rainIntensity = 0;
+    if (weatherIdx === 2) {
+      rainIntensity = Math.sin(weatherFrac * Math.PI);
+    } else if (weatherIdx === 1 && weatherFrac > 0.72) {
+      rainIntensity = ((weatherFrac - 0.72) / 0.28) * 0.35;
+    }
+
+    // 雨上がりの虹の濃さ (weatherIdx === 3 で浮かび上がる)
+    let rainbowAlpha = 0;
+    if (weatherIdx === 3) {
+      rainbowAlpha = Math.sin(weatherFrac * Math.PI) * 0.78;
+    } else if (weatherIdx === 2 && weatherFrac > 0.68) {
+      rainbowAlpha = ((weatherFrac - 0.68) / 0.32) * 0.45;
+    }
+
+    return {
+      todCycle,
+      todIdx,
+      todSmooth,
+      seasonIdx,
+      seasonFrac,
+      weatherIdx,
+      weatherFrac,
+      rainIntensity,
+      rainbowAlpha
+    };
+  }
+
   _updateBubbles(dt) {
     this.bioTime += dt;
     if (this.squidFlushBoost > 0) {
       this.squidFlushBoost = Math.max(0, this.squidFlushBoost - dt * 0.38);
+    }
+    if (this.bagStuffBounce > 0) {
+      this.bagStuffBounce = Math.max(0, this.bagStuffBounce - dt * 3.4);
+    }
+
+    // 宝箱から袋へ詰め込まれる金貨・宝石の放物線アニメーション更新
+    if (this.goldCoinsInFlight && this.goldCoinsInFlight.length > 0) {
+      for (let i = this.goldCoinsInFlight.length - 1; i >= 0; i--) {
+        const gc = this.goldCoinsInFlight[i];
+        gc.t += dt;
+        gc.rot += gc.rotSpeed * dt;
+        if (gc.t >= gc.duration) {
+          this.bagStuffBounce = Math.min(1.0, this.bagStuffBounce + 0.22);
+          this.goldCoinsInFlight.splice(i, 1);
+        }
+      }
+    }
+
+    // 空の雲・海鳥・季節天候パーティクル・海中魚の移動更新
+    const env = this._getEnvAtmosphere();
+    const windMul = 1.0 + env.rainIntensity * 0.85;
+
+    if (this.skyClouds) {
+      for (const cl of this.skyClouds) {
+        cl.x -= cl.speed * windMul * dt;
+        if (cl.x + cl.rx * 1.5 < -20) {
+          cl.x = 740 + cl.rx * 1.2;
+        }
+      }
+    }
+
+    if (this.skyBirds) {
+      for (const bd of this.skyBirds) {
+        bd.x += bd.vx * dt;
+        bd.y += Math.sin(this.bioTime * 2.2 + bd.phase) * bd.vy * dt * 12;
+        if (bd.vx > 0 && bd.x > 760) bd.x = -40;
+        if (bd.vx < 0 && bd.x < -40) bd.x = 760;
+      }
+    }
+
+    if (this.weatherParticles) {
+      for (const wp of this.weatherParticles) {
+        if (env.rainIntensity > 0.15) {
+          // 雨粒モード：斜め下へ高速落下し、海面で小さな雨波紋を作る
+          wp.x -= (65 + wp.size * 12) * dt;
+          wp.y += (240 + wp.size * 35) * dt;
+        } else {
+          // 季節モード（春の桜・秋の紅葉・冬の雪結晶）
+          const sway = Math.sin(this.bioTime * 2.6 + wp.phase) * 18;
+          wp.x += (wp.vx + sway) * dt;
+          wp.y += wp.vy * dt;
+          wp.rot += wp.rotSpeed * dt;
+        }
+        if (wp.x < -15) wp.x = 735;
+        if (wp.x > 735) wp.x = -15;
+        if (wp.y > 108) {
+          if (env.rainIntensity > 0.2 && this.surfaceRipples && this.surfaceRipples.length < 36 && Math.random() < 0.35) {
+            this.surfaceRipples.push({
+              x: wp.x,
+              y: 105 + Math.sin(wp.x * 0.065) * 3,
+              rx: 1.5,
+              maxRx: 9 + Math.random() * 6,
+              alpha: 0.55
+            });
+          }
+          wp.y = -8;
+          wp.x = Math.random() * 720;
+        }
+      }
+    }
+
+    if (this.underwaterFish) {
+      for (const f of this.underwaterFish) {
+        f.x += f.vx * dt;
+        if (f.vx > 0 && f.x > 750) f.x = -30;
+        if (f.vx < 0 && f.x < -30) f.x = 750;
+      }
+    }
+
+    if (this.marineSnow) {
+      for (const ms of this.marineSnow) {
+        ms.y += ms.speedY * dt;
+        ms.x += Math.sin(this.bioTime * 1.4 + ms.phase) * 4.5 * dt;
+        if (ms.y > 438) {
+          ms.y = 116;
+          ms.x = 20 + Math.random() * 680;
+        }
+      }
     }
 
     // ダイバーが水中にいる間、呼吸に合わせて周期的に「ボコボコッ…」と気泡が湧き出る
@@ -1305,6 +1559,8 @@ class SquidGameWatch {
           this.unloadTicksLeft -= 1;
         } else {
           this.hasBag = false;
+          this.bagGoldCount = 0;
+          this.goldCoinsInFlight = [];
           this.state = 'PLAYING';
           this._setStatusText('RIGHT ▶ ボタンで再び海底へ潜ろう！');
         }
@@ -1330,6 +1586,8 @@ class SquidGameWatch {
             // 次の潜水夫が船上からスタート
             this.diverPos = 0;
             this.hasBag = false;
+            this.bagGoldCount = 0;
+            this.goldCoinsInFlight = [];
             this.caughtTentacleIdx = -1;
             // 捕まった足を少し引っ込めて再開
             this.tentacles.forEach(t => {
@@ -1477,48 +1735,411 @@ class SquidGameWatch {
     return this.gameMode === 'C' && this.state !== 'TIME';
   }
 
+  _lerpRgb(c1, c2, t) {
+    const r = Math.round(c1[0] + (c2[0] - c1[0]) * t);
+    const g = Math.round(c1[1] + (c2[1] - c1[1]) * t);
+    const b = Math.round(c1[2] + (c2[2] - c1[2]) * t);
+    return `rgb(${r}, ${g}, ${b})`;
+  }
+
+  _lerpRgba(c1, c2, t, alpha) {
+    const r = Math.round(c1[0] + (c2[0] - c1[0]) * t);
+    const g = Math.round(c1[1] + (c2[1] - c1[1]) * t);
+    const b = Math.round(c1[2] + (c2[2] - c1[2]) * t);
+    return `rgba(${r}, ${g}, ${b}, ${alpha.toFixed(3)})`;
+  }
+
+  // GAME C: 空・太陽と月・星空・虹・流れる雲・羽ばたく海鳥・季節と天候パーティクルの描画
+  _drawRealisticDynamicSky(ctx, W, H, env) {
+    // 4つの時間帯パレット (0:朝焼け Dawn, 1:真昼 Day, 2:夕焼け Sunset, 3:月夜 Night)
+    const skyPalettes = [
+      { // 0: 朝焼け (Dawn)
+        top: [49, 46, 129],
+        mid: [192, 132, 252],
+        low: [251, 146, 60],
+        hor: [254, 240, 138],
+        cloudTop: [255, 241, 242],
+        cloudBot: [244, 114, 182]
+      },
+      { // 1: 真昼 (Midday)
+        top: [29, 78, 216],
+        mid: [59, 130, 246],
+        low: [147, 197, 253],
+        hor: [254, 249, 195],
+        cloudTop: [255, 255, 255],
+        cloudBot: [148, 163, 184]
+      },
+      { // 2: 夕焼け (Sunset)
+        top: [30, 27, 75],
+        mid: [153, 27, 27],
+        low: [234, 88, 12],
+        hor: [253, 224, 71],
+        cloudTop: [254, 215, 170],
+        cloudBot: [154, 52, 18]
+      },
+      { // 3: 月夜・星空 (Starry Night)
+        top: [2, 6, 23],
+        mid: [15, 23, 42],
+        low: [30, 41, 59],
+        hor: [51, 65, 85],
+        cloudTop: [148, 163, 184],
+        cloudBot: [30, 41, 59]
+      }
+    ];
+
+    const pA = skyPalettes[env.todIdx % 4];
+    const pB = skyPalettes[(env.todIdx + 1) % 4];
+    const t = env.todSmooth;
+
+    // 雨天時は空の彩度を少し落として雨雲の重厚感を出す
+    const rainDim = env.rainIntensity * 0.38;
+    const blendSky = (colA, colB) => {
+      const r = colA[0] + (colB[0] - colA[0]) * t;
+      const g = colA[1] + (colB[1] - colA[1]) * t;
+      const b = colA[2] + (colB[2] - colA[2]) * t;
+      return `rgb(${Math.round(r * (1 - rainDim) + 70 * rainDim)}, ${Math.round(g * (1 - rainDim) + 82 * rainDim)}, ${Math.round(b * (1 - rainDim) + 100 * rainDim)})`;
+    };
+
+    const skyGrad = ctx.createLinearGradient(0, 0, 0, 114);
+    skyGrad.addColorStop(0, blendSky(pA.top, pB.top));
+    skyGrad.addColorStop(0.42, blendSky(pA.mid, pB.mid));
+    skyGrad.addColorStop(0.78, blendSky(pA.low, pB.low));
+    skyGrad.addColorStop(1, blendSky(pA.hor, pB.hor));
+    ctx.fillStyle = skyGrad;
+    ctx.fillRect(0, 0, W, H);
+
+    // 夜〜薄明時の満天の星々と天の川グロー
+    let nightWeight = 0;
+    if (env.todIdx === 3) nightWeight = 1.0 - env.todSmooth * 0.45;
+    else if (env.todIdx === 2) nightWeight = Math.max(0, (env.todSmooth - 0.35) / 0.65);
+    else if (env.todIdx === 0) nightWeight = Math.max(0, 0.55 - env.todSmooth * 0.9);
+    nightWeight *= (1 - env.rainIntensity * 0.85);
+
+    if (nightWeight > 0.03 && this.skyStars) {
+      ctx.save();
+      for (const st of this.skyStars) {
+        const twinkle = 0.45 + 0.55 * Math.sin(this.bioTime * st.twinkleSpeed + st.phase);
+        const a = nightWeight * twinkle;
+        ctx.fillStyle = `rgba(248, 250, 252, ${a.toFixed(3)})`;
+        ctx.beginPath();
+        ctx.arc(st.x, st.y, st.r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+
+    // 太陽と月の軌道描画
+    const sunVis = Math.max(0, 1 - nightWeight * 1.15) * (1 - env.rainIntensity * 0.65);
+    if (sunVis > 0.02) {
+      const sunProg = Math.min(1, Math.max(0, (env.todCycle < 3.2 ? env.todCycle : 0) / 2.8));
+      const sunX = 165 + sunProg * 330;
+      const sunY = 78 - Math.sin(sunProg * Math.PI) * 52;
+      const isGoldenHour = env.todIdx === 0 || env.todIdx === 2;
+
+      const sunGrad = ctx.createRadialGradient(sunX, sunY, 3, sunX, sunY, isGoldenHour ? 150 : 120);
+      sunGrad.addColorStop(0, `rgba(255, 255, 245, ${(0.96 * sunVis).toFixed(3)})`);
+      sunGrad.addColorStop(0.18, isGoldenHour ? `rgba(251, 146, 60, ${(0.72 * sunVis).toFixed(3)})` : `rgba(254, 240, 138, ${(0.62 * sunVis).toFixed(3)})`);
+      sunGrad.addColorStop(0.55, isGoldenHour ? `rgba(225, 29, 72, ${(0.28 * sunVis).toFixed(3)})` : `rgba(253, 224, 71, ${(0.18 * sunVis).toFixed(3)})`);
+      sunGrad.addColorStop(1, 'rgba(254, 240, 138, 0)');
+      ctx.fillStyle = sunGrad;
+      ctx.fillRect(0, 0, W, 114);
+
+      // 太陽本体ディスク
+      ctx.fillStyle = isGoldenHour ? `rgba(254, 215, 170, ${(0.95 * sunVis).toFixed(3)})` : `rgba(255, 255, 240, ${(0.95 * sunVis).toFixed(3)})`;
+      ctx.beginPath();
+      ctx.arc(sunX, sunY, isGoldenHour ? 13.5 : 11, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // 月夜にはクレーターのあるリアルな満月が輝く
+    if (nightWeight > 0.08) {
+      const moonX = 335 + Math.sin(this.bioTime * 0.02) * 45;
+      const moonY = 34;
+      const moonGlow = ctx.createRadialGradient(moonX, moonY, 6, moonX, moonY, 85);
+      moonGlow.addColorStop(0, `rgba(254, 249, 195, ${(0.85 * nightWeight).toFixed(3)})`);
+      moonGlow.addColorStop(0.32, `rgba(186, 230, 253, ${(0.35 * nightWeight).toFixed(3)})`);
+      moonGlow.addColorStop(1, 'rgba(15, 23, 42, 0)');
+      ctx.fillStyle = moonGlow;
+      ctx.beginPath();
+      ctx.arc(moonX, moonY, 85, 0, Math.PI * 2);
+      ctx.fill();
+
+      // 月本体と海（クレーター陰影）
+      ctx.fillStyle = `rgba(254, 249, 195, ${(0.95 * nightWeight).toFixed(3)})`;
+      ctx.beginPath();
+      ctx.arc(moonX, moonY, 12.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = `rgba(148, 163, 184, ${(0.32 * nightWeight).toFixed(3)})`;
+      ctx.beginPath();
+      ctx.arc(moonX - 3.5, moonY - 2.5, 3.2, 0, Math.PI * 2);
+      ctx.arc(moonX + 4.0, moonY + 3.0, 2.6, 0, Math.PI * 2);
+      ctx.arc(moonX + 2.0, moonY - 4.0, 1.8, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // 雨上がりの七色の虹 (weatherIdx === 3 付近で空に美しいアーチを描く)
+    if (env.rainbowAlpha > 0.02) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(0, 0, W, 108);
+      ctx.clip();
+      const rbColors = [
+        [239, 68, 68],   // 赤
+        [249, 115, 22],  // 橙
+        [250, 204, 21],  // 黄
+        [34, 197, 94],   // 緑
+        [56, 189, 248],  // 青
+        [99, 102, 241],  // 藍
+        [168, 85, 247]   // 紫
+      ];
+      ctx.lineWidth = 2.4;
+      for (let i = 0; i < rbColors.length; i++) {
+        const c = rbColors[i];
+        ctx.strokeStyle = `rgba(${c[0]}, ${c[1]}, ${c[2]}, ${(env.rainbowAlpha * 0.42).toFixed(3)})`;
+        ctx.beginPath();
+        ctx.arc(385, 138, 152 - i * 2.2, Math.PI * 1.08, Math.PI * 1.92);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    // 水平線遠くの島影とゆっくり航行する遠景帆船シルエット
+    ctx.save();
+    ctx.fillStyle = nightWeight > 0.5 ? 'rgba(15, 23, 42, 0.78)' : 'rgba(51, 65, 85, 0.42)';
+    ctx.beginPath();
+    ctx.moveTo(415, 104);
+    ctx.quadraticCurveTo(442, 91, 468, 97);
+    ctx.quadraticCurveTo(486, 93, 508, 104);
+    ctx.closePath();
+    ctx.fill();
+
+    // 水平線上をゆっくり進む遠景の小型帆船
+    const distShipX = 560 - ((this.bioTime * 2.2) % 280);
+    ctx.beginPath();
+    ctx.moveTo(distShipX - 8, 103);
+    ctx.lineTo(distShipX + 8, 103);
+    ctx.lineTo(distShipX + 5, 106);
+    ctx.lineTo(distShipX - 6, 106);
+    ctx.closePath();
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(distShipX, 92);
+    ctx.lineTo(distShipX + 5, 102);
+    ctx.lineTo(distShipX - 4, 102);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+
+    // 流れる立体積雲（時間帯と天候に応じて雲のハイライト・陰影色が変化）
+    if (this.skyClouds) {
+      const cTop = this._lerpRgba(pA.cloudTop, pB.cloudTop, t, 0.88 - rainDim * 0.15);
+      const cBot = this._lerpRgba(pA.cloudBot, pB.cloudBot, t, 0.62 + rainDim * 0.25);
+      for (const cl of this.skyClouds) {
+        const cg = ctx.createLinearGradient(cl.x, cl.y - cl.ry * 1.3, cl.x, cl.y + cl.ry);
+        cg.addColorStop(0, cTop);
+        cg.addColorStop(1, cBot);
+        ctx.fillStyle = cg;
+        ctx.beginPath();
+        ctx.ellipse(cl.x, cl.y, cl.rx, cl.ry, 0, 0, Math.PI * 2);
+        for (const pf of cl.puffs) {
+          ctx.ellipse(cl.x + pf[0], cl.y + pf[1], cl.rx * 0.52 * pf[2], cl.ry * 0.95 * pf[2], 0, 0, Math.PI * 2);
+        }
+        ctx.fill();
+      }
+    }
+
+    // 羽ばたきながら空を横切る海鳥（カモメ）の群れ
+    if (this.skyBirds) {
+      ctx.save();
+      ctx.strokeStyle = nightWeight > 0.55 ? 'rgba(226, 232, 240, 0.75)' : 'rgba(30, 41, 59, 0.78)';
+      ctx.lineCap = 'round';
+      for (const bd of this.skyBirds) {
+        const flap = Math.sin(this.bioTime * bd.wingSpeed + bd.phase);
+        const s = bd.scale * 7.5;
+        const wingY = flap * s * 0.68;
+        ctx.lineWidth = Math.max(1.2, bd.scale * 1.8);
+        ctx.beginPath();
+        ctx.moveTo(bd.x - s, bd.y - wingY);
+        ctx.quadraticCurveTo(bd.x - s * 0.4, bd.y - wingY * 0.4 - 2, bd.x, bd.y);
+        ctx.quadraticCurveTo(bd.x + s * 0.4, bd.y - wingY * 0.4 - 2, bd.x + s, bd.y - wingY);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    // 季節＆天候パーティクル（雨粒・春の桜花びら・秋の紅葉・冬の雪結晶）
+    if (this.weatherParticles) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(0, 0, W, 108);
+      ctx.clip();
+      for (const wp of this.weatherParticles) {
+        if (env.rainIntensity > 0.15) {
+          // 通り雨の銀色の雨筋
+          ctx.strokeStyle = `rgba(224, 242, 254, ${(0.35 + env.rainIntensity * 0.45).toFixed(3)})`;
+          ctx.lineWidth = 1.2;
+          ctx.beginPath();
+          ctx.moveTo(wp.x, wp.y);
+          ctx.lineTo(wp.x + 3.5, wp.y - 11);
+          ctx.stroke();
+        } else if (env.seasonIdx === 0) {
+          // 春：風に舞う桜の花びら
+          ctx.save();
+          ctx.translate(wp.x, wp.y);
+          ctx.rotate(wp.rot);
+          ctx.fillStyle = 'rgba(251, 207, 232, 0.86)';
+          ctx.beginPath();
+          ctx.ellipse(0, 0, wp.size * 1.05, wp.size * 0.62, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        } else if (env.seasonIdx === 2) {
+          // 秋：舞い散る紅葉・黄金葉
+          ctx.save();
+          ctx.translate(wp.x, wp.y);
+          ctx.rotate(wp.rot);
+          ctx.fillStyle = (Math.floor(wp.phase * 10) % 2 === 0) ? 'rgba(239, 68, 68, 0.85)' : 'rgba(245, 158, 11, 0.85)';
+          ctx.beginPath();
+          ctx.moveTo(0, -wp.size);
+          ctx.lineTo(wp.size * 0.8, 0);
+          ctx.lineTo(0, wp.size);
+          ctx.lineTo(-wp.size * 0.8, 0);
+          ctx.closePath();
+          ctx.fill();
+          ctx.restore();
+        } else if (env.seasonIdx === 3) {
+          // 冬：舞い降りる雪の結晶
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.88)';
+          ctx.beginPath();
+          ctx.arc(wp.x, wp.y, wp.size * 0.58, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+      ctx.restore();
+    }
+  }
+
+  // GAME C: 海流にたなびく超リアルな海藻群（ジャイアントケルプ・カジメ・紅藻）の描画
+  _drawRealisticSwayingKelp(ctx) {
+    if (!this.kelpPlants) return;
+    ctx.save();
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    for (const kp of this.kelpPlants) {
+      const segments = kp.blades;
+      const segLen = kp.height / segments;
+      const spinePts = [{ x: kp.baseX, y: kp.baseY }];
+
+      let currX = kp.baseX;
+      let currY = kp.baseY;
+      for (let s = 1; s <= segments; s++) {
+        const u = s / segments;
+        // 海流の進行波（根元はしっかり、先端ほど大きくしなやかに揺れる）
+        const wave = Math.sin(this.bioTime * kp.freq - s * 0.48 + kp.phase) * (5 + u * 16)
+                   + Math.cos(this.bioTime * (kp.freq * 0.62) + kp.phase) * (u * 6);
+        currX = kp.baseX + wave;
+        currY = kp.baseY - s * segLen;
+        spinePts.push({ x: currX, y: currY, u });
+      }
+
+      // 1. 各節から左右に広がるリアルな葉状体（フリル＆鋸歯エッジ・葉脈・気胞付き）
+      for (let s = 1; s < spinePts.length; s++) {
+        const pt = spinePts[s];
+        const side = (s % 2 === 0) ? 1 : -1;
+        const u = pt.u;
+        const bladeLen = (18 + Math.sin(u * Math.PI) * 22) * (kp.kind === 'red' ? 0.75 : 1.0);
+        const bladeWid = (5.2 + Math.sin(u * Math.PI) * 4.5) * (kp.kind === 'red' ? 0.82 : 1.0);
+        const flutter = Math.sin(this.bioTime * (kp.freq * 1.6) - s * 0.7 + kp.phase) * 0.32;
+        const angle = (side > 0 ? -0.38 : -2.76) + flutter;
+
+        ctx.save();
+        ctx.translate(pt.x, pt.y);
+        ctx.rotate(angle);
+
+        // 根元の気胞（ウキ袋：ジャイアントケルプ特有の丸い浮き球）
+        if (kp.kind !== 'red') {
+          ctx.fillStyle = `hsla(${kp.hue + 12}, ${kp.sat + 10}%, ${kp.light + 16}%, 0.92)`;
+          ctx.beginPath();
+          ctx.ellipse(3.2, 0, 3.2, 2.3, 0, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        // 半透明の太陽光透過グラデーションを持つ葉身
+        const bGrad = ctx.createLinearGradient(0, -bladeWid, bladeLen, bladeWid);
+        bGrad.addColorStop(0, `hsla(${kp.hue - 6}, ${kp.sat}%, ${kp.light - 4}%, 0.86)`);
+        bGrad.addColorStop(0.55, `hsla(${kp.hue + 8}, ${kp.sat + 12}%, ${kp.light + 12}%, 0.78)`);
+        bGrad.addColorStop(1, `hsla(${kp.hue + 18}, ${kp.sat + 16}%, ${kp.light + 22}%, 0.62)`);
+        ctx.fillStyle = bGrad;
+        ctx.strokeStyle = `hsla(${kp.hue + 16}, ${kp.sat + 14}%, ${kp.light + 20}%, 0.55)`;
+        ctx.lineWidth = 0.9;
+
+        // 波打つ鋸歯（ギザギザ）状のリアルな海藻ブレード輪郭
+        ctx.beginPath();
+        ctx.moveTo(4, 0);
+        const ripples = 4;
+        for (let r = 1; r <= ripples; r++) {
+          const rx = 4 + (bladeLen - 4) * (r / ripples);
+          const prevX = 4 + (bladeLen - 4) * ((r - 0.5) / ripples);
+          const w = bladeWid * Math.sin((r / ripples) * Math.PI * 0.92);
+          const waveOff = Math.sin(this.bioTime * 3.2 + r * 1.4 + s) * 1.6;
+          ctx.quadraticCurveTo(prevX, -w * 1.25 + waveOff, rx, -w * 0.72 + waveOff);
+        }
+        ctx.lineTo(bladeLen + 2, Math.sin(this.bioTime * 3.5 + s) * 2.0);
+        for (let r = ripples; r >= 1; r--) {
+          const rx = 4 + (bladeLen - 4) * ((r - 1) / ripples);
+          const midX = 4 + (bladeLen - 4) * ((r - 0.5) / ripples);
+          const w = bladeWid * Math.sin((r / ripples) * Math.PI * 0.92);
+          const waveOff = Math.sin(this.bioTime * 3.2 + r * 1.4 + s) * 1.6;
+          ctx.quadraticCurveTo(midX, w * 1.25 + waveOff, rx, (r === 1 ? 0 : w * 0.72 + waveOff));
+        }
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        // 葉の中央を走る主脈（ミッドリブ）
+        ctx.strokeStyle = `hsla(${kp.hue + 20}, ${kp.sat + 18}%, ${kp.light + 26}%, 0.52)`;
+        ctx.lineWidth = 1.1;
+        ctx.beginPath();
+        ctx.moveTo(4, 0);
+        ctx.quadraticCurveTo(bladeLen * 0.5, Math.sin(this.bioTime * 3.2 + s) * 1.8, bladeLen * 0.92, Math.sin(this.bioTime * 3.5 + s) * 1.6);
+        ctx.stroke();
+
+        ctx.restore();
+      }
+
+      // 2. しなやかに湾曲する主茎（スタイプ）と根元の付着器（ホールドファスト）
+      ctx.strokeStyle = `hsla(${kp.hue - 8}, ${kp.sat}%, ${kp.light - 2}%, 0.94)`;
+      ctx.lineWidth = 3.4;
+      ctx.beginPath();
+      ctx.moveTo(spinePts[0].x, spinePts[0].y);
+      for (let s = 1; s < spinePts.length; s++) {
+        const prev = spinePts[s - 1];
+        const curr = spinePts[s];
+        const mx = (prev.x + curr.x) * 0.5;
+        const my = (prev.y + curr.y) * 0.5;
+        ctx.quadraticCurveTo(prev.x, prev.y, mx, my);
+      }
+      const last = spinePts[spinePts.length - 1];
+      ctx.lineTo(last.x, last.y);
+      ctx.stroke();
+
+      // 茎のハイライトライン
+      ctx.strokeStyle = `hsla(${kp.hue + 14}, ${kp.sat + 12}%, ${kp.light + 18}%, 0.45)`;
+      ctx.lineWidth = 1.2;
+      ctx.stroke();
+    }
+
+    ctx.restore();
+  }
+
   _render() {
     const ctx = this.ctx;
     const W = this.canvas.width;  // 720
     const H = this.canvas.height; // 480
 
     if (this._isRealColor()) {
-      // GAME C: 写真のように妙にリアルな空のグラデーションと太陽光・雲の表現
-      const skyGrad = ctx.createLinearGradient(0, 0, 0, 114);
-      skyGrad.addColorStop(0, '#1e40af');
-      skyGrad.addColorStop(0.45, '#3b82f6');
-      skyGrad.addColorStop(0.82, '#93c5fd');
-      skyGrad.addColorStop(1, '#fef3c7');
-      ctx.fillStyle = skyGrad;
-      ctx.fillRect(0, 0, W, H);
-
-      // 太陽のハロー（水平線近くの逆光感）
-      const sunGrad = ctx.createRadialGradient(285, 42, 4, 285, 42, 135);
-      sunGrad.addColorStop(0, 'rgba(255, 255, 240, 0.95)');
-      sunGrad.addColorStop(0.25, 'rgba(254, 240, 138, 0.55)');
-      sunGrad.addColorStop(1, 'rgba(254, 240, 138, 0)');
-      ctx.fillStyle = sunGrad;
-      ctx.fillRect(140, 0, 290, 114);
-
-      // リアルな積雲（立体陰影付きの雲）
-      const clouds = [
-        { x: 95, y: 36, rx: 54, ry: 15 },
-        { x: 135, y: 40, rx: 42, ry: 13 },
-        { x: 255, y: 58, rx: 68, ry: 14 },
-        { x: 435, y: 46, rx: 62, ry: 15 },
-        { x: 480, y: 52, rx: 46, ry: 12 },
-        { x: 645, y: 38, rx: 58, ry: 14 }
-      ];
-      for (const cl of clouds) {
-        const cg = ctx.createLinearGradient(cl.x, cl.y - cl.ry, cl.x, cl.y + cl.ry);
-        cg.addColorStop(0, 'rgba(255, 255, 255, 0.88)');
-        cg.addColorStop(0.65, 'rgba(241, 245, 249, 0.78)');
-        cg.addColorStop(1, 'rgba(148, 163, 184, 0.52)');
-        ctx.fillStyle = cg;
-        ctx.beginPath();
-        ctx.ellipse(cl.x, cl.y, cl.rx, cl.ry, 0, 0, Math.PI * 2);
-        ctx.fill();
-      }
+      const env = this._getEnvAtmosphere();
+      this._drawRealisticDynamicSky(ctx, W, H, env);
     } else {
       // 1. 反射型液晶パネルのオリーブグリーン背景とビネット陰影
       const bgGrad = ctx.createRadialGradient(W * 0.5, H * 0.45, 40, W * 0.5, H * 0.5, W * 0.68);
@@ -1545,41 +2166,59 @@ class SquidGameWatch {
   _drawColorFoilOverlay(ctx) {
     ctx.save();
     const real = this._isRealColor();
+    const env = real ? this._getEnvAtmosphere() : null;
 
     // --- 海面の波ライン＆海中の表現 ---
     ctx.beginPath();
     ctx.moveTo(0, 108);
     for (let x = 0; x <= 720; x += 48) {
-      ctx.quadraticCurveTo(x + 24, 96, x + 48, 108);
+      const waveY = real ? (96 + Math.sin(this.bioTime * 2.4 + x * 0.045) * 2.8) : 96;
+      ctx.quadraticCurveTo(x + 24, waveY, x + 48, 108);
     }
     ctx.lineTo(720, 480);
     ctx.lineTo(0, 480);
     ctx.closePath();
 
     if (real) {
-      // 写真のようにリアルな海中の深度グラデーション（エメラルドの浅瀬〜濃紺の深海）
+      // 時間帯（朝焼け・真昼・夕焼け・月夜）に連動して海中の色彩も美しく変化
+      const seaPalettes = [
+        { s0: [20, 184, 166], s1: [13, 148, 136], s2: [15, 118, 110], s3: [30, 58, 138], s4: [9, 20, 42], ray: [254, 215, 170] }, // 朝焼け
+        { s0: [6, 182, 212],  s1: [2, 132, 199],  s2: [3, 105, 161],  s3: [30, 58, 138], s4: [9, 21, 43], ray: [224, 242, 254] }, // 真昼
+        { s0: [217, 119, 6],  s1: [14, 116, 144], s2: [21, 94, 117],  s3: [30, 27, 75],  s4: [8, 14, 32], ray: [253, 186, 116] }, // 夕焼け
+        { s0: [14, 116, 144], s1: [12, 74, 110],  s2: [15, 23, 42],   s3: [9, 14, 30],   s4: [2, 6, 23],  ray: [186, 230, 253] }  // 月夜
+      ];
+      const spA = seaPalettes[env.todIdx % 4];
+      const spB = seaPalettes[(env.todIdx + 1) % 4];
+      const t = env.todSmooth;
+
       const seaGrad = ctx.createLinearGradient(0, 96, 0, 480);
-      seaGrad.addColorStop(0, '#06b6d4');
-      seaGrad.addColorStop(0.14, '#0284c7');
-      seaGrad.addColorStop(0.42, '#0369a1');
-      seaGrad.addColorStop(0.75, '#1e3a8a');
-      seaGrad.addColorStop(1, '#09152b');
+      seaGrad.addColorStop(0, this._lerpRgb(spA.s0, spB.s0, t));
+      seaGrad.addColorStop(0.15, this._lerpRgb(spA.s1, spB.s1, t));
+      seaGrad.addColorStop(0.42, this._lerpRgb(spA.s2, spB.s2, t));
+      seaGrad.addColorStop(0.75, this._lerpRgb(spA.s3, spB.s3, t));
+      seaGrad.addColorStop(1, this._lerpRgb(spA.s4, spB.s4, t));
       ctx.fillStyle = seaGrad;
       ctx.fill();
 
-      // 海中に差し込む太陽光の光の筋（ゴッドレイ / コースティクス）
+      // 海中に差し込む太陽光・月光の筋（ゴッドレイ）と回遊する小魚・マリンスノー
       ctx.save();
       ctx.clip();
+      const rayCol = [
+        Math.round(spA.ray[0] + (spB.ray[0] - spA.ray[0]) * t),
+        Math.round(spA.ray[1] + (spB.ray[1] - spA.ray[1]) * t),
+        Math.round(spA.ray[2] + (spB.ray[2] - spA.ray[2]) * t)
+      ];
+      const rayShift = Math.sin(this.bioTime * 0.55) * 18;
       const rays = [
-        { xTop: 140, wTop: 45, xBot: 60, wBot: 110, alpha: 0.16 },
-        { xTop: 265, wTop: 60, xBot: 210, wBot: 145, alpha: 0.20 },
-        { xTop: 410, wTop: 50, xBot: 370, wBot: 130, alpha: 0.14 },
-        { xTop: 560, wTop: 45, xBot: 520, wBot: 115, alpha: 0.11 }
+        { xTop: 140 + rayShift, wTop: 45, xBot: 60 + rayShift * 1.4, wBot: 110, alpha: 0.16 },
+        { xTop: 265 - rayShift * 0.7, wTop: 60, xBot: 210 - rayShift, wBot: 145, alpha: 0.20 },
+        { xTop: 410 + rayShift * 0.8, wTop: 50, xBot: 370 + rayShift, wBot: 130, alpha: 0.14 },
+        { xTop: 560 - rayShift * 0.6, wTop: 45, xBot: 520 - rayShift, wBot: 115, alpha: 0.11 }
       ];
       for (const r of rays) {
         const rg = ctx.createLinearGradient(r.xTop, 100, r.xBot, 440);
-        rg.addColorStop(0, `rgba(224, 242, 254, ${r.alpha})`);
-        rg.addColorStop(0.55, `rgba(56, 189, 248, ${r.alpha * 0.45})`);
+        rg.addColorStop(0, `rgba(${rayCol[0]}, ${rayCol[1]}, ${rayCol[2]}, ${r.alpha})`);
+        rg.addColorStop(0.55, `rgba(${rayCol[0]}, ${rayCol[1]}, ${rayCol[2]}, ${r.alpha * 0.42})`);
         rg.addColorStop(1, 'rgba(14, 116, 144, 0)');
         ctx.fillStyle = rg;
         ctx.beginPath();
@@ -1590,15 +2229,56 @@ class SquidGameWatch {
         ctx.closePath();
         ctx.fill();
       }
+
+      // 海中を漂うマリンスノー（プランクトン光粒）
+      if (this.marineSnow) {
+        ctx.fillStyle = `rgba(${rayCol[0]}, ${rayCol[1]}, ${rayCol[2]}, 0.34)`;
+        for (const ms of this.marineSnow) {
+          ctx.beginPath();
+          ctx.arc(ms.x, ms.y, ms.r, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+
+      // 背景の海中を泳ぐ小魚の群れ
+      if (this.underwaterFish) {
+        for (const f of this.underwaterFish) {
+          const dir = f.vx >= 0 ? 1 : -1;
+          const wag = Math.sin(this.bioTime * 9.5 + f.phase) * 2.2;
+          const fy = f.y + Math.sin(this.bioTime * 1.8 + f.phase) * 4.5;
+          ctx.save();
+          ctx.translate(f.x, fy);
+          ctx.scale(dir * f.scale, f.scale);
+          ctx.fillStyle = `hsla(${f.hue}, 78%, 72%, 0.52)`;
+          ctx.beginPath();
+          ctx.ellipse(0, 0, 8.5, 3.2, 0, 0, Math.PI * 2);
+          ctx.fill();
+          // 尾ビレ
+          ctx.beginPath();
+          ctx.moveTo(-7.5, 0);
+          ctx.lineTo(-13, -3.5 + wag);
+          ctx.lineTo(-11.5, 0);
+          ctx.lineTo(-13, 3.5 + wag);
+          ctx.closePath();
+          ctx.fill();
+          // 銀色の側線ハイライト
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.65)';
+          ctx.beginPath();
+          ctx.ellipse(2, -0.8, 4.5, 0.9, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        }
+      }
       ctx.restore();
 
-      // リアルな白波の輝きライン
-      ctx.strokeStyle = 'rgba(224, 242, 254, 0.88)';
+      // リアルな白波の輝きライン（太陽・月光の反射きらめき付き）
+      ctx.strokeStyle = `rgba(${rayCol[0]}, ${rayCol[1]}, ${rayCol[2]}, 0.88)`;
       ctx.lineWidth = 3.5;
       ctx.beginPath();
       ctx.moveTo(0, 108);
       for (let x = 0; x <= 720; x += 48) {
-        ctx.quadraticCurveTo(x + 24, 96, x + 48, 108);
+        const waveY = 96 + Math.sin(this.bioTime * 2.4 + x * 0.045) * 2.8;
+        ctx.quadraticCurveTo(x + 24, waveY, x + 48, 108);
       }
       ctx.stroke();
     } else {
@@ -1710,16 +2390,20 @@ class SquidGameWatch {
       ctx.fill();
     }
 
-    // 海藻の揺らぎシルエット
-    ctx.strokeStyle = real ? 'rgba(34, 197, 94, 0.68)' : 'rgba(38, 92, 58, 0.42)';
-    ctx.lineWidth = 4;
-    const weeds = [42, 74, 305, 492];
-    for (const wx of weeds) {
-      ctx.beginPath();
-      ctx.moveTo(wx, 445);
-      ctx.quadraticCurveTo(wx - 12, 410, wx + 6, 380);
-      ctx.quadraticCurveTo(wx + 16, 355, wx - 4, 332);
-      ctx.stroke();
+    // 海藻の揺らぎシルエット（GAME C では超リアルに色と形が揺れる多層ジャイアントケルプ＆紅藻群を描画）
+    if (real) {
+      this._drawRealisticSwayingKelp(ctx);
+    } else {
+      ctx.strokeStyle = 'rgba(38, 92, 58, 0.42)';
+      ctx.lineWidth = 4;
+      const weeds = [42, 74, 305, 492];
+      for (const wx of weeds) {
+        ctx.beginPath();
+        ctx.moveTo(wx, 445);
+        ctx.quadraticCurveTo(wx - 12, 410, wx + 6, 380);
+        ctx.quadraticCurveTo(wx + 16, 355, wx - 4, 332);
+        ctx.stroke();
+      }
     }
 
     // --- 右下の開いた黄金の宝箱（プリント層） ---
@@ -1768,6 +2452,42 @@ class SquidGameWatch {
     ctx.strokeStyle = real ? '#713f12' : 'rgba(120, 80, 10, 0.8)';
     ctx.lineWidth = 1.8;
     ctx.stroke();
+
+    if (real) {
+      // GAME C: 宝箱の中にぎっしり詰まった個別の金貨・金塊・ルビー・エメラルド・黄金聖杯のディテール
+      const coinOffsets = [
+        [-22, 2, 3.8], [-15, -2, 4.0], [-8, 3, 3.6], [0, -3, 4.2], [8, 2, 3.9],
+        [15, -1, 4.1], [22, 3, 3.7], [-11, 5, 3.5], [4, 5, 3.8], [18, 5, 3.5]
+      ];
+      for (const [ox, oy, cr] of coinOffsets) {
+        ctx.fillStyle = '#fde047';
+        ctx.strokeStyle = '#a16207';
+        ctx.lineWidth = 0.9;
+        ctx.beginPath();
+        ctx.ellipse(cx + 44 + ox, cy + 16 + oy, cr, cr * 0.68, 0.15, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+      }
+      // 赤いルビーと緑のエメラルドの輝き
+      ctx.fillStyle = '#ef4444';
+      ctx.beginPath();
+      ctx.arc(cx + 34, cy + 16, 3.0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#10b981';
+      ctx.beginPath();
+      ctx.arc(cx + 55, cy + 15, 2.8, 0, Math.PI * 2);
+      ctx.fill();
+      // キラリと光る黄金スパークル
+      const glintAlpha = 0.55 + 0.45 * Math.sin(this.bioTime * 6.5);
+      ctx.strokeStyle = `rgba(255, 255, 255, ${glintAlpha.toFixed(3)})`;
+      ctx.lineWidth = 1.3;
+      const gx = cx + 44 + Math.sin(Math.floor(this.bioTime * 2.5)) * 16;
+      const gy = cy + 14;
+      ctx.beginPath();
+      ctx.moveTo(gx - 4, gy); ctx.lineTo(gx + 4, gy);
+      ctx.moveTo(gx, gy - 4); ctx.lineTo(gx, gy + 4);
+      ctx.stroke();
+    }
 
     // 宝箱の金具バンド
     ctx.strokeStyle = real ? '#fde047' : 'rgba(215, 175, 65, 0.85)';
@@ -2485,27 +3205,90 @@ class SquidGameWatch {
     }, (c) => {
       const bx = x - 22;
       const by = y + 36;
-      const bagGrad = c.createRadialGradient(bx - 3, by - 1, 2, bx, by + 3, 12);
-      bagGrad.addColorStop(0, '#fef08a');
-      bagGrad.addColorStop(0.45, '#d97706');
-      bagGrad.addColorStop(0.85, '#78350f');
+      // 金貨を詰めるたびに袋がぷっくり膨らみ、詰め込み瞬間はリアルに弾む
+      const isAtChest = (pose === 'chest');
+      const bounce = isAtChest ? (this.bagStuffBounce || 0) : 0;
+      const goldBonus = Math.min(3.8, Math.max(0, (this.bagGoldCount || 1) - 1) * 0.55);
+      const bagR = 11.5 + goldBonus * 0.45;
+      const stretchX = 1.0 + Math.sin(bounce * Math.PI * 2) * 0.16 + goldBonus * 0.03;
+      const stretchY = 1.0 - Math.sin(bounce * Math.PI * 2) * 0.12 + goldBonus * 0.04;
+
+      c.save();
+      c.translate(bx, by + 3);
+      c.scale(stretchX, stretchY);
+
+      // 1. 袋の口（宝箱前や詰め込み中は袋の口がガバッと開いて中の金貨・宝石が覗く）
+      const mouthOpen = isAtChest && (this.grabAnimPhase > 0 || bounce > 0.05 || (this.goldCoinsInFlight && this.goldCoinsInFlight.length > 0));
+      const mouthW = mouthOpen ? 8.2 : 5.5;
+
+      // 麻袋の口フリル
+      c.fillStyle = '#92400e';
+      c.strokeStyle = '#451a03';
+      c.lineWidth = 1.2;
+      c.beginPath();
+      c.moveTo(-mouthW, -16);
+      c.lineTo(mouthW, -16);
+      c.lineTo(3.5, -8);
+      c.lineTo(-3.5, -8);
+      c.closePath();
+      c.fill();
+      c.stroke();
+
+      // 袋の口から溢れそうに覗いている金貨・ルビー・エメラルド
+      const peekCoins = [
+        [-3.5, -15.2, 2.8, '#fde047'],
+        [0.0,  -16.2, 3.1, '#facc15'],
+        [3.6,  -15.0, 2.7, '#fde047'],
+        [-1.6, -13.8, 2.5, '#ef4444'], // ルビー
+        [2.0,  -13.8, 2.4, '#10b981']  // エメラルド
+      ];
+      for (const [px, py, pr, col] of peekCoins) {
+        c.fillStyle = col;
+        c.strokeStyle = '#713f12';
+        c.lineWidth = 0.7;
+        c.beginPath();
+        c.arc(px, py, pr, 0, Math.PI * 2);
+        c.fill();
+        c.stroke();
+      }
+
+      // 2. 麻布・革製の宝袋本体（中の金貨や金塊でゴツゴツと膨らんだ立体陰影）
+      const bagGrad = c.createRadialGradient(-3.5, -3.5, 2, 0, 0, bagR + 2);
+      bagGrad.addColorStop(0, '#fde68a');
+      bagGrad.addColorStop(0.35, '#d97706');
+      bagGrad.addColorStop(0.78, '#92400e');
       bagGrad.addColorStop(1, '#3b1506');
       c.fillStyle = bagGrad;
       c.beginPath();
-      c.moveTo(bx - 5, by - 12);
-      c.lineTo(bx + 5, by - 12);
-      c.lineTo(bx + 2, by - 6);
-      c.lineTo(bx - 2, by - 6);
-      c.closePath();
+      c.arc(0, 0, bagR, 0, Math.PI * 2);
       c.fill();
+
+      // 袋の布地に浮き出る内部の金貨・金塊の凹凸シルエット
+      const lumps = [
+        [-4.2, -2.0, 3.8], [3.8, -1.5, 3.6], [-2.5, 4.2, 4.0], [3.5, 4.0, 3.7], [0.2, 1.2, 4.2]
+      ];
+      c.strokeStyle = 'rgba(254, 240, 138, 0.32)';
+      c.lineWidth = 1.0;
+      for (const [lx, ly, lr] of lumps) {
+        c.beginPath();
+        c.arc(lx, ly, lr, -0.7, 1.4);
+        c.stroke();
+      }
+
+      // 袋の縫い目ステッチと口を縛る麻紐
+      c.strokeStyle = '#fef08a';
+      c.lineWidth = 1.6;
       c.beginPath();
-      c.arc(bx, by + 3, 11.5, 0, Math.PI * 2);
-      c.fill();
+      c.moveTo(-4.2, -8.5);
+      c.quadraticCurveTo(0, -6.8, 4.2, -8.5);
+      c.stroke();
+
+      c.restore();
     });
   }
 
   _drawTreasureGrabArms(ctx, x, y, reach1Lit, reach2Lit) {
-    // 腕セグメント1：右下の宝箱の中に手を突っ込む
+    // 腕セグメント1：右下の宝箱の中に手を突っ込み、金貨と宝石をごっそり鷲掴みにする
     this._drawSegment(ctx, reach1Lit, (c) => {
       c.lineWidth = 7.5;
       c.lineCap = 'round';
@@ -2519,7 +3302,12 @@ class SquidGameWatch {
       c.arc(x + 82, y + 24, 7, 0, Math.PI * 2);
       c.fill();
     }, (c) => {
-      c.strokeStyle = '#9c8b67';
+      // 耐圧キャンバス袖と重厚な潜水グローブ
+      const armGrad = c.createLinearGradient(x + 10, y + 18, x + 78, y + 28);
+      armGrad.addColorStop(0, '#b5a482');
+      armGrad.addColorStop(0.65, '#8c7a56');
+      armGrad.addColorStop(1, '#4a3f2a');
+      c.strokeStyle = armGrad;
       c.lineWidth = 7.5;
       c.lineCap = 'round';
       c.beginPath();
@@ -2527,17 +3315,33 @@ class SquidGameWatch {
       c.lineTo(x + 48, y + 28);
       c.lineTo(x + 76, y + 24);
       c.stroke();
-      const goldGrad = c.createRadialGradient(x + 80, y + 22, 1, x + 82, y + 24, 7);
-      goldGrad.addColorStop(0, '#fef9c3');
-      goldGrad.addColorStop(0.55, '#facc15');
-      goldGrad.addColorStop(1, '#a16207');
+
+      // 手の中で山盛りに輝く金貨・金塊・ルビーの束
+      const gx = x + 82, gy = y + 24;
+      const goldGrad = c.createRadialGradient(gx - 2, gy - 2, 1, gx, gy, 8.5);
+      goldGrad.addColorStop(0, '#ffffff');
+      goldGrad.addColorStop(0.35, '#fef08a');
+      goldGrad.addColorStop(0.72, '#eab308');
+      goldGrad.addColorStop(1, '#854d0e');
       c.fillStyle = goldGrad;
       c.beginPath();
-      c.arc(x + 82, y + 24, 7, 0, Math.PI * 2);
+      c.arc(gx, gy, 7.5, 0, Math.PI * 2);
       c.fill();
+
+      // 指の間からこぼれ落ちる個別の金貨と宝石
+      const handCoins = [[-5, -4, 3.0, '#fde047'], [4, -4, 2.8, '#facc15'], [5, 3, 2.7, '#fde047'], [-3, 5, 2.4, '#ef4444']];
+      for (const [ox, oy, cr, col] of handCoins) {
+        c.fillStyle = col;
+        c.strokeStyle = '#713f12';
+        c.lineWidth = 0.8;
+        c.beginPath();
+        c.ellipse(gx + ox, gy + oy, cr, cr * 0.72, 0.3, 0, Math.PI * 2);
+        c.fill();
+        c.stroke();
+      }
     });
 
-    // 腕セグメント2：宝箱から引き上げて自分の袋へ詰める
+    // 腕セグメント2：宝箱から引き上げ、左手で広げた腰の宝袋の口へ金貨をグイッと詰め込む！
     this._drawSegment(ctx, reach2Lit, (c) => {
       c.lineWidth = 7.5;
       c.lineCap = 'round';
@@ -2549,6 +3353,7 @@ class SquidGameWatch {
       c.arc(x + 36, y - 2, 7.5, 0, Math.PI * 2);
       c.fill();
     }, (c) => {
+      // 1. 元のLCDセグメント位置の引き上げ腕（山盛りの金貨を抱えて運ぶ）
       c.strokeStyle = '#9c8b67';
       c.lineWidth = 7.5;
       c.lineCap = 'round';
@@ -2556,15 +3361,94 @@ class SquidGameWatch {
       c.moveTo(x + 10, y + 18);
       c.lineTo(x + 32, y + 2);
       c.stroke();
-      const goldGrad = c.createRadialGradient(x + 34, y - 4, 1, x + 36, y - 2, 7.5);
+
+      const gx = x + 36, gy = y - 2;
+      const goldGrad = c.createRadialGradient(gx - 2, gy - 2, 1, gx, gy, 8);
       goldGrad.addColorStop(0, '#fef9c3');
       goldGrad.addColorStop(0.55, '#facc15');
       goldGrad.addColorStop(1, '#a16207');
       c.fillStyle = goldGrad;
       c.beginPath();
-      c.arc(x + 36, y - 2, 7.5, 0, Math.PI * 2);
+      c.arc(gx, gy, 7.5, 0, Math.PI * 2);
       c.fill();
+
+      // 2. 手から腰の宝袋の口(x - 22, y + 23)へザクザク流し込まれる金貨の軌跡ストリーム
+      const bagMouthX = x - 22;
+      const bagMouthY = y + 22;
+      for (let i = 0; i < 5; i++) {
+        const u = (i + ((this.bioTime * 12) % 1)) / 5;
+        const cx = (1 - u) * (1 - u) * gx + 2 * (1 - u) * u * (x + 6) + u * u * bagMouthX;
+        const cy = (1 - u) * (1 - u) * gy + 2 * (1 - u) * u * (y - 14) + u * u * bagMouthY;
+        c.save();
+        c.translate(cx, cy);
+        c.rotate(u * 4.5 + i);
+        c.fillStyle = (i === 2) ? '#ef4444' : (i === 4 ? '#10b981' : '#fde047');
+        c.strokeStyle = '#854d0e';
+        c.lineWidth = 0.8;
+        c.beginPath();
+        c.ellipse(0, 0, 3.4, 2.2, 0, 0, Math.PI * 2);
+        c.fill();
+        c.stroke();
+        c.restore();
+      }
     });
+
+    // GAME C 専用：宝箱からダイバーの手を経て宝袋の口へ吸い込まれる連続金貨・金塊・宝石パーティクル描画
+    if (this._isRealColor() && this.goldCoinsInFlight && this.goldCoinsInFlight.length > 0) {
+      ctx.save();
+      for (const gc of this.goldCoinsInFlight) {
+        if (gc.t < 0) continue;
+        const u = Math.min(1, gc.t / gc.duration);
+        const px = (1 - u) * (1 - u) * gc.startX + 2 * (1 - u) * u * gc.ctrlX + u * u * gc.endX;
+        const py = (1 - u) * (1 - u) * gc.startY + 2 * (1 - u) * u * gc.ctrlY + u * u * gc.endY;
+
+        ctx.save();
+        ctx.translate(px, py);
+        ctx.rotate(gc.rot);
+
+        if (gc.kind === 'ingot') {
+          // 黄金の延べ棒（インゴット）
+          ctx.fillStyle = '#facc15';
+          ctx.strokeStyle = '#854d0e';
+          ctx.lineWidth = 0.9;
+          ctx.beginPath();
+          ctx.roundRect(-gc.r, -gc.r * 0.55, gc.r * 2, gc.r * 1.1, 1.2);
+          ctx.fill();
+          ctx.stroke();
+          ctx.fillStyle = '#fef9c3';
+          ctx.fillRect(-gc.r * 0.65, -gc.r * 0.3, gc.r * 1.3, gc.r * 0.35);
+        } else if (gc.kind === 'ruby' || gc.kind === 'emerald') {
+          // 輝く宝石（ルビー・エメラルド）
+          ctx.fillStyle = gc.kind === 'ruby' ? '#f43f5e' : '#10b981';
+          ctx.strokeStyle = '#ffffff';
+          ctx.lineWidth = 0.7;
+          ctx.beginPath();
+          ctx.moveTo(0, -gc.r);
+          ctx.lineTo(gc.r * 0.85, 0);
+          ctx.lineTo(0, gc.r);
+          ctx.lineTo(-gc.r * 0.85, 0);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+        } else {
+          // 回転しながら袋へ吸い込まれる金貨
+          const coinSquash = Math.max(0.32, Math.abs(Math.cos(gc.rot * 1.5)));
+          const cg = ctx.createRadialGradient(-1, -1, 0.5, 0, 0, gc.r);
+          cg.addColorStop(0, '#ffffff');
+          cg.addColorStop(0.4, '#fde047');
+          cg.addColorStop(1, '#ca8a04');
+          ctx.fillStyle = cg;
+          ctx.strokeStyle = '#713f12';
+          ctx.lineWidth = 0.8;
+          ctx.beginPath();
+          ctx.ellipse(0, 0, gc.r, gc.r * coinSquash, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
+      ctx.restore();
+    }
   }
 
   _drawGiantSquidBody(ctx) {
