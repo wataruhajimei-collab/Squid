@@ -217,6 +217,7 @@ class SquidGameWatch {
     this.currentLbFilter = 'ALL';
 
     this._lastTime = performance.now();
+    this._initBioSquidAndBubbles();
     this._bindUI();
     this._initStartModal();
     this._updateProfilePill();
@@ -224,6 +225,73 @@ class SquidGameWatch {
     this._resetDemoState();
 
     requestAnimationFrame(ts => this._loop(ts));
+  }
+
+  // GAME C 専用：活イカの透明〜赤茶マダラ色素胞（クロマトフォア）配列＆リアル気泡物理の初期化
+  _initBioSquidAndBubbles() {
+    this.bioTime = 0;
+    this.squidFlushBoost = 0; // 攻撃時・捕獲時に色素胞が一気に赤茶色に集約・興奮するブースト値
+    this.bubbles = [];
+    this.surfaceRipples = [];
+    this.bubbleSpawnTimer = 0;
+
+    // 擬似乱数（決定論的シードで毎回美しいマダラ模様を生成）
+    let seed = 19810722;
+    const rand = () => {
+      seed = (seed * 1664525 + 1013904223) >>> 0;
+      return (seed & 0x0fffffff) / 0x10000000;
+    };
+
+    // 空間的な「マダラ模様（斑紋クラスタ）」強度を計算するマルチスケール波関数 (0.0〜1.0)
+    const mottleField = (x, y) => {
+      const n1 = Math.sin(x * 0.095 + y * 0.065) * Math.cos(x * 0.055 - y * 0.11);
+      const n2 = Math.sin(x * 0.21 - y * 0.17 + 1.4) * 0.5;
+      const n3 = Math.cos(x * 0.34 + y * 0.29 - 0.8) * 0.25;
+      return Math.max(0, Math.min(1, (n1 + n2 + n3 + 1.25) / 2.5));
+    };
+
+    // 1. 外套膜・エンペラ・頭部用の色素胞セル（約185個）
+    this.mantleChromatophores = [];
+    for (let i = 0; i < 185; i++) {
+      // 外套膜ポリゴン (x: 492..696, y: 92..228) 全域に分布（描画時は厳密にポリゴンでclipされる）
+      const x = 492 + rand() * 204;
+      const y = 92 + rand() * 136;
+      const mottle = mottleField(x, y);
+      // 4段階のリアルな色素胞カラー階層 (0:濃暗赤褐, 1:赤茶マダラ主色, 2:鮮赤褐色, 3:黄褐・琥珀色)
+      const rVal = rand();
+      const tier = rVal < 0.28 ? 0 : (rVal < 0.68 ? 1 : (rVal < 0.90 ? 2 : 3));
+      this.mantleChromatophores.push({
+        x,
+        y,
+        // 透明収縮時は0.55〜1.0pxの極小点、拡張集約時はマダラ斑の中心ほど大きく(2.6〜6.2px)広がる
+        baseR: 0.52 + rand() * 0.48,
+        maxR: (2.1 + rand() * 2.8) * (0.65 + mottle * 0.78),
+        mottle,
+        tier,
+        phase: rand() * Math.PI * 2,
+        aspect: 0.72 + rand() * 0.55,
+        angle: (rand() - 0.5) * 1.2
+      });
+    }
+
+    // 2. 触腕セグメント用の色素胞セル（正規化座標 u:0..1, v:-0.9..0.9 に34個）
+    this.tentacleChromatophores = [];
+    for (let i = 0; i < 34; i++) {
+      const u = 0.04 + rand() * 0.92;
+      const v = (rand() * 1.76) - 0.88;
+      const mottle = Math.max(0, Math.min(1, (Math.sin(u * 14 + v * 4) * Math.cos(u * 7 - v * 6) + 1) * 0.55));
+      const rVal = rand();
+      const tier = rVal < 0.30 ? 0 : (rVal < 0.72 ? 1 : (rVal < 0.92 ? 2 : 3));
+      this.tentacleChromatophores.push({
+        u,
+        v,
+        baseR: 0.45 + rand() * 0.4,
+        maxR: (1.8 + rand() * 2.3) * (0.65 + mottle * 0.75) * (1.08 - u * 0.35),
+        mottle,
+        tier,
+        phase: rand() * Math.PI * 2
+      });
+    }
   }
 
   _initStartModal() {
@@ -970,6 +1038,7 @@ class SquidGameWatch {
         this.diverPos += 1;
         this.grabAnimPhase = 0;
         this.sound.step();
+        this._spawnDiverBubbleBurst(7);
         this._checkCollisionImmediate();
       } else if (this.diverPos === 5) {
         // 宝箱の前(pos=5)でRIGHTを押すと財宝を1個掴んで+1点！
@@ -980,6 +1049,7 @@ class SquidGameWatch {
         this.diverPos -= 1;
         this.grabAnimPhase = 0;
         this.sound.step();
+        this._spawnDiverBubbleBurst(7);
         this._checkCollisionImmediate();
       } else if (this.diverPos === 1) {
         // 財宝袋(hasBag)を持っている時だけ船上(pos=0)へ上がって+3点ボーナス！
@@ -1009,6 +1079,8 @@ class SquidGameWatch {
     this.treasuresGrabbed += 1;
     this.grabAnimPhase = 1;
     this.grabAnimTimer = 0.22;
+    this.squidFlushBoost = Math.min(1.0, this.squidFlushBoost + 0.45);
+    this._spawnDiverBubbleBurst(9);
     this.sound.grabTreasure();
     this._addScore(1);
     this._setStatusText(`💰 財宝ゲット (+1点)！ 続けて取るか LEFT ◀ で船へ戻ろう！`);
@@ -1070,11 +1142,123 @@ class SquidGameWatch {
     this.caughtFlailTicks = 7; // 本家同様の手足バタバタ回数
     this.caughtTimer = 0;
     this.grabAnimPhase = 0;
+    this.squidFlushBoost = 1.0; // 捕獲時はイカが激しく興奮し赤茶色マダラ模様が最大発色
+    this._spawnDiverBubbleBurst(16, 376, 166);
     if (navigator.vibrate) {
       try { navigator.vibrate([60, 40, 80]); } catch (_) {}
     }
     this.sound.caughtFlail(0);
     this._setStatusText('🦑 イカの足に捕まった！ MISS!');
+  }
+
+  // ダイバーの現在水中座標を取得（水中にいない時はnull）
+  _getActiveUnderwaterDiverCoords() {
+    if (this.state === 'CAUGHT') {
+      return { x: 374, y: 164, isFlailing: true };
+    }
+    if ((this.state === 'PLAYING' || this.state === 'TIME' || this.state === 'BONUS') && this.diverPos >= 1 && this.diverPos <= 5) {
+      const coords = [
+        null,
+        { x: 142, y: 184 },
+        { x: 194, y: 294 },
+        { x: 304, y: 344 },
+        { x: 420, y: 362 },
+        { x: 534, y: 368 }
+      ];
+      return coords[this.diverPos];
+    }
+    return null;
+  }
+
+  // ヘルメット排気弁から「ぼこぼこ」と大小の空気塊を発生させる
+  _spawnDiverBubbleBurst(count = 6, customX = null, customY = null) {
+    if (!this.bubbles) return;
+    const dc = (customX !== null && customY !== null)
+      ? { x: customX, y: customY }
+      : this._getActiveUnderwaterDiverCoords();
+    if (!dc) return;
+
+    const originX = dc.x - 4;
+    const originY = dc.y - 14;
+
+    for (let i = 0; i < count; i++) {
+      // 大粒で扁平に歪みながら「ぼこっ」と上がる主気泡と、それに付随する中・小気泡を混ぜる
+      const roll = Math.random();
+      const radius = roll < 0.26
+        ? (5.2 + Math.random() * 3.6)   // 大気泡（ぼこぼこ変形する塊）
+        : (roll < 0.65 ? (2.5 + Math.random() * 2.4) : (1.1 + Math.random() * 1.3)); // 中・小気泡
+      this.bubbles.push({
+        x: originX + (Math.random() - 0.5) * 14,
+        y: originY - Math.random() * 10,
+        vx: (Math.random() - 0.5) * 28,
+        vy: -(52 + radius * 11 + Math.random() * 26),
+        r: radius,
+        wobblePhase: Math.random() * Math.PI * 2,
+        wobbleFreq: 5.5 + Math.random() * 5.0,
+        wobbleAmp: 12 + Math.random() * 18,
+        deformPhase: Math.random() * Math.PI * 2,
+        age: 0
+      });
+    }
+    if (this.bubbles.length > 140) {
+      this.bubbles.splice(0, this.bubbles.length - 140);
+    }
+  }
+
+  _updateBubbles(dt) {
+    this.bioTime += dt;
+    if (this.squidFlushBoost > 0) {
+      this.squidFlushBoost = Math.max(0, this.squidFlushBoost - dt * 0.38);
+    }
+
+    // ダイバーが水中にいる間、呼吸に合わせて周期的に「ボコボコッ…」と気泡が湧き出る
+    const dc = this._getActiveUnderwaterDiverCoords();
+    if (dc) {
+      this.bubbleSpawnTimer -= dt;
+      if (this.bubbleSpawnTimer <= 0) {
+        // 呼吸のリズム（吸気時の小泡＋呼気時のボコボコ大放出）
+        const isExhale = Math.sin(this.bioTime * 3.4) > -0.15;
+        this._spawnDiverBubbleBurst(isExhale ? (dc.isFlailing ? 7 : 4) : 1);
+        this.bubbleSpawnTimer = dc.isFlailing ? 0.08 : (isExhale ? 0.11 : 0.24);
+      }
+    }
+
+    // 各気泡の浮力上昇・横揺れ・水圧減による膨張・海面到達時の波紋生成
+    for (let i = this.bubbles.length - 1; i >= 0; i--) {
+      const b = this.bubbles[i];
+      b.age += dt;
+      // 浮力で少しずつ加速しながら上昇し、浅くなるほど水圧が減ってわずかに膨張する
+      b.vy -= dt * 18;
+      b.r += dt * 0.22;
+      const sway = Math.cos(b.age * b.wobbleFreq + b.wobblePhase) * b.wobbleAmp;
+      b.x += (b.vx * 0.35 + sway) * dt;
+      b.y += b.vy * dt;
+
+      // 海面の波ライン(y ≒ 104〜108)に達したら弾けて波紋リングを作る
+      const surfaceY = 104 + Math.sin(b.x * 0.065) * 4;
+      if (b.y - b.r <= surfaceY) {
+        if (b.r >= 2.2 && this.surfaceRipples.length < 30) {
+          this.surfaceRipples.push({
+            x: b.x,
+            y: surfaceY,
+            rx: b.r * 1.4,
+            maxRx: b.r * 5.2 + 8,
+            alpha: 0.78
+          });
+        }
+        this.bubbles.splice(i, 1);
+      }
+    }
+
+    // 海面で弾けた気泡の波紋アニメーション
+    for (let i = this.surfaceRipples.length - 1; i >= 0; i--) {
+      const rp = this.surfaceRipples[i];
+      rp.rx += dt * 36;
+      rp.alpha -= dt * 1.35;
+      if (rp.alpha <= 0 || rp.rx >= rp.maxRx) {
+        this.surfaceRipples.splice(i, 1);
+      }
+    }
   }
 
   /* --------------------------------------------------------------------------
@@ -1091,6 +1275,8 @@ class SquidGameWatch {
   }
 
   _update(dt) {
+    this._updateBubbles(dt);
+
     if (this.bonusTimer > 0) {
       this.bonusTimer = Math.max(0, this.bonusTimer - dt);
     }
@@ -1203,6 +1389,7 @@ class SquidGameWatch {
       if (t.len >= t.maxLen) {
         t.len = t.maxLen;
         t.dir = -1;
+        this.squidFlushBoost = Math.min(1.0, this.squidFlushBoost + 0.28);
         // 先端到達後、次のティックですぐ引っ込む
       } else if (t.len <= 0) {
         t.len = 0;
@@ -1839,18 +2026,97 @@ class SquidGameWatch {
     ctx.restore();
   }
 
+  // 活イカの現在の色素胞集約度（0.0=透き通った活イカ透明状態 〜 1.0=赤茶色の細かなマダラ模様に全開集約）を計算
+  _getSquidFlushLevel(x = 580, y = 160) {
+    // 周期的に「透き通る透明状態」と「赤茶色マダラ模様への集約状態」を行き来しつつ、攻撃・捕獲時は一気に赤茶マダラに興奮する
+    const slowCycle = Math.sin(this.bioTime * 1.35) * 0.5 + 0.5; // 0..1 の基本呼吸サイクル
+    const sharpWave = Math.pow(slowCycle, 1.45);
+    // 外套膜先端(右上)から頭部・触腕先端へ走る神経フラッシング波
+    const spatialWave = Math.sin((x - 650) * 0.032 + (y - 92) * 0.032 + this.bioTime * 5.4) * 0.22;
+    const pulseRipple = Math.cos((x + y) * 0.055 - this.bioTime * 8.2) * 0.08;
+    const raw = sharpWave * 0.78 + this.squidFlushBoost * 0.65 + spatialWave + pulseRipple;
+    return Math.max(0.02, Math.min(1.0, raw));
+  }
+
+  // 単一のリアルな水中気泡（屈折リム・扁平ゆらぎ・三日月ハイライト）を描画
+  _drawSingleRefractiveBubble(c, bx, by, r, wobbleArg = 0) {
+    c.save();
+    c.translate(bx, by);
+    // 大粒の気泡ほど水圧抵抗で横長の楕円（扁平）にボコボコと歪みながら揺れる
+    const isLarge = r >= 3.8;
+    const stretch = isLarge ? (1.0 + Math.sin(wobbleArg) * 0.22 + 0.14) : (1.0 + Math.sin(wobbleArg) * 0.09);
+    const squash = isLarge ? (1.0 / stretch) * 0.94 : (1.0 - Math.sin(wobbleArg) * 0.07);
+    const tilt = Math.cos(wobbleArg * 0.7) * (isLarge ? 0.22 : 0.08);
+    c.rotate(tilt);
+    c.scale(stretch, squash);
+
+    // 1. 気泡内部の水中屈折グラデーション（中心は透き通り、輪郭がシアン銀色に輝く）
+    const bGrad = c.createRadialGradient(-r * 0.28, -r * 0.28, r * 0.08, 0, 0, r);
+    bGrad.addColorStop(0, 'rgba(255, 255, 255, 0.35)');
+    bGrad.addColorStop(0.35, 'rgba(186, 230, 253, 0.10)');
+    bGrad.addColorStop(0.76, 'rgba(125, 211, 252, 0.38)');
+    bGrad.addColorStop(0.92, 'rgba(224, 242, 254, 0.82)');
+    bGrad.addColorStop(1, 'rgba(12, 74, 110, 0.55)');
+    c.fillStyle = bGrad;
+    c.beginPath();
+    c.arc(0, 0, r, 0, Math.PI * 2);
+    c.fill();
+
+    // 2. 左上の鋭い光沢ハイライト（太陽光反射）
+    c.fillStyle = 'rgba(255, 255, 255, 0.94)';
+    c.beginPath();
+    c.ellipse(-r * 0.34, -r * 0.34, Math.max(0.7, r * 0.28), Math.max(0.5, r * 0.16), -0.65, 0, Math.PI * 2);
+    c.fill();
+
+    // 3. 右下の二次反射アーク
+    if (r >= 2.2) {
+      c.strokeStyle = 'rgba(186, 230, 253, 0.75)';
+      c.lineWidth = Math.max(0.8, r * 0.14);
+      c.lineCap = 'round';
+      c.beginPath();
+      c.arc(0, 0, r * 0.72, 0.15 * Math.PI, 0.45 * Math.PI);
+      c.stroke();
+    }
+    c.restore();
+  }
+
+  // ダイバーから海面へ「ぼこぼこ」と浮かび上がる連続気泡パーティクル＆海面波紋を描画
+  _drawRealisticBubbleStream(ctx) {
+    if (!this._isRealColor()) return;
+    ctx.save();
+
+    // 1. 浮上中の大小気泡群
+    for (const b of this.bubbles) {
+      const wobbleArg = b.age * b.wobbleFreq * 1.35 + b.deformPhase;
+      this._drawSingleRefractiveBubble(ctx, b.x, b.y, b.r, wobbleArg);
+    }
+
+    // 2. 海面に到達してパチンと弾けた気泡の波紋リング
+    for (const rp of this.surfaceRipples) {
+      ctx.strokeStyle = `rgba(224, 242, 254, ${Math.max(0, rp.alpha).toFixed(3)})`;
+      ctx.lineWidth = 1.6;
+      ctx.beginPath();
+      ctx.ellipse(rp.x, rp.y, rp.rx, rp.rx * 0.26, 0, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
+    ctx.restore();
+  }
+
   // 液晶セグメント描画ヘルパー（GAME A/B: 1981年モノクロ液晶 / GAME C: 同じ形で妙にリアルな彩色）
-  _drawSegment(ctx, isLit, pathFn, realDrawFn = null) {
+  _drawSegment(ctx, isLit, pathFn, realDrawFn = null, shadowAlpha = 0.38) {
     if (this._isRealColor()) {
       if (!isLit) return;
       ctx.save();
-      // 海中・船上のリアルな立体ドロップシャドウ
-      ctx.save();
-      ctx.translate(2.4, 3.0);
-      ctx.fillStyle = 'rgba(4, 12, 26, 0.38)';
-      ctx.strokeStyle = 'rgba(4, 12, 26, 0.38)';
-      pathFn(ctx);
-      ctx.restore();
+      // 海中・船上のリアルな立体ドロップシャドウ（活イカの透明状態時は影も薄く透ける）
+      if (shadowAlpha > 0.01) {
+        ctx.save();
+        ctx.translate(2.4, 3.0);
+        ctx.fillStyle = `rgba(4, 12, 26, ${shadowAlpha.toFixed(3)})`;
+        ctx.strokeStyle = `rgba(4, 12, 26, ${shadowAlpha.toFixed(3)})`;
+        pathFn(ctx);
+        ctx.restore();
+      }
 
       if (realDrawFn) {
         realDrawFn(ctx);
@@ -1929,6 +2195,9 @@ class SquidGameWatch {
 
     // 7. イカに捕まった時の「手足バタバタもがきダイバー」セグメント（中央空中）
     this._drawCaughtFlailingDiver(ctx);
+
+    // 7.5. GAME C 専用：ダイバーから海面へ「ぼこぼこ」とリアルに浮かび上がる空気の泡＆波紋
+    this._drawRealisticBubbleStream(ctx);
 
     // 8. 右上の7セグメントデジタルスコア＆モード・ステータス表示
     this._drawTopRightHudSegments(ctx);
@@ -2192,12 +2461,9 @@ class SquidGameWatch {
       c.arc(x + 4, y - 1, 6.5, 0, Math.PI * 2);
       c.fill();
 
-      // 呼吸気泡（銀白色に輝くリアルな気泡）
-      c.fillStyle = 'rgba(224, 242, 254, 0.92)';
-      c.beginPath();
-      c.arc(x - 6, y - 20, 2.8, 0, Math.PI * 2);
-      c.arc(x - 2, y - 28, 3.6, 0, Math.PI * 2);
-      c.fill();
+      // 呼吸気泡（ヘルメット排気口直上の2つの気泡もリアルな屈折・揺らぎ気泡として描画）
+      this._drawSingleRefractiveBubble(c, x - 6, y - 20, 2.9, this.bioTime * 8.0);
+      this._drawSingleRefractiveBubble(c, x - 2, y - 28, 3.8, this.bioTime * 7.2 + 1.5);
     });
 
     // 腰にぶら下げる「宝袋（TREASURE BAG）」独立液晶セグメント
@@ -2305,6 +2571,8 @@ class SquidGameWatch {
     // 巨大イカ（ダイオウイカ）の頭部・外套膜・三角エンペラ（常時点灯セグメント）
     const squidLit = true;
     const eyeShift = (this.tickCount % 2 === 0) ? -3 : 3;
+    const avgFlush = this._getSquidFlushLevel(585, 155);
+    const squidShadowAlpha = 0.08 + avgFlush * 0.28;
 
     this._drawSegment(ctx, squidLit, (c) => {
       c.save();
@@ -2348,27 +2616,26 @@ class SquidGameWatch {
       c.fill();
       c.restore();
     }, (c) => {
-      // GAME C: まったく同じ形・座標で、妙にリアルな生々しいスルメイカ／ダイオウイカの色素胞＆ぬめり感
+      // GAME C: まったく同じ形・座標で「本物の生きたイカの如き超リアルな透明状態」から
+      // 「色素胞（クロマトフォア）が一気に集約・拡張して赤茶色の細かなマダラ模様になる」異常なまでの生物学的演出
       c.save();
 
-      // 漏斗（半透明の赤갈色〜乳白色の肉質管）
-      const siphonGrad = c.createLinearGradient(604, 216, 626, 230);
-      siphonGrad.addColorStop(0, '#f4c2b8');
-      siphonGrad.addColorStop(0.5, '#be123c');
-      siphonGrad.addColorStop(1, '#4c0519');
-      c.fillStyle = siphonGrad;
+      // --- 1. 漏斗（イカの呼吸・墨吐き管）の半透明軟骨〜赤茶色素胞表現 ---
+      c.save();
       c.beginPath();
       c.roundRect(604, 216, 22, 14, 5);
-      c.fill();
+      c.clip();
+      const siphonFlush = this._getSquidFlushLevel(615, 223);
+      const siphonGrad = c.createLinearGradient(604, 216, 626, 230);
+      siphonGrad.addColorStop(0, `rgba(236, 246, 255, ${(0.34 + siphonFlush * 0.25).toFixed(3)})`);
+      siphonGrad.addColorStop(0.55, `rgba(${Math.round(185 - siphonFlush * 35)}, ${Math.round(160 - siphonFlush * 115)}, ${Math.round(155 - siphonFlush * 125)}, ${(0.38 + siphonFlush * 0.48).toFixed(3)})`);
+      siphonGrad.addColorStop(1, `rgba(92, 22, 12, ${(0.28 + siphonFlush * 0.62).toFixed(3)})`);
+      c.fillStyle = siphonGrad;
+      c.fillRect(602, 214, 26, 18);
+      c.restore();
 
-      // 外套膜とエンペラ（赤褐色〜深紅〜半透明ピンクベージュの生々しいグラデーション）
-      const mantleGrad = c.createLinearGradient(660, 95, 510, 220);
-      mantleGrad.addColorStop(0, '#450a0a');
-      mantleGrad.addColorStop(0.28, '#881337');
-      mantleGrad.addColorStop(0.58, '#be123c');
-      mantleGrad.addColorStop(0.84, '#e16a64');
-      mantleGrad.addColorStop(1, '#f8d2c9');
-      c.fillStyle = mantleGrad;
+      // --- 2. 外套膜＆エンペラ（厳密に元のポリゴン形状でクリップ） ---
+      c.save();
       c.beginPath();
       c.moveTo(648, 92);
       c.lineTo(696, 152);
@@ -2378,10 +2645,91 @@ class SquidGameWatch {
       c.quadraticCurveTo(516, 168, 554, 138);
       c.lineTo(528, 106);
       c.closePath();
+      c.clip();
+
+      // (A) 活イカのガラス質・半透明オパール外皮ベース（透明時は背景の海や沈没船がうっすら透ける）
+      const mantleBaseGrad = c.createLinearGradient(656, 94, 512, 218);
+      const baseAlphaTop = 0.28 + avgFlush * 0.56;
+      const baseAlphaMid = 0.34 + avgFlush * 0.52;
+      const baseAlphaBot = 0.38 + avgFlush * 0.46;
+      mantleBaseGrad.addColorStop(0, `rgba(${Math.round(195 - avgFlush * 95)}, ${Math.round(225 - avgFlush * 195)}, ${Math.round(238 - avgFlush * 218)}, ${baseAlphaTop.toFixed(3)})`);
+      mantleBaseGrad.addColorStop(0.45, `rgba(${Math.round(220 - avgFlush * 68)}, ${Math.round(232 - avgFlush * 185)}, ${Math.round(240 - avgFlush * 208)}, ${baseAlphaMid.toFixed(3)})`);
+      mantleBaseGrad.addColorStop(1, `rgba(${Math.round(238 - avgFlush * 42)}, ${Math.round(242 - avgFlush * 128)}, ${Math.round(246 - avgFlush * 148)}, ${baseAlphaBot.toFixed(3)})`);
+      c.fillStyle = mantleBaseGrad;
+      c.fillRect(488, 88, 214, 144);
+
+      // (B) 透明時に外套膜の奥に透けて見える「内臓（中腸腺・肝臓の淡い琥珀サーモン色）」「銀黒色の墨袋」「軟甲（ガラス質の背骨筋）」
+      const organVis = Math.max(0.12, 1.0 - avgFlush * 0.72);
+      const liverGrad = c.createRadialGradient(596, 156, 4, 592, 160, 44);
+      liverGrad.addColorStop(0, `rgba(234, 138, 102, ${(0.48 * organVis).toFixed(3)})`);
+      liverGrad.addColorStop(0.55, `rgba(194, 92, 68, ${(0.32 * organVis).toFixed(3)})`);
+      liverGrad.addColorStop(1, 'rgba(180, 80, 60, 0)');
+      c.fillStyle = liverGrad;
+      c.beginPath();
+      c.ellipse(592, 160, 42, 18, -0.62, 0, Math.PI * 2);
       c.fill();
 
-      // 外套膜のぬめりハイライト（同じスリット座標 (638,114)->(568,165)）
-      c.strokeStyle = 'rgba(255, 228, 230, 0.62)';
+      // 奥に透ける銀黒色の墨袋（インクサック）
+      c.fillStyle = `rgba(30, 41, 59, ${(0.42 * organVis).toFixed(3)})`;
+      c.beginPath();
+      c.ellipse(582, 174, 16, 6.5, -0.58, 0, Math.PI * 2);
+      c.fill();
+
+      // (C) 虹色色素胞（イリドフォア：活イカ特有の青緑〜エメラルドの構造色ラメの輝き）
+      const iridShift = Math.sin(this.bioTime * 3.8) * 0.5 + 0.5;
+      c.strokeStyle = `rgba(52, 211, 153, ${(0.22 + iridShift * 0.24).toFixed(3)})`;
+      c.lineWidth = 5.5;
+      c.beginPath();
+      c.moveTo(646, 98);
+      c.lineTo(688, 150);
+      c.moveTo(644, 98);
+      c.lineTo(534, 108);
+      c.moveTo(552, 142);
+      c.quadraticCurveTo(526, 168, 502, 198);
+      c.stroke();
+
+      c.strokeStyle = `rgba(56, 189, 248, ${(0.20 + (1 - iridShift) * 0.22).toFixed(3)})`;
+      c.lineWidth = 2.6;
+      c.stroke();
+
+      // (D) 赤茶色の細かなマダラ模様を作る「色素胞（クロマトフォア）185個」のリアルタイム収縮・拡張アニメーション
+      // 各セルが局所の神経波によって極小点(0.5px)から赤茶色・焦茶色・琥珀色のマダラ斑(最大6px)へうねるように集約・拡散する
+      const tierColors = [
+        [58, 14, 7],    // Tier 0: 濃暗セピア・黒赤褐色
+        [128, 29, 16],  // Tier 1: スルメイカ特有の赤茶色（主マダラ色）
+        [166, 44, 22],  // Tier 2: 鮮やかな赤褐色
+        [196, 92, 24]   // Tier 3: 黄褐色・琥珀色素胞
+      ];
+
+      for (let i = 0; i < this.mantleChromatophores.length; i++) {
+        const ch = this.mantleChromatophores[i];
+        const localFlush = this._getSquidFlushLevel(ch.x, ch.y);
+        // 個々の色素胞の微小な筋収縮震え（脈動）
+        const microPulse = Math.sin(this.bioTime * 9.5 + ch.phase) * 0.08;
+        // マダラ斑の中心部から優先的に色素が集約して赤茶色の斑紋が浮かび上がる
+        const activation = Math.max(0, Math.min(1, (localFlush * (0.55 + ch.mottle * 0.72)) + microPulse));
+
+        const curR = ch.baseR + (ch.maxR - ch.baseR) * Math.pow(activation, 1.35);
+        const rgb = tierColors[ch.tier];
+        const alpha = 0.42 + activation * 0.52;
+
+        // 拡張した色素胞の周囲に滲む赤茶色のサブサーフェスハロー（隣り合う色素胞と融合してリアルなマダラ模様を形成）
+        if (activation > 0.32 && curR > 1.8) {
+          c.fillStyle = `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, ${(activation * 0.28).toFixed(3)})`;
+          c.beginPath();
+          c.ellipse(ch.x, ch.y, curR * 1.55, curR * 1.55 * ch.aspect, ch.angle, 0, Math.PI * 2);
+          c.fill();
+        }
+
+        // 色素胞セル本体
+        c.fillStyle = `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, ${alpha.toFixed(3)})`;
+        c.beginPath();
+        c.ellipse(ch.x, ch.y, curR, curR * ch.aspect, ch.angle, 0, Math.PI * 2);
+        c.fill();
+      }
+
+      // (E) 外套膜正中線の軟甲ハイライト＆表皮の濡れた粘液グロス（同じスリット座標 (638,114)->(568,165)）
+      c.strokeStyle = 'rgba(255, 250, 245, 0.68)';
       c.lineWidth = 4;
       c.lineCap = 'round';
       c.beginPath();
@@ -2389,13 +2737,30 @@ class SquidGameWatch {
       c.lineTo(568, 165);
       c.stroke();
 
-      // 巨大イカのリアルな眼球（黄色がかった銀白色の強膜と血走りリム）
+      // 外套膜輪郭の半透明ゼラチン質リム光沢
+      c.strokeStyle = `rgba(224, 242, 254, ${(0.48 - avgFlush * 0.22).toFixed(3)})`;
+      c.lineWidth = 2.2;
+      c.beginPath();
+      c.moveTo(648, 92);
+      c.lineTo(696, 152);
+      c.lineTo(652, 168);
+      c.quadraticCurveTo(628, 212, 598, 226);
+      c.lineTo(492, 206);
+      c.quadraticCurveTo(516, 168, 554, 138);
+      c.lineTo(528, 106);
+      c.closePath();
+      c.stroke();
+
+      c.restore();
+
+      // --- 3. 巨大イカの生々しい眼球（エメラルド銀色の虹彩膜・赤茶の色素縁・漆黒の水晶体） ---
       const drawRealEye = (ex, ey, rot) => {
         const eyeGrad = c.createRadialGradient(ex - 2, ey - 2, 2, ex, ey, 16);
         eyeGrad.addColorStop(0, '#fefce8');
-        eyeGrad.addColorStop(0.55, '#fde047');
-        eyeGrad.addColorStop(0.82, '#94a3b8');
-        eyeGrad.addColorStop(1, '#4c0519');
+        eyeGrad.addColorStop(0.48, '#fde047');
+        eyeGrad.addColorStop(0.76, '#5eead4');
+        eyeGrad.addColorStop(0.90, '#64748b');
+        eyeGrad.addColorStop(1, '#581c1c');
         c.fillStyle = eyeGrad;
         c.beginPath();
         c.ellipse(ex, ey, 16, 13, rot, 0, Math.PI * 2);
@@ -2411,15 +2776,15 @@ class SquidGameWatch {
       c.arc(572 + eyeShift, 200, 7.5, 0, Math.PI * 2);
       c.fill();
 
-      // 瞳孔内の濡れたキャッチライト（形を変えずに内側に極小の白い光点）
-      c.fillStyle = 'rgba(255, 255, 255, 0.88)';
+      // 瞳孔内の濡れた角膜キャッチライト
+      c.fillStyle = 'rgba(255, 255, 255, 0.92)';
       c.beginPath();
-      c.arc(524 + eyeShift, 187, 2.1, 0, Math.PI * 2);
-      c.arc(570 + eyeShift, 197, 2.1, 0, Math.PI * 2);
+      c.arc(523.5 + eyeShift, 187, 2.3, 0, Math.PI * 2);
+      c.arc(569.5 + eyeShift, 197, 2.3, 0, Math.PI * 2);
       c.fill();
 
       c.restore();
-    });
+    }, squidShadowAlpha);
   }
 
   _drawSquidTentacles(ctx) {
@@ -2463,18 +2828,20 @@ class SquidGameWatch {
       for (let sIdx = 0; sIdx < segs.length; sIdx++) {
         const seg = segs[sIdx];
         const isLit = t.len > sIdx;
+        const segFlush = this._getSquidFlushLevel((seg.x1 + seg.x2) * 0.5, (seg.y1 + seg.y2) * 0.5);
+        const segShadow = 0.08 + segFlush * 0.28;
 
         this._drawSegment(ctx, isLit, (c) => {
-          this._drawTaperedTentacleSegment(c, seg, false);
+          this._drawTaperedTentacleSegment(c, seg, false, tIdx, sIdx);
         }, (c) => {
-          this._drawTaperedTentacleSegment(c, seg, true);
-        });
+          this._drawTaperedTentacleSegment(c, seg, true, tIdx, sIdx);
+        }, segShadow);
       }
     }
   }
 
   // 根本が太く先端が細いイカの足セグメント＋リアルな輪っか状の吸盤（◎）を描画
-  _drawTaperedTentacleSegment(c, seg, isRealColor = false) {
+  _drawTaperedTentacleSegment(c, seg, isRealColor = false, tIdx = 0, sIdx = 0) {
     const { x1, y1, x2, y2, w1, w2, curve = 0, suckerDir = 1, isTip = false } = seg;
     const dx = x2 - x1;
     const dy = y2 - y1;
@@ -2513,29 +2880,15 @@ class SquidGameWatch {
       lowerPts.push([px - pnx * r, py - pny * r]);
     }
 
-    if (isRealColor) {
-      // GAME C: 触腕の背中側は赤褐色〜エンジ色、吸盤が並ぶ腹側は生々しい乳白ピンク色のグラデーション
-      const midSp = spinePts[5];
-      const armGrad = c.createLinearGradient(
-        midSp.px - midSp.pnx * suckerDir * (midSp.r + 4),
-        midSp.py - midSp.pny * suckerDir * (midSp.r + 4),
-        midSp.px + midSp.pnx * suckerDir * (midSp.r + 6),
-        midSp.py + midSp.pny * suckerDir * (midSp.r + 6)
-      );
-      armGrad.addColorStop(0, '#4c0519');
-      armGrad.addColorStop(0.45, '#9f1239');
-      armGrad.addColorStop(0.78, '#e16a64');
-      armGrad.addColorStop(1, '#fce7f3');
-      c.fillStyle = armGrad;
-    }
+    const midSp = spinePts[5];
+    const segFlush = isRealColor ? this._getSquidFlushLevel(midSp.px, midSp.py) : 0;
 
-    // 1. テーパーのかかった触腕本体ポリゴンを描画
+    // 1. テーパーのかかった触腕本体ポリゴンパスを構築
     c.beginPath();
     c.moveTo(upperPts[0][0], upperPts[0][1]);
     for (let i = 1; i <= steps; i++) {
       c.lineTo(upperPts[i][0], upperPts[i][1]);
     }
-    // 先端の丸みまたはカールした細先
     const endSp = spinePts[steps];
     c.arc(endSp.px, endSp.py, Math.max(2, w2 * 0.5), Math.atan2(endSp.pny, endSp.pnx), Math.atan2(-endSp.pny, -endSp.pnx), false);
     for (let i = steps; i >= 0; i--) {
@@ -2544,7 +2897,75 @@ class SquidGameWatch {
     const startSp = spinePts[0];
     c.arc(startSp.px, startSp.py, w1 * 0.5, Math.atan2(-startSp.pny, -startSp.pnx), Math.atan2(startSp.pny, startSp.pnx), false);
     c.closePath();
-    c.fill();
+
+    if (isRealColor) {
+      // GAME C: 活イカの透き通った触腕筋肉（内部の白い神経索が透ける）〜赤茶色マダラ模様へのリアルタイム変化
+      c.save();
+      c.clip();
+
+      const armGrad = c.createLinearGradient(
+        midSp.px - midSp.pnx * suckerDir * (midSp.r + 4),
+        midSp.py - midSp.pny * suckerDir * (midSp.r + 4),
+        midSp.px + midSp.pnx * suckerDir * (midSp.r + 6),
+        midSp.py + midSp.pny * suckerDir * (midSp.r + 6)
+      );
+      const dorsalAlpha = 0.30 + segFlush * 0.58;
+      const ventralAlpha = 0.36 + segFlush * 0.46;
+      armGrad.addColorStop(0, `rgba(${Math.round(185 - segFlush * 105)}, ${Math.round(220 - segFlush * 198)}, ${Math.round(235 - segFlush * 222)}, ${dorsalAlpha.toFixed(3)})`);
+      armGrad.addColorStop(0.52, `rgba(${Math.round(215 - segFlush * 65)}, ${Math.round(232 - segFlush * 188)}, ${Math.round(240 - segFlush * 212)}, ${((dorsalAlpha + ventralAlpha) * 0.5).toFixed(3)})`);
+      armGrad.addColorStop(1, `rgba(248, ${Math.round(242 - segFlush * 32)}, ${Math.round(240 - segFlush * 40)}, ${ventralAlpha.toFixed(3)})`);
+      c.fillStyle = armGrad;
+      c.fill();
+
+      // 透明時に触腕の中心を貫いて透けて見える「白い軸索（メイン神経・血管ライン）」
+      c.strokeStyle = `rgba(248, 250, 252, ${(0.45 * (1 - segFlush * 0.6)).toFixed(3)})`;
+      c.lineWidth = Math.max(1.5, midSp.r * 0.32);
+      c.beginPath();
+      c.moveTo(x1, y1);
+      c.quadraticCurveTo(cx, cy, x2, y2);
+      c.stroke();
+
+      // 触腕表面の色素胞（クロマトフォア）群：収縮時の微細点から赤茶色のマダラ模様へ集約
+      const tierColors = [
+        [58, 14, 7],
+        [128, 29, 16],
+        [166, 44, 22],
+        [196, 92, 24]
+      ];
+      const phaseSeed = tIdx * 2.1 + sIdx * 1.3;
+      for (let i = 0; i < this.tentacleChromatophores.length; i++) {
+        const tc = this.tentacleChromatophores[i];
+        const spIdx = Math.min(steps, Math.max(0, Math.round(tc.u * steps)));
+        const sp = spinePts[spIdx];
+        // 吸盤の反対側（背側〜側面）を中心に赤茶色マダラ模様が濃く集まる本物のイカの配色
+        const sideWeight = 1.0 - Math.max(0, tc.v * suckerDir * 0.55);
+        const cxPos = sp.px + sp.pnx * tc.v * sp.r;
+        const cyPos = sp.py + sp.pny * tc.v * sp.r;
+        const locFlush = this._getSquidFlushLevel(cxPos, cyPos);
+        const act = Math.max(0, Math.min(1, locFlush * (0.5 + tc.mottle * 0.7) * sideWeight + Math.sin(this.bioTime * 9 + tc.phase + phaseSeed) * 0.08));
+        const rad = (tc.baseR + (tc.maxR - tc.baseR) * Math.pow(act, 1.3)) * Math.max(0.45, sp.r / 12);
+        const rgb = tierColors[tc.tier];
+
+        if (act > 0.3 && rad > 1.2) {
+          c.fillStyle = `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, ${(act * 0.26).toFixed(3)})`;
+          c.beginPath();
+          c.arc(cxPos, cyPos, rad * 1.5, 0, Math.PI * 2);
+          c.fill();
+        }
+        c.fillStyle = `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, ${(0.40 + act * 0.52).toFixed(3)})`;
+        c.beginPath();
+        c.arc(cxPos, cyPos, rad, 0, Math.PI * 2);
+        c.fill();
+      }
+      c.restore();
+
+      // 半透明ゼラチン質の輪郭ハイライト
+      c.strokeStyle = `rgba(224, 242, 254, ${(0.40 - segFlush * 0.18).toFixed(3)})`;
+      c.lineWidth = 1.2;
+      c.stroke();
+    } else {
+      c.fill();
+    }
 
     // 2. 触腕の縁に沿って並ぶ「吸盤（カップ＋中央穴 ◎）」を3個ずつ描画
     const suckerSteps = [2, 5, 8];
@@ -2559,9 +2980,9 @@ class SquidGameWatch {
 
       if (isRealColor) {
         const cupGrad = c.createRadialGradient(sx - 1, sy - 1, 0.5, sx, sy, sRadius);
-        cupGrad.addColorStop(0, '#fff1f2');
-        cupGrad.addColorStop(0.65, '#fecdd3');
-        cupGrad.addColorStop(1, '#be123c');
+        cupGrad.addColorStop(0, 'rgba(255, 250, 245, 0.92)');
+        cupGrad.addColorStop(0.62, 'rgba(245, 222, 212, 0.85)');
+        cupGrad.addColorStop(1, `rgba(148, 52, 36, ${(0.55 + segFlush * 0.38).toFixed(3)})`);
         c.fillStyle = cupGrad;
       }
 
@@ -2575,16 +2996,19 @@ class SquidGameWatch {
       }
     }
 
-    // 吸盤の中央のくぼみ（LCD時は白抜きリング、GAME C時は生々しい暗赤色の吸盤穴）
+    // 吸盤の中央のくぼみ（LCD時は白抜きリング、GAME C時はキチン質の角質環と暗赤色の吸盤腔）
     if (holeCenters.length > 0) {
       if (isRealColor) {
-        c.fillStyle = '#4c0519';
+        c.fillStyle = '#3b0d06';
+        c.strokeStyle = 'rgba(253, 224, 71, 0.65)';
+        c.lineWidth = 0.9;
         c.beginPath();
         for (const h of holeCenters) {
           c.moveTo(h.sx + h.hr, h.sy);
           c.arc(h.sx, h.sy, h.hr, 0, Math.PI * 2);
         }
         c.fill();
+        c.stroke();
       } else {
         c.save();
         c.globalCompositeOperation = 'destination-out';
@@ -2601,7 +3025,7 @@ class SquidGameWatch {
     // 3. 先端セグメント（isTip）は細くカールした触腕フックを描く
     if (isTip) {
       if (isRealColor) {
-        c.strokeStyle = '#e16a64';
+        c.strokeStyle = `rgba(${Math.round(210 - segFlush * 65)}, ${Math.round(190 - segFlush * 145)}, ${Math.round(195 - segFlush * 165)}, ${(0.55 + segFlush * 0.4).toFixed(3)})`;
       }
       c.lineWidth = Math.max(3.5, w2 * 0.85);
       c.lineCap = 'round';
