@@ -114,15 +114,10 @@ class PiezoSoundEngine {
     this.beep(1760, 0.045, 0.04, 'square', 0.095);
   }
 
-  // 船に生還して布袋から金を降ろし+3点ボーナスが入る時のカウント音＆金貨ジャラジャラ音（「チャリッ・ピ・ピ・ピ！」）
+  // 船に生還して+3点ボーナスが入る時のカウント音（「ピ・ピ・ピ！」）
   boatBonusTick(stepIdx) {
     const freqs = [1568, 1760, 2093];
-    const base = freqs[stepIdx % 3];
-    // 金貨が甲板にこぼれ落ちる金属チャイム装飾音
-    this.beep(base * 1.5, 0.018, 0.0, 'triangle', 0.06);
-    this.beep(base * 1.25, 0.020, 0.022, 'triangle', 0.065);
-    // 本家生還ボーナス音
-    this.beep(base, 0.055, 0.042, 'square', 0.1);
+    this.beep(freqs[stepIdx % 3], 0.05, 0, 'square', 0.1);
   }
 
   // イカの足に捕まってバタバタもがく時の警告ブザー音
@@ -1800,25 +1795,18 @@ class SquidGameWatch {
 
   _stepDemoAI() {
     // TIMEモード中に画面内で動くデモダイバーAI
-    const readyToReturn = this.hasBag && (this.bagGoldCount || 0) >= 3;
-    if (!readyToReturn) {
+    if (!this.hasBag) {
       if (this.diverPos < 5) {
         const nextPos = this.diverPos + 1;
         if (!this._isPositionDangerous(nextPos)) {
           this.diverPos = nextPos;
         }
       } else {
-        const prevGold = this.bagGoldCount || 0;
-        this.hasBag = true;
         this.grabAnimPhase = 1;
-        this.grabAnimTimer = 0.22;
-        this.bagGoldCount = prevGold + 1;
-        if (typeof this.visualBagGold !== 'number' || this.visualBagGold < prevGold) {
-          this.visualBagGold = prevGold;
+        this.grabAnimTimer = 0.2;
+        if (Math.random() < 0.45) {
+          this.hasBag = true;
         }
-        this.bagStuffBounce = 1.0;
-        this.bagGoldRipple = 1.0;
-        this._spawnGoldStuffingBurst();
       }
     } else {
       if (this.diverPos > 1) {
@@ -1829,17 +1817,9 @@ class SquidGameWatch {
       } else {
         this.diverPos = 0;
         this.hasBag = false;
-        this.demoUnloadTimer = 0.90;
-        this.unloadElapsed = 0;
-        this._spawnBoatUnloadGoldWave(0);
         setTimeout(() => {
-          if (this.state === 'TIME') {
-            this.diverPos = 1;
-            this.bagGoldCount = 0;
-            this.visualBagGold = 0;
-            this.bagGoldRipple = 0;
-          }
-        }, 900);
+          if (this.state === 'TIME') this.diverPos = 1;
+        }, 500);
       }
     }
   }
@@ -3113,21 +3093,19 @@ class SquidGameWatch {
   }
 
   _drawBoatBowDiver(ctx, x, y, isLit, isUnloading) {
-    const isDemoUnloading = this.state === 'TIME' && this.diverPos === 0 && (this.demoUnloadTimer > 0);
-    const activeUnload = isLit && (isUnloading || isDemoUnloading || this.hasBag);
-    const unloadProg = (isUnloading || isDemoUnloading)
+    const activeUnload = isLit && (isUnloading || this.hasBag);
+    const unloadProg = isUnloading
       ? Math.min(1, (this.unloadElapsed || 0) / 1.05)
       : 0;
-    // 荷下ろし中は布袋を振るリズムに合わせてダイバーの上半身もわずかに前傾して揺れる
     const bodyLeanX = activeUnload ? Math.sin((this.unloadElapsed || 0) * 26) * 1.4 + 1.5 : 0;
 
-    // 1. 船首に立つダイバー本体
+    // 1. 船首に立つダイバー本体（GAME A / B は本家準拠の固定モノクロ液晶セグメント）
     this._drawSegment(ctx, isLit, (c) => {
       c.beginPath();
-      c.arc(x + bodyLeanX, y, 12, 0, Math.PI * 2);
+      c.arc(x, y, 12, 0, Math.PI * 2);
       c.fill();
       c.beginPath();
-      c.roundRect(x - 10 + bodyLeanX * 0.7, y + 12, 20, 24, 5);
+      c.roundRect(x - 10, y + 12, 20, 24, 5);
       c.fill();
       // 足
       c.lineWidth = 6;
@@ -3139,7 +3117,7 @@ class SquidGameWatch {
       c.lineTo(x + 9, y + 48);
       c.stroke();
     }, (c) => {
-      // 足（重厚な潜水ズボンと鉛靴）
+      // GAME C 専用：足（重厚な潜水ズボンと鉛靴）
       c.strokeStyle = '#6b5b3e';
       c.lineWidth = 6;
       c.lineCap = 'round';
@@ -3183,79 +3161,31 @@ class SquidGameWatch {
       c.fill();
     });
 
-    // 2. 船の甲板上に積み上がった黄金の山（LCDゴースト＆点灯セグメント＋リアル金貨山）
+    // GAME C 専用：船の甲板上に積み上がった黄金の山
     const hasDeckPile = (this.bagsReturned > 0) || activeUnload || (this.boatDeckCoins && this.boatDeckCoins.length > 0);
-    this._drawSegment(ctx, hasDeckPile, (c) => {
-      // 甲板上の金貨マウンドシルエット
-      c.beginPath();
-      c.moveTo(x + 14, y + 32);
-      c.quadraticCurveTo(x + 32, y + 20, x + 52, y + 32);
-      c.closePath();
-      c.fill();
-    }, (c) => {
-      this._drawBoatDeckTreasureMound(c, x + 32, y + 32, unloadProg);
-    });
-
-    // GAME A / B でも船の甲板上に積み上がったリアルな金貨・金塊の山を描画
-    if (!this._isRealColor() && hasDeckPile) {
+    if (this._isRealColor() && hasDeckPile) {
       ctx.save();
       this._drawBoatDeckTreasureMound(ctx, x + 32, y + 32, unloadProg);
       ctx.restore();
     }
 
-    // 3. 生還時に満杯の布袋を逆さに傾けて揺すり、金を船に降ろす腕＆布袋セグメント
-    this._drawSegment(ctx, activeUnload, (c) => {
-      const shakeY = Math.sin((this.unloadElapsed || 0) * 28) * 2.5;
-      const bagScale = Math.max(0.58, 1.0 - unloadProg * 0.42);
+    // 生還時に宝袋を高々と掲げる腕＆宝袋セグメント（+3点ボーナス時）
+    // GAME A / B は元の1981年モノクロ液晶セグメントそのまま、GAME C のみリアルな布袋荷下ろし演出
+    const bagRaisedLit = isLit && (isUnloading || this.hasBag);
+    this._drawSegment(ctx, bagRaisedLit, (c) => {
       c.lineWidth = 6;
       c.lineCap = 'round';
-      // 両腕で布袋の底と口元を持って傾ける
       c.beginPath();
-      c.moveTo(x + 6, y + 15);
-      c.lineTo(x + 25, y - 10 + shakeY);
-      c.moveTo(x + 8, y + 22);
-      c.lineTo(x + 28, y - 1 + shakeY);
+      c.moveTo(x + 6, y + 16);
+      c.lineTo(x + 24, y - 4);
       c.stroke();
-
-      // 逆さに傾けた布袋本体（金が減るにつれて少しずつしぼむ）
-      c.save();
-      c.translate(x + 30, y - 8 + shakeY);
-      c.rotate(2.35);
-      c.scale(bagScale, 1.08);
+      // 掲げた宝袋
       c.beginPath();
-      c.arc(0, 0, 11.5, 0, Math.PI * 2);
+      c.arc(x + 30, y - 10, 11, 0, Math.PI * 2);
       c.fill();
-      // 下向きに開いた布袋の口
-      c.beginPath();
-      c.moveTo(-6, -14);
-      c.lineTo(6, -14);
-      c.lineTo(3, -8);
-      c.lineTo(-3, -8);
-      c.closePath();
-      c.fill();
-      c.restore();
-
-      // 布袋の口から甲板へこぼれ落ちる金貨・金塊ストリーム（LCDドット列）
-      if (unloadProg < 0.92) {
-        const dropPhase = Math.floor((this.unloadElapsed || 0) * 18) % 3;
-        for (let d = 0; d < 4; d++) {
-          const dy = (y + 4) + d * 6.5 + dropPhase * 2.0;
-          const dx = (x + 30) + ((d % 2 === 0) ? -2.5 : 2.5);
-          c.beginPath();
-          c.arc(dx, dy, 2.8, 0, Math.PI * 2);
-          c.fill();
-        }
-      }
     }, (c) => {
       this._drawRealisticBoatBagUnloading(c, x, y, unloadProg);
     });
-
-    // GAME A / B でも満杯の布袋から金貨・金塊がザクザク船に降り注ぐリアルな質感アニメーションを重ねて描画
-    if (!this._isRealColor() && activeUnload) {
-      ctx.save();
-      this._drawRealisticBoatBagUnloading(ctx, x, y, unloadProg);
-      ctx.restore();
-    }
   }
 
   // 船の甲板(x≈200, y≈84)に積み上がるリアルな金貨・金塊・宝石の山を描画
@@ -3582,13 +3512,8 @@ class SquidGameWatch {
     c.lineWidth = 7;
     if (pose === 'rope') {
       c.beginPath();
-      // 左腕：布袋の絞り口（首元）を上からしっかり握る（ツボの取っ手のように見えない自然な保持角度）
-      c.moveTo(x - 10, y + 18);
-      c.lineTo(x - 26, y + 24);
-      // 右腕：船から垂れるロープ梯子を掴む
       c.moveTo(x + 8, y + 18);
       c.lineTo(x + 24, y + 6);
-      // 両足
       c.moveTo(x - 6, y + 40);
       c.lineTo(x - 12, y + 60);
       c.moveTo(x + 6, y + 40);
@@ -3596,27 +3521,21 @@ class SquidGameWatch {
       c.stroke();
     } else if (pose === 'walk1') {
       c.beginPath();
-      // 左腕：布袋の結び目を上から握って提げる
       c.moveTo(x - 10, y + 18);
-      c.lineTo(x - 26, y + 24);
-      // 右腕
+      c.lineTo(x - 24, y + 30);
       c.moveTo(x + 10, y + 18);
       c.lineTo(x + 24, y + 10);
-      // 両足
       c.moveTo(x - 6, y + 41);
-      c.lineTo(x - 16, y + 64);
+      c.lineTo(x - 18, y + 64);
       c.moveTo(x + 6, y + 41);
       c.lineTo(x + 16, y + 64);
       c.stroke();
     } else if (pose === 'walk2') {
       c.beginPath();
-      // 左腕：布袋の結び目を上から握って提げる
       c.moveTo(x - 10, y + 18);
-      c.lineTo(x - 26, y + 22);
-      // 右腕
+      c.lineTo(x - 22, y + 10);
       c.moveTo(x + 10, y + 18);
       c.lineTo(x + 24, y + 28);
-      // 両足
       c.moveTo(x - 5, y + 41);
       c.lineTo(x - 12, y + 65);
       c.moveTo(x + 6, y + 41);
@@ -3624,10 +3543,56 @@ class SquidGameWatch {
       c.stroke();
     } else {
       c.beginPath();
-      // 宝箱前：左手で布袋の口を大きく広げて構える
+      c.moveTo(x - 10, y + 20);
+      c.lineTo(x - 24, y + 32);
+      c.moveTo(x - 6, y + 41);
+      c.lineTo(x - 15, y + 65);
+      c.moveTo(x + 6, y + 41);
+      c.lineTo(x + 14, y + 65);
+      c.stroke();
+    }
+  }
+
+  // GAME C 専用：布袋の首元を上から自然に握る手足パス
+  _drawRealDiverLimbsPath(c, x, y, pose) {
+    c.lineWidth = 7;
+    if (pose === 'rope') {
+      c.beginPath();
+      c.moveTo(x - 10, y + 18);
+      c.lineTo(x - 26, y + 24);
+      c.moveTo(x + 8, y + 18);
+      c.lineTo(x + 24, y + 6);
+      c.moveTo(x - 6, y + 40);
+      c.lineTo(x - 12, y + 60);
+      c.moveTo(x + 6, y + 40);
+      c.lineTo(x + 14, y + 56);
+      c.stroke();
+    } else if (pose === 'walk1') {
+      c.beginPath();
+      c.moveTo(x - 10, y + 18);
+      c.lineTo(x - 26, y + 24);
+      c.moveTo(x + 10, y + 18);
+      c.lineTo(x + 24, y + 10);
+      c.moveTo(x - 6, y + 41);
+      c.lineTo(x - 16, y + 64);
+      c.moveTo(x + 6, y + 41);
+      c.lineTo(x + 16, y + 64);
+      c.stroke();
+    } else if (pose === 'walk2') {
+      c.beginPath();
+      c.moveTo(x - 10, y + 18);
+      c.lineTo(x - 26, y + 22);
+      c.moveTo(x + 10, y + 18);
+      c.lineTo(x + 24, y + 28);
+      c.moveTo(x - 5, y + 41);
+      c.lineTo(x - 12, y + 65);
+      c.moveTo(x + 6, y + 41);
+      c.lineTo(x + 20, y + 62);
+      c.stroke();
+    } else {
+      c.beginPath();
       c.moveTo(x - 10, y + 19);
       c.lineTo(x - 26, y + 24);
-      // 両足
       c.moveTo(x - 6, y + 41);
       c.lineTo(x - 14, y + 65);
       c.moveTo(x + 6, y + 41);
@@ -4024,7 +3989,7 @@ class SquidGameWatch {
       limbGrad.addColorStop(0.55, '#78684b');
       limbGrad.addColorStop(1, '#332b1d');
       c.strokeStyle = limbGrad;
-      this._drawDiverLimbsPath(c, x, y, pose);
+      this._drawRealDiverLimbsPath(c, x, y, pose);
 
       // 胴体（重厚なヴィンテージ潜水服＋胸部プロテクター陰影）
       const suitGrad = c.createLinearGradient(x - 12, y + 13, x + 12, y + 43);
@@ -4062,49 +4027,48 @@ class SquidGameWatch {
       // 呼吸気泡（ヘルメット排気口直上の2つの気泡もリアルな屈折・揺らぎ気泡として描画）
       this._drawSingleRefractiveBubble(c, x - 6, y - 20, 2.9, this.bioTime * 8.0);
       this._drawSingleRefractiveBubble(c, x - 2, y - 28, 3.8, this.bioTime * 7.2 + 1.5);
-    });
 
-    // 左手に持つ「布袋（CLOTH SACK）」セグメント（潜水中は常に手に持っており、金を拾うと底から溜まって膨らむ）
-    this._drawSegment(ctx, isLit, (c) => {
-      const nx = x - 26;
-      const ny = (pose === 'walk2') ? (y + 22) : (y + 24);
-      const w = hasBagLit ? 11.5 : 7.8;
-      const h = hasBagLit ? 25.0 : 22.0;
-      // 巾着・布袋の波打つ口ヒダ
-      c.beginPath();
-      c.moveTo(nx - 4, ny);
-      c.lineTo(nx - 7, ny - 8);
-      c.lineTo(nx - 2, ny - 6);
-      c.lineTo(nx, ny - 9);
-      c.lineTo(nx + 2, ny - 6);
-      c.lineTo(nx + 7, ny - 8);
-      c.lineTo(nx + 4, ny);
-      c.closePath();
-      c.fill();
-      // しずく型・底角マチ付きの布袋シルエット（ツボのような真円にしない）
-      c.beginPath();
-      c.moveTo(nx - 4, ny);
-      c.bezierCurveTo(nx - w * 0.7, ny + h * 0.3, nx - w, ny + h * 0.68, nx - w * 0.88, ny + h * 0.92);
-      c.quadraticCurveTo(nx, ny + h * 1.04, nx + w * 0.88, ny + h * 0.92);
-      c.bezierCurveTo(nx + w, ny + h * 0.68, nx + w * 0.7, ny + h * 0.3, nx + 4, ny);
-      c.closePath();
-      c.fill();
-    }, (c) => {
+      // GAME C 専用：海中に潜る時〜金を拾う時のリアルな「麻の布袋（空のしぼんだ状態→金が底から溜まって膨らむ状態）」
       this._drawUnderwaterClothSack(c, x, y, pose, hasBagLit);
     });
 
-    // GAME A / B でも、海中に潜る時〜金を拾う時にリアルな「麻の布袋（空のしぼんだ状態→金が底から溜まって膨らむ状態）」を描画
-    if (!this._isRealColor() && isLit) {
-      ctx.save();
-      this._drawUnderwaterClothSack(ctx, x, y, pose, hasBagLit);
-      ctx.restore();
+    // GAME A / B 用：腰にぶら下げる「宝袋（TREASURE BAG）」独立液晶セグメント（元の1981年モノクロ液晶セグメントそのまま）
+    if (!this._isRealColor()) {
+      this._drawSegment(ctx, hasBagLit, (c) => {
+        const bx = x - 22;
+        const by = y + 36;
+        // 袋の結び目
+        c.beginPath();
+        c.moveTo(bx - 5, by - 12);
+        c.lineTo(bx + 5, by - 12);
+        c.lineTo(bx + 2, by - 6);
+        c.lineTo(bx - 2, by - 6);
+        c.closePath();
+        c.fill();
+        // 膨らんだ宝袋本体
+        c.beginPath();
+        c.arc(bx, by + 3, 11.5, 0, Math.PI * 2);
+        c.fill();
+      });
     }
   }
 
   _drawTreasureGrabArms(ctx, x, y, reach1Lit, reach2Lit) {
     // 腕セグメント1：右下の宝箱の中に手を突っ込み、金貨と宝石をごっそり鷲掴みにする
-    const drawRealReach1 = (c) => {
-      // 耐圧キャンバス袖と重厚な潜水グローブ
+    this._drawSegment(ctx, reach1Lit, (c) => {
+      c.lineWidth = 7.5;
+      c.lineCap = 'round';
+      c.beginPath();
+      c.moveTo(x + 10, y + 20);
+      c.lineTo(x + 48, y + 28);
+      c.lineTo(x + 76, y + 24);
+      c.stroke();
+      // 掴んだ金貨の塊
+      c.beginPath();
+      c.arc(x + 82, y + 24, 7, 0, Math.PI * 2);
+      c.fill();
+    }, (c) => {
+      // GAME C 専用：耐圧キャンバス袖と重厚な潜水グローブ
       const armGrad = c.createLinearGradient(x + 10, y + 18, x + 78, y + 28);
       armGrad.addColorStop(0, '#b5a482');
       armGrad.addColorStop(0.65, '#8c7a56');
@@ -4141,31 +4105,21 @@ class SquidGameWatch {
         c.fill();
         c.stroke();
       }
-    };
+    });
 
-    this._drawSegment(ctx, reach1Lit, (c) => {
+    // 腕セグメント2：宝箱から引き上げ、左手で広げた布袋の口へ金貨を流し込む！
+    this._drawSegment(ctx, reach2Lit, (c) => {
       c.lineWidth = 7.5;
       c.lineCap = 'round';
       c.beginPath();
-      c.moveTo(x + 10, y + 20);
-      c.lineTo(x + 48, y + 28);
-      c.lineTo(x + 76, y + 24);
+      c.moveTo(x + 10, y + 18);
+      c.lineTo(x + 32, y + 2);
       c.stroke();
-      // 掴んだ金貨の塊
       c.beginPath();
-      c.arc(x + 82, y + 24, 7, 0, Math.PI * 2);
+      c.arc(x + 36, y - 2, 7.5, 0, Math.PI * 2);
       c.fill();
-    }, drawRealReach1);
-
-    if (!this._isRealColor() && reach1Lit) {
-      ctx.save();
-      drawRealReach1(ctx);
-      ctx.restore();
-    }
-
-    // 腕セグメント2：宝箱から引き上げ、左手で広げた布袋の口(x - 26, y + 16)へ金貨をザクザク流し込む！
-    const drawRealReach2 = (c) => {
-      // 1. 元のLCDセグメント位置の引き上げ腕（山盛りの金貨を抱えて運ぶ）
+    }, (c) => {
+      // GAME C 専用：1. 元のLCDセグメント位置の引き上げ腕（山盛りの金貨を抱えて運ぶ）
       c.strokeStyle = '#9c8b67';
       c.lineWidth = 7.5;
       c.lineCap = 'round';
@@ -4203,28 +4157,10 @@ class SquidGameWatch {
         c.stroke();
         c.restore();
       }
-    };
+    });
 
-    this._drawSegment(ctx, reach2Lit, (c) => {
-      c.lineWidth = 7.5;
-      c.lineCap = 'round';
-      c.beginPath();
-      c.moveTo(x + 10, y + 18);
-      c.lineTo(x + 32, y + 2);
-      c.stroke();
-      c.beginPath();
-      c.arc(x + 36, y - 2, 7.5, 0, Math.PI * 2);
-      c.fill();
-    }, drawRealReach2);
-
-    if (!this._isRealColor() && reach2Lit) {
-      ctx.save();
-      drawRealReach2(ctx);
-      ctx.restore();
-    }
-
-    // 全モード共通：宝箱からダイバーの手を経て左手の布袋の口へ吸い込まれ、布袋の底に溜まっていく連続金貨・金塊・宝石パーティクル描画
-    if (this.goldCoinsInFlight && this.goldCoinsInFlight.length > 0) {
+    // GAME C 専用：宝箱からダイバーの手を経て左手の布袋の口へ吸い込まれ、布袋の底に溜まっていく連続金貨・金塊・宝石パーティクル描画
+    if (this._isRealColor() && this.goldCoinsInFlight && this.goldCoinsInFlight.length > 0) {
       ctx.save();
       for (const gc of this.goldCoinsInFlight) {
         if (gc.t < 0) continue;
