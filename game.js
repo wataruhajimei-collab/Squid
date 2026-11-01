@@ -300,6 +300,8 @@ class SquidGameWatch {
 
     // GAME C: 袋に詰めた金貨の量・袋の揺れ・飛び交う金貨パーティクル・船上荷下ろし演出
     this.bagGoldCount = 0;
+    this.visualBagGold = 0;
+    this.bagGoldRipple = 0;
     this.bagStuffBounce = 0;
     this.goldCoinsInFlight = [];
     this.unloadElapsed = 0;
@@ -1032,6 +1034,9 @@ class SquidGameWatch {
     this.lives = 3;
     this.diverPos = 1;
     this.hasBag = false;
+    this.bagGoldCount = 0;
+    this.visualBagGold = 0;
+    this.bagGoldRipple = 0;
     this.grabAnimPhase = 0;
     this.tentacles = [
       { maxLen: 4, len: 1, dir: 1, wait: 0 },
@@ -1067,6 +1072,8 @@ class SquidGameWatch {
     this.diverPos = 0;
     this.hasBag = false;
     this.bagGoldCount = 0;
+    this.visualBagGold = 0;
+    this.bagGoldRipple = 0;
     this.bagStuffBounce = 0;
     this.goldCoinsInFlight = [];
     this.unloadElapsed = 0;
@@ -1180,10 +1187,15 @@ class SquidGameWatch {
       this._triggerCaught(3);
       return;
     }
+    const prevGold = this.bagGoldCount || 0;
     this.hasBag = true;
     this.treasuresGrabbed += 1;
-    this.bagGoldCount = (this.bagGoldCount || 0) + 1;
+    this.bagGoldCount = prevGold + 1;
+    if (typeof this.visualBagGold !== 'number' || this.visualBagGold < prevGold) {
+      this.visualBagGold = prevGold;
+    }
     this.bagStuffBounce = 1.0;
+    this.bagGoldRipple = 1.0;
     this.grabAnimPhase = 1;
     this.grabAnimTimer = 0.22;
     this.squidFlushBoost = Math.min(1.0, this.squidFlushBoost + 0.45);
@@ -1191,25 +1203,25 @@ class SquidGameWatch {
     this._spawnGoldStuffingBurst();
     this.sound.grabTreasure();
     this._addScore(1);
-    this._setStatusText(`💰 財宝ゲット (+1点)！ 続けて取るか LEFT ◀ で船へ戻ろう！`);
+    this._setStatusText(`💰 財宝ゲット (+1点)！ 布袋に金が溜まっていくぞ (現在${this.bagGoldCount}掴み)！`);
   }
 
-  // 宝箱(616,392)からダイバーの手を経由して腰の宝袋の口(512,392)へ金貨・宝石を次々と詰め込むパーティクルを生成
+  // 宝箱(628,394)からダイバーの手を経由して左手の布袋の大きく開いた口(508,384)へ金貨・金塊・宝石を次々と流し込むパーティクルを生成
   _spawnGoldStuffingBurst() {
     if (!this.goldCoinsInFlight) this.goldCoinsInFlight = [];
-    const types = ['coin', 'coin', 'coin', 'ingot', 'ruby', 'emerald', 'coin'];
+    const types = ['coin', 'coin', 'ingot', 'coin', 'ruby', 'coin', 'emerald', 'ingot', 'coin'];
     for (let i = 0; i < 12; i++) {
       const kind = types[i % types.length];
       this.goldCoinsInFlight.push({
         kind,
-        t: -i * 0.028, // 時間差で連続して袋へ吸い込まれる
-        duration: 0.36 + (i % 3) * 0.04,
-        startX: 610 + (Math.random() - 0.5) * 18,
-        startY: 392 + (Math.random() - 0.5) * 10,
-        ctrlX: 564 + (Math.random() - 0.5) * 18,
-        ctrlY: 344 - Math.random() * 20,
-        endX: 512 + (Math.random() - 0.5) * 8,
-        endY: 394 + (Math.random() - 0.5) * 5,
+        t: -i * 0.026, // 時間差で連続して布袋の口へ吸い込まれる
+        duration: 0.34 + (i % 3) * 0.035,
+        startX: 626 + (Math.random() - 0.5) * 20,
+        startY: 394 + (Math.random() - 0.5) * 10,
+        ctrlX: 564 + (Math.random() - 0.5) * 14,
+        ctrlY: 342 - Math.random() * 18,
+        endX: 508 + (Math.random() - 0.5) * 7,
+        endY: 384 + (Math.random() - 0.5) * 4,
         rot: Math.random() * Math.PI * 2,
         rotSpeed: (Math.random() - 0.5) * 18,
         r: kind === 'ingot' ? 4.4 : (3.1 + (i % 3) * 0.65)
@@ -1431,18 +1443,25 @@ class SquidGameWatch {
     if (this.bagStuffBounce > 0) {
       this.bagStuffBounce = Math.max(0, this.bagStuffBounce - dt * 3.4);
     }
+    if (this.bagGoldRipple > 0) {
+      this.bagGoldRipple = Math.max(0, this.bagGoldRipple - dt * 3.2);
+    }
 
-    // 宝箱から袋へ詰め込まれる金貨・宝石の放物線アニメーション更新
+    // 宝箱から布袋へ詰め込まれる金貨・金塊・宝石の放物線アニメーション更新（着弾ごとに布袋の中の金かさが増える）
     if (this.goldCoinsInFlight && this.goldCoinsInFlight.length > 0) {
       for (let i = this.goldCoinsInFlight.length - 1; i >= 0; i--) {
         const gc = this.goldCoinsInFlight[i];
         gc.t += dt;
         gc.rot += gc.rotSpeed * dt;
         if (gc.t >= gc.duration) {
-          this.bagStuffBounce = Math.min(1.0, this.bagStuffBounce + 0.22);
+          this.bagStuffBounce = Math.min(1.0, this.bagStuffBounce + 0.24);
+          this.bagGoldRipple = 1.0;
+          this.visualBagGold = Math.min(this.bagGoldCount || 1, (this.visualBagGold || 0) + 0.11);
           this.goldCoinsInFlight.splice(i, 1);
         }
       }
+    } else {
+      this.visualBagGold = this.bagGoldCount || 0;
     }
 
     // 船に戻った時、満杯の布袋から船の甲板へ降り注ぐ金貨・金塊・宝石の物理バウンド更新
@@ -1661,6 +1680,8 @@ class SquidGameWatch {
         } else {
           this.hasBag = false;
           this.bagGoldCount = 0;
+          this.visualBagGold = 0;
+          this.bagGoldRipple = 0;
           this.goldCoinsInFlight = [];
           this.state = 'PLAYING';
           this._setStatusText('RIGHT ▶ ボタンで再び海底へ潜ろう！');
@@ -1688,6 +1709,8 @@ class SquidGameWatch {
             this.diverPos = 0;
             this.hasBag = false;
             this.bagGoldCount = 0;
+            this.visualBagGold = 0;
+            this.bagGoldRipple = 0;
             this.goldCoinsInFlight = [];
             this.caughtTentacleIdx = -1;
             // 捕まった足を少し引っ込めて再開
@@ -1777,21 +1800,25 @@ class SquidGameWatch {
 
   _stepDemoAI() {
     // TIMEモード中に画面内で動くデモダイバーAI
-    if (!this.hasBag) {
+    const readyToReturn = this.hasBag && (this.bagGoldCount || 0) >= 3;
+    if (!readyToReturn) {
       if (this.diverPos < 5) {
         const nextPos = this.diverPos + 1;
         if (!this._isPositionDangerous(nextPos)) {
           this.diverPos = nextPos;
         }
       } else {
+        const prevGold = this.bagGoldCount || 0;
+        this.hasBag = true;
         this.grabAnimPhase = 1;
-        this.grabAnimTimer = 0.2;
-        this.bagGoldCount = (this.bagGoldCount || 0) + 1;
-        this.bagStuffBounce = 1.0;
-        this._spawnGoldStuffingBurst();
-        if (Math.random() < 0.45) {
-          this.hasBag = true;
+        this.grabAnimTimer = 0.22;
+        this.bagGoldCount = prevGold + 1;
+        if (typeof this.visualBagGold !== 'number' || this.visualBagGold < prevGold) {
+          this.visualBagGold = prevGold;
         }
+        this.bagStuffBounce = 1.0;
+        this.bagGoldRipple = 1.0;
+        this._spawnGoldStuffingBurst();
       }
     } else {
       if (this.diverPos > 1) {
@@ -1809,6 +1836,8 @@ class SquidGameWatch {
           if (this.state === 'TIME') {
             this.diverPos = 1;
             this.bagGoldCount = 0;
+            this.visualBagGold = 0;
+            this.bagGoldRipple = 0;
           }
         }, 900);
       }
@@ -3553,8 +3582,13 @@ class SquidGameWatch {
     c.lineWidth = 7;
     if (pose === 'rope') {
       c.beginPath();
+      // 左腕：布袋の絞り口（首元）を上からしっかり握る（ツボの取っ手のように見えない自然な保持角度）
+      c.moveTo(x - 10, y + 18);
+      c.lineTo(x - 26, y + 24);
+      // 右腕：船から垂れるロープ梯子を掴む
       c.moveTo(x + 8, y + 18);
       c.lineTo(x + 24, y + 6);
+      // 両足
       c.moveTo(x - 6, y + 40);
       c.lineTo(x - 12, y + 60);
       c.moveTo(x + 6, y + 40);
@@ -3562,21 +3596,27 @@ class SquidGameWatch {
       c.stroke();
     } else if (pose === 'walk1') {
       c.beginPath();
+      // 左腕：布袋の結び目を上から握って提げる
       c.moveTo(x - 10, y + 18);
-      c.lineTo(x - 24, y + 30);
+      c.lineTo(x - 26, y + 24);
+      // 右腕
       c.moveTo(x + 10, y + 18);
       c.lineTo(x + 24, y + 10);
+      // 両足
       c.moveTo(x - 6, y + 41);
-      c.lineTo(x - 18, y + 64);
+      c.lineTo(x - 16, y + 64);
       c.moveTo(x + 6, y + 41);
       c.lineTo(x + 16, y + 64);
       c.stroke();
     } else if (pose === 'walk2') {
       c.beginPath();
+      // 左腕：布袋の結び目を上から握って提げる
       c.moveTo(x - 10, y + 18);
-      c.lineTo(x - 22, y + 10);
+      c.lineTo(x - 26, y + 22);
+      // 右腕
       c.moveTo(x + 10, y + 18);
       c.lineTo(x + 24, y + 28);
+      // 両足
       c.moveTo(x - 5, y + 41);
       c.lineTo(x - 12, y + 65);
       c.moveTo(x + 6, y + 41);
@@ -3584,14 +3624,361 @@ class SquidGameWatch {
       c.stroke();
     } else {
       c.beginPath();
-      c.moveTo(x - 10, y + 20);
-      c.lineTo(x - 24, y + 32);
+      // 宝箱前：左手で布袋の口を大きく広げて構える
+      c.moveTo(x - 10, y + 19);
+      c.lineTo(x - 26, y + 24);
+      // 両足
       c.moveTo(x - 6, y + 41);
-      c.lineTo(x - 15, y + 65);
+      c.lineTo(x - 14, y + 65);
       c.moveTo(x + 6, y + 41);
       c.lineTo(x + 14, y + 65);
       c.stroke();
     }
+  }
+
+  // 海中でダイバーが手に持つ「麻の布袋（CLOTH TREASURE SACK）」の描画
+  // ・潜水中（金0個）は柔らかくしぼんだ生成り麻の布袋（縦ヒダ・底角マチ・絞り口フリル・麻紐結び目）
+  // ・宝箱で金を拾うたびに、布袋の底から1段ずつ金貨・金塊・宝石が積み上がり、布袋が重みでぷっくり膨らんでいく
+  _drawUnderwaterClothSack(c, x, y, pose, hasBagLit) {
+    const nx = x - 26;
+    const ny = (pose === 'walk2') ? (y + 22) : (y + 24);
+    const isAtChest = (pose === 'chest');
+
+    const rawGold = hasBagLit
+      ? Math.max(0.32, (typeof this.visualBagGold === 'number' ? this.visualBagGold : (this.bagGoldCount || 1)))
+      : 0;
+    const fillRatio = Math.min(1.0, rawGold / 5.0); // 0.0(空の布袋) 〜 1.0(満杯の布袋)
+    const bounce = isAtChest ? (this.bagStuffBounce || 0) : 0;
+    const ripple = isAtChest ? (this.bagGoldRipple || 0) : 0;
+    const isFillingNow = isAtChest && (
+      this.grabAnimPhase > 0 ||
+      bounce > 0.04 ||
+      (this.goldCoinsInFlight && this.goldCoinsInFlight.length > 0)
+    );
+
+    // 水流による布袋の揺れ（空の時は布が柔らかくたなびき、金が溜まるほど重みでどっしり落ち着く）
+    // 宝箱前では布袋の口を右側の宝箱・右手方向へ向けて少し傾けて広げる
+    const currentSway = Math.sin(this.bioTime * 3.1 + x * 0.05) * (0.13 * (1.0 - fillRatio * 0.55));
+    const baseTilt = isAtChest ? -0.18 : (0.06 + currentSway);
+
+    c.save();
+    c.translate(nx, ny);
+    c.rotate(baseTilt);
+
+    // 金貨が袋に着弾した瞬間の弾성バウンド（横にぷっくり広がり縦に少し沈む）
+    const stretchX = 1.0 + Math.sin(bounce * Math.PI * 2) * 0.16;
+    const stretchY = 1.0 - Math.sin(bounce * Math.PI * 2) * 0.11;
+    c.scale(stretchX, stretchY);
+
+    // 布袋のサイズパラメータ（空の時は細長くしなやかな布袋、金が溜まるにつれて底がぷっくり大きく膨らむ）
+    const neckW = isAtChest ? 4.8 : 3.8;
+    const bagH = 22.0 + fillRatio * 5.5;
+    const upperW = 5.8 + fillRatio * 4.5;
+    const bellyW = 7.2 + fillRatio * 8.4; // 空: 7.2px(しぼんだ布袋) -> 満杯: 15.6px(パンパンの布袋)
+    const cornerW = 6.6 + fillRatio * 5.4;
+
+    const traceSackBody = () => {
+      c.beginPath();
+      c.moveTo(-neckW, 0);
+      // 左肩〜左腹（布の柔らかいドレープ曲線）
+      c.bezierCurveTo(
+        -upperW, bagH * 0.26,
+        -bellyW * 1.04, bagH * 0.62,
+        -cornerW * 1.05, bagH * 0.90
+      );
+      // 布袋特有の底の左角耳（縫い目マチ）から底面中央へ
+      c.quadraticCurveTo(
+        -cornerW * 0.95, bagH * 1.01,
+        0, bagH + (fillRatio > 0 ? 1.4 : -0.4)
+      );
+      // 底面中央から右角耳（縫い目マチ）へ
+      c.quadraticCurveTo(
+        cornerW * 0.95, bagH * 1.01,
+        cornerW * 1.05, bagH * 0.90
+      );
+      // 右腹〜右肩
+      c.bezierCurveTo(
+        bellyW * 1.04, bagH * 0.62,
+        upperW, bagH * 0.26,
+        neckW, 0
+      );
+      c.closePath();
+    };
+
+    // 1. 袋の口元の布ヒダ（巾着の絞り耳フリル／宝箱前ではガバッと開いた布袋の口）
+    const mouthOpen = isAtChest || isFillingNow;
+    const mouthW = mouthOpen ? (8.2 + fillRatio * 2.4) : (6.6 + fillRatio * 1.2);
+    const mouthTopY = mouthOpen ? -10.5 : -9.2;
+
+    const ruffleGrad = c.createLinearGradient(-mouthW, mouthTopY, mouthW, 0);
+    ruffleGrad.addColorStop(0, '#faf3e0');
+    ruffleGrad.addColorStop(0.5, '#e2cfa6');
+    ruffleGrad.addColorStop(1, '#b0915e');
+    c.fillStyle = ruffleGrad;
+    c.strokeStyle = '#6e5229';
+    c.lineWidth = 1.15;
+
+    // 波打つ3枚の柔らかい布ヒダ（陶器のリムではなく巾着袋の絞り布耳）
+    c.beginPath();
+    c.moveTo(-neckW, 0.5);
+    c.quadraticCurveTo(-mouthW * 1.05, mouthTopY * 0.45, -mouthW * 0.88, mouthTopY * 0.88);
+    c.quadraticCurveTo(-mouthW * 0.55, mouthTopY * 1.15, -mouthW * 0.25, mouthTopY * 0.78);
+    c.quadraticCurveTo(0, mouthTopY * 1.22, mouthW * 0.25, mouthTopY * 0.78);
+    c.quadraticCurveTo(mouthW * 0.55, mouthTopY * 1.15, mouthW * 0.88, mouthTopY * 0.88);
+    c.quadraticCurveTo(mouthW * 1.05, mouthTopY * 0.45, neckW, 0.5);
+    c.closePath();
+    c.fill();
+    c.stroke();
+
+    // 布耳の縦シワ
+    c.strokeStyle = 'rgba(110, 82, 41, 0.48)';
+    c.lineWidth = 0.9;
+    c.beginPath();
+    c.moveTo(-mouthW * 0.32, mouthTopY * 0.75); c.lineTo(-neckW * 0.45, -0.5);
+    c.moveTo(0, mouthTopY * 0.92);              c.lineTo(0, -0.5);
+    c.moveTo(mouthW * 0.32, mouthTopY * 0.75);  c.lineTo(neckW * 0.45, -0.5);
+    c.stroke();
+
+    // 宝箱前では大きく開いた布袋の口の内側（暗い布地穴）を描画し、そこに金貨が吸い込まれるように見せる
+    if (mouthOpen) {
+      c.fillStyle = '#3b2510';
+      c.strokeStyle = '#6e5229';
+      c.lineWidth = 0.9;
+      c.beginPath();
+      c.ellipse(0, mouthTopY * 0.72, mouthW * 0.76, 2.9, 0, 0, Math.PI * 2);
+      c.fill();
+      c.stroke();
+    }
+
+    // 満杯に近い時は布袋の口元からも金貨・宝石が山盛りに顔を覗かせる
+    if (fillRatio >= 0.45) {
+      const topCoins = [
+        [-3.2, mouthTopY * 0.72, 2.5, '#fde047'],
+        [0.0,  mouthTopY * 0.82, 2.8, '#facc15'],
+        [3.2,  mouthTopY * 0.70, 2.5, '#fde047']
+      ];
+      if (fillRatio >= 0.75) {
+        topCoins.push([-1.5, mouthTopY * 0.62, 2.2, '#ef4444']);
+        topCoins.push([1.8,  mouthTopY * 0.62, 2.2, '#10b981']);
+      }
+      for (const [tcx, tcy, tcr, tcol] of topCoins) {
+        c.fillStyle = tcol;
+        c.strokeStyle = '#713f12';
+        c.lineWidth = 0.7;
+        c.beginPath();
+        c.arc(tcx, tcy, tcr, 0, Math.PI * 2);
+        c.fill();
+        c.stroke();
+      }
+    }
+
+    // 2. 布袋本体（明るい生成り麻布・帆布のマットな質感グラデーション）
+    const sackGrad = c.createRadialGradient(-bellyW * 0.28, bagH * 0.35, 1.5, 0, bagH * 0.55, Math.max(bellyW, bagH) * 0.95);
+    sackGrad.addColorStop(0, '#fbf5e6');   // 明るい生成り麻ハイライト
+    sackGrad.addColorStop(0.45, '#e6d3ad'); // ナチュラル麻布・帆布ベージュ
+    sackGrad.addColorStop(0.82, '#c2a36e'); // 布地の柔らかい陰影
+    sackGrad.addColorStop(1, '#8a6b3b');    // 輪郭の織り影
+    c.fillStyle = sackGrad;
+    traceSackBody();
+    c.fill();
+
+    // 3. 布袋内部の描画（クリップ領域内：麻布の織り目・空袋の縦ドレープ・底から順番に溜まっていく金貨と金塊の層）
+    c.save();
+    traceSackBody();
+    c.clip();
+
+    // (A) 麻布・帆布のクロスハッチ織り目テクスチャ
+    c.strokeStyle = 'rgba(120, 88, 42, 0.16)';
+    c.lineWidth = 0.7;
+    c.beginPath();
+    for (let wy = 4; wy < bagH; wy += 4.2) {
+      c.moveTo(-bellyW, wy);
+      c.lineTo(bellyW, wy + 1.2);
+    }
+    for (let wx = -12; wx <= 12; wx += 4.5) {
+      c.moveTo(wx, 0);
+      c.lineTo(wx - 1.5, bagH);
+    }
+    c.stroke();
+
+    // (B) 金が溜まっていない部分（空の布袋〜上部）に入る柔らかい布の縦ヒダ・たるみシワ
+    const emptyTopH = bagH * (1.0 - fillRatio * 0.78);
+    if (emptyTopH > 4) {
+      const folds = [-0.42, 0.0, 0.42];
+      for (const f of folds) {
+        c.strokeStyle = 'rgba(115, 82, 38, 0.36)';
+        c.lineWidth = 1.1;
+        c.beginPath();
+        c.moveTo(f * neckW * 0.8, 1);
+        c.quadraticCurveTo(f * bellyW * 0.95, emptyTopH * 0.55, f * cornerW * 0.75, Math.min(bagH - 2, emptyTopH + 5));
+        c.stroke();
+
+        c.strokeStyle = 'rgba(255, 252, 240, 0.48)';
+        c.lineWidth = 0.8;
+        c.beginPath();
+        c.moveTo(f * neckW * 0.8 + 1.0, 1);
+        c.quadraticCurveTo(f * bellyW * 0.95 + 1.0, emptyTopH * 0.55, f * cornerW * 0.75 + 1.0, Math.min(bagH - 2, emptyTopH + 5));
+        c.stroke();
+      }
+    }
+
+    // (C) 金を拾うたびに布袋の底から順番に金貨・金塊・宝石が溜まっていく演出！
+    if (fillRatio > 0.01) {
+      // 現在の金のかさ（底から fillTopY まで金が詰まっている）
+      const fillFrac = Math.min(0.95, 0.22 + fillRatio * 0.73);
+      const fillTopY = bagH * (1.0 - fillFrac);
+
+      // 布袋の底から金が詰まっている領域の黄金色の透かし・張り出しグロー
+      const goldGlowGrad = c.createLinearGradient(0, fillTopY, 0, bagH);
+      goldGlowGrad.addColorStop(0, 'rgba(253, 224, 71, 0.42)');
+      goldGlowGrad.addColorStop(0.4, 'rgba(234, 179, 8, 0.48)');
+      goldGlowGrad.addColorStop(1, 'rgba(180, 83, 9, 0.55)');
+      c.fillStyle = goldGlowGrad;
+      c.fillRect(-bellyW - 2, fillTopY, (bellyW + 2) * 2, bagH - fillTopY + 4);
+
+      // 布袋の中に底から順番に積み上がっていく金貨・金塊・ルビー・エメラルドの層
+      // （宝箱前では内部に溜まっていく様子がくっきり見え、移動中も布越しに黄金の塊と凹凸が透けて見える）
+      const interiorAlpha = (isAtChest || isFillingNow) ? 0.92 : 0.62;
+      c.save();
+      c.globalAlpha = interiorAlpha;
+
+      // 下の段(row 0: 底)から上の段(row 4: 口元近く)まで順番に溜まる財宝データ
+      const stackItems = [
+        // 1掴み目 (fillRatio > 0.05): 布袋の底に最初の金貨と金塊が溜まる
+        { req: 0.05, x: -3.2, y: bagH - 3.2, r: 2.9, kind: 'coin' },
+        { req: 0.05, x:  3.0, y: bagH - 3.0, r: 2.9, kind: 'coin' },
+        { req: 0.12, x:  0.0, y: bagH - 4.2, r: 3.3, kind: 'ingot' },
+        // 2掴み目 (fillRatio >= 0.30): 底の上に2段目の金貨とルビーが積み上がる
+        { req: 0.28, x: -5.2, y: bagH - 7.2, r: 2.8, kind: 'coin' },
+        { req: 0.32, x:  4.8, y: bagH - 7.0, r: 2.8, kind: 'coin' },
+        { req: 0.36, x: -1.4, y: bagH - 8.0, r: 2.5, kind: 'ruby' },
+        { req: 0.38, x:  2.2, y: bagH - 8.2, r: 3.0, kind: 'coin' },
+        // 3掴み目 (fillRatio >= 0.50): 布袋の中腹まで金塊・エメラルド・金貨が溜まる
+        { req: 0.48, x: -6.0, y: bagH - 11.5, r: 2.9, kind: 'coin' },
+        { req: 0.52, x:  0.2, y: bagH - 12.0, r: 3.4, kind: 'ingot' },
+        { req: 0.56, x:  5.6, y: bagH - 11.4, r: 2.5, kind: 'emerald' },
+        { req: 0.58, x: -2.8, y: bagH - 13.2, r: 2.8, kind: 'coin' },
+        // 4掴み目 (fillRatio >= 0.72): 布袋の上部までぎっしり溜まる
+        { req: 0.70, x:  3.4, y: bagH - 15.6, r: 2.9, kind: 'coin' },
+        { req: 0.74, x: -4.2, y: bagH - 16.2, r: 3.2, kind: 'ingot' },
+        { req: 0.78, x:  0.0, y: bagH - 17.0, r: 2.6, kind: 'ruby' },
+        // 5掴み目以降 (fillRatio >= 0.90): 首元までパンパンの満杯！
+        { req: 0.88, x: -2.6, y: bagH - 20.2, r: 2.8, kind: 'coin' },
+        { req: 0.92, x:  2.8, y: bagH - 20.0, r: 2.8, kind: 'coin' },
+        { req: 0.95, x:  0.0, y: bagH - 21.2, r: 2.5, kind: 'emerald' }
+      ];
+
+      for (const item of stackItems) {
+        if (fillRatio < item.req) continue;
+        c.save();
+        c.translate(item.x, item.y);
+        if (item.kind === 'ingot') {
+          c.fillStyle = '#facc15';
+          c.strokeStyle = '#854d0e';
+          c.lineWidth = 0.75;
+          c.beginPath();
+          c.roundRect(-item.r, -item.r * 0.52, item.r * 2, item.r * 1.04, 0.9);
+          c.fill();
+          c.stroke();
+          c.fillStyle = '#fef9c3';
+          c.fillRect(-item.r * 0.6, -item.r * 0.25, item.r * 1.2, item.r * 0.28);
+        } else if (item.kind === 'ruby' || item.kind === 'emerald') {
+          c.fillStyle = item.kind === 'ruby' ? '#ef4444' : '#10b981';
+          c.strokeStyle = '#fef08a';
+          c.lineWidth = 0.65;
+          c.beginPath();
+          c.arc(0, 0, item.r * 0.85, 0, Math.PI * 2);
+          c.fill();
+          c.stroke();
+        } else {
+          c.fillStyle = '#fde047';
+          c.strokeStyle = '#854d0e';
+          c.lineWidth = 0.7;
+          c.beginPath();
+          c.ellipse(0, 0, item.r, item.r * 0.7, 0.1, 0, Math.PI * 2);
+          c.fill();
+          c.stroke();
+        }
+        c.restore();
+      }
+      c.restore();
+
+      // 溜まった金の天面ライン（新しい金貨が落ちてくるたびにキラキラ波打つ黄金ライン）
+      c.strokeStyle = `rgba(254, 249, 195, ${(0.55 + ripple * 0.42).toFixed(3)})`;
+      c.lineWidth = 1.3 + ripple * 0.8;
+      c.beginPath();
+      c.moveTo(-bellyW * 0.78, fillTopY + 1.5);
+      c.quadraticCurveTo(0, fillTopY - 1.8 - ripple * 2.2, bellyW * 0.78, fillTopY + 1.5);
+      c.stroke();
+
+      // 布地の内側から金貨が押し広げている立体的な布の張りハイライト
+      c.strokeStyle = 'rgba(255, 251, 235, 0.45)';
+      c.lineWidth = 1.0;
+      c.beginPath();
+      c.arc(-bellyW * 0.32, Math.min(bagH - 5, fillTopY + 5), 3.6, -0.6, 1.3);
+      c.stroke();
+      c.beginPath();
+      c.arc(bellyW * 0.30, Math.min(bagH - 4, fillTopY + 6), 3.4, -0.4, 1.5);
+      c.stroke();
+    }
+
+    // (D) 布袋の両脇の縫い目ステッチ（破線）
+    c.save();
+    c.strokeStyle = 'rgba(110, 78, 35, 0.52)';
+    c.lineWidth = 0.85;
+    c.setLineDash([2.0, 2.0]);
+    c.beginPath();
+    c.moveTo(-neckW + 1.2, 2);
+    c.quadraticCurveTo(-bellyW + 1.8, bagH * 0.62, -cornerW * 0.8, bagH - 1.5);
+    c.moveTo(neckW - 1.2, 2);
+    c.quadraticCurveTo(bellyW - 1.8, bagH * 0.62, cornerW * 0.8, bagH - 1.5);
+    c.stroke();
+    c.restore();
+
+    c.restore(); // end clip
+
+    // 4. 布袋本体の外周アウトライン（柔らかい麻布の輪郭）
+    c.strokeStyle = '#6e5229';
+    c.lineWidth = 1.25;
+    traceSackBody();
+    c.stroke();
+
+    // 5. 首元をキュッと縛る二重巻きの麻紐（ドローストリング）と蝶結び・垂れ紐
+    c.strokeStyle = '#fef08a';
+    c.lineWidth = 2.0;
+    c.lineCap = 'round';
+    c.beginPath();
+    c.moveTo(-neckW - 0.8, -0.8);
+    c.quadraticCurveTo(0, 1.2, neckW + 0.8, -0.8);
+    c.moveTo(-neckW - 0.5, 1.2);
+    c.quadraticCurveTo(0, 3.0, neckW + 0.5, 1.2);
+    c.stroke();
+
+    // 麻紐の結び目と水中で揺れる2本の垂れ紐（布袋らしさの決定打）
+    const cordSway = Math.sin(this.bioTime * 5.2 + x * 0.1) * 1.8;
+    c.strokeStyle = '#fde047';
+    c.lineWidth = 1.35;
+    c.beginPath();
+    c.moveTo(-neckW, 0.5);
+    c.quadraticCurveTo(-neckW - 4.5, 3.5 + cordSway * 0.5, -neckW - 5.5, 8.5 + cordSway);
+    c.moveTo(-neckW + 0.5, 1.2);
+    c.quadraticCurveTo(-neckW - 2.5, 5.0 - cordSway * 0.4, -neckW - 2.8, 9.8 - cordSway * 0.6);
+    c.stroke();
+
+    // 6. 布袋の首元を上からしっかり握っているダイバーの左手グローブ
+    const gloveGrad = c.createRadialGradient(neckW * 0.5, -1.5, 0.8, neckW * 0.6, 0, 4.6);
+    gloveGrad.addColorStop(0, '#d8cba8');
+    gloveGrad.addColorStop(0.6, '#8c7a56');
+    gloveGrad.addColorStop(1, '#3f3524');
+    c.fillStyle = gloveGrad;
+    c.strokeStyle = '#292216';
+    c.lineWidth = 1.0;
+    c.beginPath();
+    c.arc(neckW * 0.55, -0.2, 4.0, 0, Math.PI * 2);
+    c.fill();
+    c.stroke();
+
+    c.restore();
   }
 
   _drawUnderwaterDiver(ctx, x, y, pose, isLit, hasBagLit) {
@@ -3677,122 +4064,46 @@ class SquidGameWatch {
       this._drawSingleRefractiveBubble(c, x - 2, y - 28, 3.8, this.bioTime * 7.2 + 1.5);
     });
 
-    // 腰にぶら下げる「宝袋（TREASURE BAG）」独立液晶セグメント
-    this._drawSegment(ctx, hasBagLit, (c) => {
-      const bx = x - 22;
-      const by = y + 36;
-      // 袋の結び目
+    // 左手に持つ「布袋（CLOTH SACK）」セグメント（潜水中は常に手に持っており、金を拾うと底から溜まって膨らむ）
+    this._drawSegment(ctx, isLit, (c) => {
+      const nx = x - 26;
+      const ny = (pose === 'walk2') ? (y + 22) : (y + 24);
+      const w = hasBagLit ? 11.5 : 7.8;
+      const h = hasBagLit ? 25.0 : 22.0;
+      // 巾着・布袋の波打つ口ヒダ
       c.beginPath();
-      c.moveTo(bx - 5, by - 12);
-      c.lineTo(bx + 5, by - 12);
-      c.lineTo(bx + 2, by - 6);
-      c.lineTo(bx - 2, by - 6);
+      c.moveTo(nx - 4, ny);
+      c.lineTo(nx - 7, ny - 8);
+      c.lineTo(nx - 2, ny - 6);
+      c.lineTo(nx, ny - 9);
+      c.lineTo(nx + 2, ny - 6);
+      c.lineTo(nx + 7, ny - 8);
+      c.lineTo(nx + 4, ny);
       c.closePath();
       c.fill();
-      // 膨らんだ宝袋本体
+      // しずく型・底角マチ付きの布袋シルエット（ツボのような真円にしない）
       c.beginPath();
-      c.arc(bx, by + 3, 11.5, 0, Math.PI * 2);
+      c.moveTo(nx - 4, ny);
+      c.bezierCurveTo(nx - w * 0.7, ny + h * 0.3, nx - w, ny + h * 0.68, nx - w * 0.88, ny + h * 0.92);
+      c.quadraticCurveTo(nx, ny + h * 1.04, nx + w * 0.88, ny + h * 0.92);
+      c.bezierCurveTo(nx + w, ny + h * 0.68, nx + w * 0.7, ny + h * 0.3, nx + 4, ny);
+      c.closePath();
       c.fill();
     }, (c) => {
-      const bx = x - 22;
-      const by = y + 36;
-      // 金貨を詰めるたびに袋がぷっくり膨らみ、詰め込み瞬間はリアルに弾む
-      const isAtChest = (pose === 'chest');
-      const bounce = isAtChest ? (this.bagStuffBounce || 0) : 0;
-      const goldBonus = Math.min(3.8, Math.max(0, (this.bagGoldCount || 1) - 1) * 0.55);
-      const bagR = 11.5 + goldBonus * 0.45;
-      const stretchX = 1.0 + Math.sin(bounce * Math.PI * 2) * 0.16 + goldBonus * 0.03;
-      const stretchY = 1.0 - Math.sin(bounce * Math.PI * 2) * 0.12 + goldBonus * 0.04;
-
-      c.save();
-      c.translate(bx, by + 3);
-      c.scale(stretchX, stretchY);
-
-      // 1. 袋の口（宝箱前や詰め込み中は袋の口がガバッと開いて中の金貨・宝石が覗く）
-      const mouthOpen = isAtChest && (this.grabAnimPhase > 0 || bounce > 0.05 || (this.goldCoinsInFlight && this.goldCoinsInFlight.length > 0));
-      const mouthW = mouthOpen ? 8.2 : 5.5;
-
-      // 麻袋の口フリル
-      c.fillStyle = '#92400e';
-      c.strokeStyle = '#451a03';
-      c.lineWidth = 1.2;
-      c.beginPath();
-      c.moveTo(-mouthW, -16);
-      c.lineTo(mouthW, -16);
-      c.lineTo(3.5, -8);
-      c.lineTo(-3.5, -8);
-      c.closePath();
-      c.fill();
-      c.stroke();
-
-      // 袋の口から溢れそうに覗いている金貨・ルビー・エメラルド
-      const peekCoins = [
-        [-3.5, -15.2, 2.8, '#fde047'],
-        [0.0,  -16.2, 3.1, '#facc15'],
-        [3.6,  -15.0, 2.7, '#fde047'],
-        [-1.6, -13.8, 2.5, '#ef4444'], // ルビー
-        [2.0,  -13.8, 2.4, '#10b981']  // エメラルド
-      ];
-      for (const [px, py, pr, col] of peekCoins) {
-        c.fillStyle = col;
-        c.strokeStyle = '#713f12';
-        c.lineWidth = 0.7;
-        c.beginPath();
-        c.arc(px, py, pr, 0, Math.PI * 2);
-        c.fill();
-        c.stroke();
-      }
-
-      // 2. 麻布・革製の宝袋本体（中の金貨や金塊でゴツゴツと膨らんだ立体陰影）
-      const bagGrad = c.createRadialGradient(-3.5, -3.5, 2, 0, 0, bagR + 2);
-      bagGrad.addColorStop(0, '#fde68a');
-      bagGrad.addColorStop(0.35, '#d97706');
-      bagGrad.addColorStop(0.78, '#92400e');
-      bagGrad.addColorStop(1, '#3b1506');
-      c.fillStyle = bagGrad;
-      c.beginPath();
-      c.arc(0, 0, bagR, 0, Math.PI * 2);
-      c.fill();
-
-      // 袋の布地に浮き出る内部の金貨・金塊の凹凸シルエット
-      const lumps = [
-        [-4.2, -2.0, 3.8], [3.8, -1.5, 3.6], [-2.5, 4.2, 4.0], [3.5, 4.0, 3.7], [0.2, 1.2, 4.2]
-      ];
-      c.strokeStyle = 'rgba(254, 240, 138, 0.32)';
-      c.lineWidth = 1.0;
-      for (const [lx, ly, lr] of lumps) {
-        c.beginPath();
-        c.arc(lx, ly, lr, -0.7, 1.4);
-        c.stroke();
-      }
-
-      // 袋の縫い目ステッチと口を縛る麻紐
-      c.strokeStyle = '#fef08a';
-      c.lineWidth = 1.6;
-      c.beginPath();
-      c.moveTo(-4.2, -8.5);
-      c.quadraticCurveTo(0, -6.8, 4.2, -8.5);
-      c.stroke();
-
-      c.restore();
+      this._drawUnderwaterClothSack(c, x, y, pose, hasBagLit);
     });
+
+    // GAME A / B でも、海中に潜る時〜金を拾う時にリアルな「麻の布袋（空のしぼんだ状態→金が底から溜まって膨らむ状態）」を描画
+    if (!this._isRealColor() && isLit) {
+      ctx.save();
+      this._drawUnderwaterClothSack(ctx, x, y, pose, hasBagLit);
+      ctx.restore();
+    }
   }
 
   _drawTreasureGrabArms(ctx, x, y, reach1Lit, reach2Lit) {
     // 腕セグメント1：右下の宝箱の中に手を突っ込み、金貨と宝石をごっそり鷲掴みにする
-    this._drawSegment(ctx, reach1Lit, (c) => {
-      c.lineWidth = 7.5;
-      c.lineCap = 'round';
-      c.beginPath();
-      c.moveTo(x + 10, y + 20);
-      c.lineTo(x + 48, y + 28);
-      c.lineTo(x + 76, y + 24);
-      c.stroke();
-      // 掴んだ金貨の塊
-      c.beginPath();
-      c.arc(x + 82, y + 24, 7, 0, Math.PI * 2);
-      c.fill();
-    }, (c) => {
+    const drawRealReach1 = (c) => {
       // 耐圧キャンバス袖と重厚な潜水グローブ
       const armGrad = c.createLinearGradient(x + 10, y + 18, x + 78, y + 28);
       armGrad.addColorStop(0, '#b5a482');
@@ -3830,20 +4141,30 @@ class SquidGameWatch {
         c.fill();
         c.stroke();
       }
-    });
+    };
 
-    // 腕セグメント2：宝箱から引き上げ、左手で広げた腰の宝袋の口へ金貨をグイッと詰め込む！
-    this._drawSegment(ctx, reach2Lit, (c) => {
+    this._drawSegment(ctx, reach1Lit, (c) => {
       c.lineWidth = 7.5;
       c.lineCap = 'round';
       c.beginPath();
-      c.moveTo(x + 10, y + 18);
-      c.lineTo(x + 32, y + 2);
+      c.moveTo(x + 10, y + 20);
+      c.lineTo(x + 48, y + 28);
+      c.lineTo(x + 76, y + 24);
       c.stroke();
+      // 掴んだ金貨の塊
       c.beginPath();
-      c.arc(x + 36, y - 2, 7.5, 0, Math.PI * 2);
+      c.arc(x + 82, y + 24, 7, 0, Math.PI * 2);
       c.fill();
-    }, (c) => {
+    }, drawRealReach1);
+
+    if (!this._isRealColor() && reach1Lit) {
+      ctx.save();
+      drawRealReach1(ctx);
+      ctx.restore();
+    }
+
+    // 腕セグメント2：宝箱から引き上げ、左手で広げた布袋の口(x - 26, y + 16)へ金貨をザクザク流し込む！
+    const drawRealReach2 = (c) => {
       // 1. 元のLCDセグメント位置の引き上げ腕（山盛りの金貨を抱えて運ぶ）
       c.strokeStyle = '#9c8b67';
       c.lineWidth = 7.5;
@@ -3863,13 +4184,13 @@ class SquidGameWatch {
       c.arc(gx, gy, 7.5, 0, Math.PI * 2);
       c.fill();
 
-      // 2. 手から腰の宝袋の口(x - 22, y + 23)へザクザク流し込まれる金貨の軌跡ストリーム
-      const bagMouthX = x - 22;
-      const bagMouthY = y + 22;
-      for (let i = 0; i < 5; i++) {
-        const u = (i + ((this.bioTime * 12) % 1)) / 5;
-        const cx = (1 - u) * (1 - u) * gx + 2 * (1 - u) * u * (x + 6) + u * u * bagMouthX;
-        const cy = (1 - u) * (1 - u) * gy + 2 * (1 - u) * u * (y - 14) + u * u * bagMouthY;
+      // 2. 手から左手の布袋の大きく開いた口(x - 26, y + 16)へザクザク流し込まれる金貨の軌跡ストリーム
+      const bagMouthX = x - 26;
+      const bagMouthY = y + 16;
+      for (let i = 0; i < 6; i++) {
+        const u = (i + ((this.bioTime * 14) % 1)) / 6;
+        const cx = (1 - u) * (1 - u) * gx + 2 * (1 - u) * u * (x + 2) + u * u * bagMouthX;
+        const cy = (1 - u) * (1 - u) * gy + 2 * (1 - u) * u * (y - 16) + u * u * bagMouthY;
         c.save();
         c.translate(cx, cy);
         c.rotate(u * 4.5 + i);
@@ -3882,10 +4203,28 @@ class SquidGameWatch {
         c.stroke();
         c.restore();
       }
-    });
+    };
 
-    // GAME C 専用：宝箱からダイバーの手を経て宝袋の口へ吸い込まれる連続金貨・金塊・宝石パーティクル描画
-    if (this._isRealColor() && this.goldCoinsInFlight && this.goldCoinsInFlight.length > 0) {
+    this._drawSegment(ctx, reach2Lit, (c) => {
+      c.lineWidth = 7.5;
+      c.lineCap = 'round';
+      c.beginPath();
+      c.moveTo(x + 10, y + 18);
+      c.lineTo(x + 32, y + 2);
+      c.stroke();
+      c.beginPath();
+      c.arc(x + 36, y - 2, 7.5, 0, Math.PI * 2);
+      c.fill();
+    }, drawRealReach2);
+
+    if (!this._isRealColor() && reach2Lit) {
+      ctx.save();
+      drawRealReach2(ctx);
+      ctx.restore();
+    }
+
+    // 全モード共通：宝箱からダイバーの手を経て左手の布袋の口へ吸い込まれ、布袋の底に溜まっていく連続金貨・金塊・宝石パーティクル描画
+    if (this.goldCoinsInFlight && this.goldCoinsInFlight.length > 0) {
       ctx.save();
       for (const gc of this.goldCoinsInFlight) {
         if (gc.t < 0) continue;
@@ -3922,7 +4261,7 @@ class SquidGameWatch {
           ctx.fill();
           ctx.stroke();
         } else {
-          // 回転しながら袋へ吸い込まれる金貨
+          // 回転しながら布袋へ吸い込まれる金貨
           const coinSquash = Math.max(0.32, Math.abs(Math.cos(gc.rot * 1.5)));
           const cg = ctx.createRadialGradient(-1, -1, 0.5, 0, 0, gc.r);
           cg.addColorStop(0, '#ffffff');
