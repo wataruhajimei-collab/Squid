@@ -379,9 +379,9 @@ html, body {
 .sys-btn-group {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 13px;
   background: rgba(0, 0, 0, 0.26);
-  padding: 5px 16px;
+  padding: 5px 15px;
   border-radius: 999px;
   border: 1px solid rgba(255, 230, 175, 0.2);
 }
@@ -740,6 +740,16 @@ html, body {
   background: linear-gradient(180deg, #b45309 0%, #78350f 100%);
 }
 
+.primary-retro-btn.accent-c {
+  background: linear-gradient(180deg, #0e7490 0%, #155e75 55%, #164e63 100%);
+}
+
+.mode-select-row .primary-retro-btn {
+  padding: 11px 6px;
+  font-size: 12.5px;
+  white-space: nowrap;
+}
+
 .secondary-retro-btn {
   flex: 1;
   padding: 9px 8px;
@@ -941,6 +951,11 @@ html, body {
 .mode-pill.mode-B {
   background: rgba(224, 49, 49, 0.35);
   color: #ffc9c9;
+}
+
+.mode-pill.mode-C {
+  background: rgba(14, 116, 144, 0.45);
+  color: #a5f3fc;
 }
 
 .col-score,

@@ -13,7 +13,7 @@
   <link rel="apple-touch-icon" href="icon.svg">
   <link rel="manifest" href="manifest.json">
   <title>SQUID - ROGAN &amp; WATCH WABISABI SCREEN</title>
-  <link rel="stylesheet" href="style.css?v=1.3">
+  <link rel="stylesheet" href="style.css?v=1.4">
 </head>
 <body>
   <div id="debug-error" style="display:none;position:fixed;top:0;left:0;z-index:99999;background:#b91c1c;color:#fff;width:100%;padding:6px 10px;font-size:12px;white-space:pre-wrap;"></div>
@@ -95,6 +95,10 @@
             <span class="oval-cap"></span>
             <span class="oval-label">GAME B</span>
           </button>
+          <button id="btn-game-c" class="sys-oval-btn">
+            <span class="oval-cap"></span>
+            <span class="oval-label">GAME C</span>
+          </button>
           <button id="btn-time" class="sys-oval-btn">
             <span class="oval-cap"></span>
             <span class="oval-label">TIME</span>
@@ -151,9 +155,10 @@
           <div id="start-name-error" class="start-name-error hidden">⚠️ 名前を入力してからスタートしてください！</div>
         </div>
 
-        <div class="modal-btn-row">
-          <button id="start-btn-a" class="primary-retro-btn">▶ GAME A スタート</button>
-          <button id="start-btn-b" class="primary-retro-btn accent-b">▶ GAME B スタート</button>
+        <div class="modal-btn-row mode-select-row">
+          <button id="start-btn-a" class="primary-retro-btn">▶ GAME A</button>
+          <button id="start-btn-b" class="primary-retro-btn accent-b">▶ GAME B</button>
+          <button id="start-btn-c" class="primary-retro-btn accent-c">▶ GAME C</button>
         </div>
         <div class="modal-btn-row secondary-row">
           <button id="start-open-ranking" class="secondary-retro-btn">🏆 グローバルランキング</button>
@@ -186,9 +191,10 @@
           <div id="submit-status-msg" class="submit-status-msg">スコアを送信中...</div>
         </div>
 
-        <div class="modal-btn-row">
-          <button id="result-retry-a" class="primary-retro-btn">▶ GAME A で再挑戦</button>
-          <button id="result-retry-b" class="primary-retro-btn accent-b">▶ GAME B で挑戦</button>
+        <div class="modal-btn-row mode-select-row">
+          <button id="result-retry-a" class="primary-retro-btn">▶ GAME A</button>
+          <button id="result-retry-b" class="primary-retro-btn accent-b">▶ GAME B</button>
+          <button id="result-retry-c" class="primary-retro-btn accent-c">▶ GAME C</button>
         </div>
         <div class="modal-btn-row secondary-row">
           <button id="result-open-ranking" class="secondary-retro-btn">🏆 世界ランキングを見る</button>
@@ -281,6 +287,7 @@
           <button class="subfilter-btn active" data-filter="ALL">ALL</button>
           <button class="subfilter-btn" data-filter="A">GAME A</button>
           <button class="subfilter-btn" data-filter="B">GAME B</button>
+          <button class="subfilter-btn" data-filter="C">GAME C</button>
         </div>
 
         <!-- テーブルヘッダー -->
@@ -318,6 +325,6 @@
     </div>
   </div>
 
-  <script src="game.js?v=1.5"></script>
+  <script src="game.js?v=1.6"></script>
 </body>
 </html>

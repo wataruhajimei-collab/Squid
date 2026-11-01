@@ -21,6 +21,7 @@ const STORAGE_KEYS = {
   PLAYER_ID: 'squid_gw_player_id',
   HIGH_A: 'squid_gw_high_a',
   HIGH_B: 'squid_gw_high_b',
+  HIGH_C: 'squid_gw_high_c',
   LOCAL_LB: 'squid_gw_local_leaderboard',
   SOUND: 'squid_gw_sound_on'
 };
@@ -150,7 +151,7 @@ class SquidGameWatch {
 
     // モード状態: 'TIME' (時計&デモ画面), 'PLAYING', 'CAUGHT' (捕まりバタバタ中), 'UNLOADING' (船上+3点演出中), 'BONUS' (200/500点復活演出), 'GAMEOVER'
     this.state = 'TIME';
-    this.gameMode = 'A'; // 'A' or 'B'
+    this.gameMode = 'A'; // 'A', 'B', or 'C'
 
     // スコア＆統計
     this.score = 0;
@@ -158,6 +159,7 @@ class SquidGameWatch {
     this.treasuresGrabbed = 0;
     this.highScoreA = Number(localStorage.getItem(STORAGE_KEYS.HIGH_A) || 0);
     this.highScoreB = Number(localStorage.getItem(STORAGE_KEYS.HIGH_B) || 0);
+    this.highScoreC = Number(localStorage.getItem(STORAGE_KEYS.HIGH_C) || 0);
 
     // 残機（最大3人：1人が海中、残り2人が船上に待機）
     this.lives = 3;
@@ -254,6 +256,7 @@ class SquidGameWatch {
     const btnRight = document.getElementById('btn-right');
     const btnGameA = document.getElementById('btn-game-a');
     const btnGameB = document.getElementById('btn-game-b');
+    const btnGameC = document.getElementById('btn-game-c');
     const btnTime = document.getElementById('btn-time');
     const lcdTouchZone = document.getElementById('lcd-touch-zone');
 
@@ -304,9 +307,10 @@ class SquidGameWatch {
       });
     }
 
-    // システムボタン (GAME A / GAME B / TIME)
+    // システムボタン (GAME A / GAME B / GAME C / TIME)
     btnGameA?.addEventListener('click', () => this.startGame('A'));
     btnGameB?.addEventListener('click', () => this.startGame('B'));
+    btnGameC?.addEventListener('click', () => this.startGame('C'));
     btnTime?.addEventListener('click', () => this.enterTimeMode());
 
     // キーボード操作 (PC / 外付けキーボード対応)
@@ -324,6 +328,8 @@ class SquidGameWatch {
         this.startGame('A');
       } else if (e.key === '2') {
         this.startGame('B');
+      } else if (e.key === '3') {
+        this.startGame('C');
       }
     });
     window.addEventListener('keyup', (e) => {
@@ -388,6 +394,7 @@ class SquidGameWatch {
 
     document.getElementById('start-btn-a')?.addEventListener('click', () => tryStartFromModal('A'));
     document.getElementById('start-btn-b')?.addEventListener('click', () => tryStartFromModal('B'));
+    document.getElementById('start-btn-c')?.addEventListener('click', () => tryStartFromModal('C'));
     document.getElementById('start-open-ranking')?.addEventListener('click', () => {
       this.openRankingModal();
     });
@@ -448,6 +455,11 @@ class SquidGameWatch {
       saveFromResultAndResubmit();
       resultModal?.classList.add('hidden');
       this.startGame('B');
+    });
+    document.getElementById('result-retry-c')?.addEventListener('click', () => {
+      saveFromResultAndResubmit();
+      resultModal?.classList.add('hidden');
+      this.startGame('C');
     });
     document.getElementById('result-open-ranking')?.addEventListener('click', () => {
       saveFromResultAndResubmit();
@@ -829,7 +841,7 @@ class SquidGameWatch {
           ? `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
           : '-';
         const cityTxt = entry.city ? `${flag} 📍${this._esc(entry.city)}` : `${flag} Location Unknown`;
-        const gMode = entry.gameMode === 'B' ? 'B' : 'A';
+        const gMode = (entry.gameMode === 'B' || entry.gameMode === 'C') ? entry.gameMode : 'A';
         row.innerHTML = `
           <div class="col-rank">${medal}</div>
           <div class="col-name">
@@ -881,7 +893,7 @@ class SquidGameWatch {
       return;
     }
     this.sound.init();
-    this.gameMode = mode === 'B' ? 'B' : 'A';
+    this.gameMode = (mode === 'B' || mode === 'C') ? mode : 'A';
     this.state = 'PLAYING';
     this.score = 0;
     this.bagsReturned = 0;
@@ -926,6 +938,7 @@ class SquidGameWatch {
   _updateModeButtons(active) {
     document.getElementById('btn-game-a')?.classList.toggle('active-mode', active === 'A');
     document.getElementById('btn-game-b')?.classList.toggle('active-mode', active === 'B');
+    document.getElementById('btn-game-c')?.classList.toggle('active-mode', active === 'C');
     document.getElementById('btn-time')?.classList.toggle('active-mode', active === 'TIME');
   }
 
@@ -1012,6 +1025,9 @@ class SquidGameWatch {
     } else if (this.gameMode === 'B' && this.score > this.highScoreB) {
       this.highScoreB = this.score;
       try { localStorage.setItem(STORAGE_KEYS.HIGH_B, String(this.highScoreB)); } catch (_) {}
+    } else if (this.gameMode === 'C' && this.score > this.highScoreC) {
+      this.highScoreC = this.score;
+      try { localStorage.setItem(STORAGE_KEYS.HIGH_C, String(this.highScoreC)); } catch (_) {}
     }
 
     // 200点到達時、および以降は500点ごと（500, 1000, 1500, 2000...）にダイバーが1名増える（+1UP・最大3名）
@@ -1268,25 +1284,68 @@ class SquidGameWatch {
   }
 
   /* --------------------------------------------------------------------------
-     3. AUTHENTIC 1981 LCD SCREEN RENDERER (Canvas 720x480)
+     3. AUTHENTIC 1981 LCD SCREEN RENDERER + GAME C REALISTIC COLOR MODE
      -------------------------------------------------------------------------- */
+  _isRealColor() {
+    return this.gameMode === 'C' && this.state !== 'TIME';
+  }
+
   _render() {
     const ctx = this.ctx;
     const W = this.canvas.width;  // 720
     const H = this.canvas.height; // 480
 
-    // 1. 反射型液晶パネルのオリーブグリーン背景とビネット陰影
-    const bgGrad = ctx.createRadialGradient(W * 0.5, H * 0.45, 40, W * 0.5, H * 0.5, W * 0.68);
-    bgGrad.addColorStop(0, '#9ead8b');
-    bgGrad.addColorStop(0.75, '#8f9e7c');
-    bgGrad.addColorStop(1, '#7c8b69');
-    ctx.fillStyle = bgGrad;
-    ctx.fillRect(0, 0, W, H);
+    if (this._isRealColor()) {
+      // GAME C: 写真のように妙にリアルな空のグラデーションと太陽光・雲の表現
+      const skyGrad = ctx.createLinearGradient(0, 0, 0, 114);
+      skyGrad.addColorStop(0, '#1e40af');
+      skyGrad.addColorStop(0.45, '#3b82f6');
+      skyGrad.addColorStop(0.82, '#93c5fd');
+      skyGrad.addColorStop(1, '#fef3c7');
+      ctx.fillStyle = skyGrad;
+      ctx.fillRect(0, 0, W, H);
 
-    // 微細な液晶偏光板テクスチャ横線
-    ctx.fillStyle = 'rgba(30, 40, 22, 0.018)';
-    for (let y = 0; y < H; y += 3) {
-      ctx.fillRect(0, y, W, 1);
+      // 太陽のハロー（水平線近くの逆光感）
+      const sunGrad = ctx.createRadialGradient(285, 42, 4, 285, 42, 135);
+      sunGrad.addColorStop(0, 'rgba(255, 255, 240, 0.95)');
+      sunGrad.addColorStop(0.25, 'rgba(254, 240, 138, 0.55)');
+      sunGrad.addColorStop(1, 'rgba(254, 240, 138, 0)');
+      ctx.fillStyle = sunGrad;
+      ctx.fillRect(140, 0, 290, 114);
+
+      // リアルな積雲（立体陰影付きの雲）
+      const clouds = [
+        { x: 95, y: 36, rx: 54, ry: 15 },
+        { x: 135, y: 40, rx: 42, ry: 13 },
+        { x: 255, y: 58, rx: 68, ry: 14 },
+        { x: 435, y: 46, rx: 62, ry: 15 },
+        { x: 480, y: 52, rx: 46, ry: 12 },
+        { x: 645, y: 38, rx: 58, ry: 14 }
+      ];
+      for (const cl of clouds) {
+        const cg = ctx.createLinearGradient(cl.x, cl.y - cl.ry, cl.x, cl.y + cl.ry);
+        cg.addColorStop(0, 'rgba(255, 255, 255, 0.88)');
+        cg.addColorStop(0.65, 'rgba(241, 245, 249, 0.78)');
+        cg.addColorStop(1, 'rgba(148, 163, 184, 0.52)');
+        ctx.fillStyle = cg;
+        ctx.beginPath();
+        ctx.ellipse(cl.x, cl.y, cl.rx, cl.ry, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    } else {
+      // 1. 反射型液晶パネルのオリーブグリーン背景とビネット陰影
+      const bgGrad = ctx.createRadialGradient(W * 0.5, H * 0.45, 40, W * 0.5, H * 0.5, W * 0.68);
+      bgGrad.addColorStop(0, '#9ead8b');
+      bgGrad.addColorStop(0.75, '#8f9e7c');
+      bgGrad.addColorStop(1, '#7c8b69');
+      ctx.fillStyle = bgGrad;
+      ctx.fillRect(0, 0, W, H);
+
+      // 微細な液晶偏光板テクスチャ横線
+      ctx.fillStyle = 'rgba(30, 40, 22, 0.018)';
+      for (let y = 0; y < H; y += 3) {
+        ctx.fillRect(0, y, W, 1);
+      }
     }
 
     // 2. カラー印刷オーバーレイ層（海面・サルベージ船・海底岩礁・沈没船・黄金の宝箱）
@@ -1298,11 +1357,9 @@ class SquidGameWatch {
 
   _drawColorFoilOverlay(ctx) {
     ctx.save();
+    const real = this._isRealColor();
 
-    // --- 海面の波ライン（シアンブルー印刷） ---
-    ctx.strokeStyle = 'rgba(26, 112, 138, 0.58)';
-    ctx.fillStyle = 'rgba(34, 132, 160, 0.16)';
-    ctx.lineWidth = 4;
+    // --- 海面の波ライン＆海中の表現 ---
     ctx.beginPath();
     ctx.moveTo(0, 108);
     for (let x = 0; x <= 720; x += 48) {
@@ -1311,18 +1368,79 @@ class SquidGameWatch {
     ctx.lineTo(720, 480);
     ctx.lineTo(0, 480);
     ctx.closePath();
-    ctx.fill();
 
-    ctx.beginPath();
-    ctx.moveTo(0, 108);
-    for (let x = 0; x <= 720; x += 48) {
-      ctx.quadraticCurveTo(x + 24, 96, x + 48, 108);
+    if (real) {
+      // 写真のようにリアルな海中の深度グラデーション（エメラルドの浅瀬〜濃紺の深海）
+      const seaGrad = ctx.createLinearGradient(0, 96, 0, 480);
+      seaGrad.addColorStop(0, '#06b6d4');
+      seaGrad.addColorStop(0.14, '#0284c7');
+      seaGrad.addColorStop(0.42, '#0369a1');
+      seaGrad.addColorStop(0.75, '#1e3a8a');
+      seaGrad.addColorStop(1, '#09152b');
+      ctx.fillStyle = seaGrad;
+      ctx.fill();
+
+      // 海中に差し込む太陽光の光の筋（ゴッドレイ / コースティクス）
+      ctx.save();
+      ctx.clip();
+      const rays = [
+        { xTop: 140, wTop: 45, xBot: 60, wBot: 110, alpha: 0.16 },
+        { xTop: 265, wTop: 60, xBot: 210, wBot: 145, alpha: 0.20 },
+        { xTop: 410, wTop: 50, xBot: 370, wBot: 130, alpha: 0.14 },
+        { xTop: 560, wTop: 45, xBot: 520, wBot: 115, alpha: 0.11 }
+      ];
+      for (const r of rays) {
+        const rg = ctx.createLinearGradient(r.xTop, 100, r.xBot, 440);
+        rg.addColorStop(0, `rgba(224, 242, 254, ${r.alpha})`);
+        rg.addColorStop(0.55, `rgba(56, 189, 248, ${r.alpha * 0.45})`);
+        rg.addColorStop(1, 'rgba(14, 116, 144, 0)');
+        ctx.fillStyle = rg;
+        ctx.beginPath();
+        ctx.moveTo(r.xTop, 98);
+        ctx.lineTo(r.xTop + r.wTop, 98);
+        ctx.lineTo(r.xBot + r.wBot, 450);
+        ctx.lineTo(r.xBot, 450);
+        ctx.closePath();
+        ctx.fill();
+      }
+      ctx.restore();
+
+      // リアルな白波の輝きライン
+      ctx.strokeStyle = 'rgba(224, 242, 254, 0.88)';
+      ctx.lineWidth = 3.5;
+      ctx.beginPath();
+      ctx.moveTo(0, 108);
+      for (let x = 0; x <= 720; x += 48) {
+        ctx.quadraticCurveTo(x + 24, 96, x + 48, 108);
+      }
+      ctx.stroke();
+    } else {
+      ctx.strokeStyle = 'rgba(26, 112, 138, 0.58)';
+      ctx.fillStyle = 'rgba(34, 132, 160, 0.16)';
+      ctx.lineWidth = 4;
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.moveTo(0, 108);
+      for (let x = 0; x <= 720; x += 48) {
+        ctx.quadraticCurveTo(x + 24, 96, x + 48, 108);
+      }
+      ctx.stroke();
     }
-    ctx.stroke();
 
-    // --- 左上のサルベージ船（赤茶色の船体プリント） ---
-    ctx.fillStyle = 'rgba(138, 48, 34, 0.72)';
-    ctx.strokeStyle = 'rgba(72, 24, 16, 0.85)';
+    // --- 左上のサルベージ船 ---
+    if (real) {
+      const boatGrad = ctx.createLinearGradient(22, 82, 22, 116);
+      boatGrad.addColorStop(0, '#b91c1c');
+      boatGrad.addColorStop(0.45, '#7f1d1d');
+      boatGrad.addColorStop(0.8, '#450a0a');
+      boatGrad.addColorStop(1, '#1c0404');
+      ctx.fillStyle = boatGrad;
+      ctx.strokeStyle = '#270909';
+    } else {
+      ctx.fillStyle = 'rgba(138, 48, 34, 0.72)';
+      ctx.strokeStyle = 'rgba(72, 24, 16, 0.85)';
+    }
     ctx.lineWidth = 3;
     ctx.beginPath();
     ctx.moveTo(22, 82);
@@ -1334,7 +1452,7 @@ class SquidGameWatch {
     ctx.stroke();
 
     // 船の白いラインと操舵室フレーム
-    ctx.strokeStyle = 'rgba(235, 225, 195, 0.65)';
+    ctx.strokeStyle = real ? 'rgba(248, 250, 252, 0.92)' : 'rgba(235, 225, 195, 0.65)';
     ctx.lineWidth = 2.5;
     ctx.beginPath();
     ctx.moveTo(32, 92);
@@ -1342,7 +1460,7 @@ class SquidGameWatch {
     ctx.stroke();
 
     // 船から海中へ垂れるロープ梯子（pos=1用）
-    ctx.strokeStyle = 'rgba(92, 58, 30, 0.55)';
+    ctx.strokeStyle = real ? 'rgba(217, 179, 115, 0.88)' : 'rgba(92, 58, 30, 0.55)';
     ctx.lineWidth = 2.5;
     ctx.beginPath();
     ctx.moveTo(182, 116);
@@ -1361,8 +1479,18 @@ class SquidGameWatch {
     this._drawSunkenGalleon(ctx);
 
     // --- 左側〜海底の岩礁と海藻プリント ---
-    ctx.fillStyle = 'rgba(54, 78, 52, 0.34)';
-    ctx.strokeStyle = 'rgba(40, 58, 38, 0.52)';
+    if (real) {
+      const reefGrad = ctx.createLinearGradient(0, 195, 0, 480);
+      reefGrad.addColorStop(0, '#475569');
+      reefGrad.addColorStop(0.35, '#334155');
+      reefGrad.addColorStop(0.72, '#1e293b');
+      reefGrad.addColorStop(1, '#0f172a');
+      ctx.fillStyle = reefGrad;
+      ctx.strokeStyle = '#0f172a';
+    } else {
+      ctx.fillStyle = 'rgba(54, 78, 52, 0.34)';
+      ctx.strokeStyle = 'rgba(40, 58, 38, 0.52)';
+    }
     ctx.lineWidth = 2.5;
     ctx.beginPath();
     ctx.moveTo(0, 195);
@@ -1377,8 +1505,26 @@ class SquidGameWatch {
     ctx.fill();
     ctx.stroke();
 
+    if (real) {
+      // 海底の砂地・岩肌のリアルな陰影ハイライト
+      const sandGrad = ctx.createLinearGradient(140, 395, 720, 480);
+      sandGrad.addColorStop(0, 'rgba(148, 132, 102, 0.42)');
+      sandGrad.addColorStop(0.5, 'rgba(120, 108, 82, 0.36)');
+      sandGrad.addColorStop(1, 'rgba(51, 65, 85, 0.25)');
+      ctx.fillStyle = sandGrad;
+      ctx.beginPath();
+      ctx.moveTo(150, 382);
+      ctx.lineTo(265, 420);
+      ctx.lineTo(465, 434);
+      ctx.lineTo(720, 438);
+      ctx.lineTo(720, 480);
+      ctx.lineTo(120, 480);
+      ctx.closePath();
+      ctx.fill();
+    }
+
     // 海藻の揺らぎシルエット
-    ctx.strokeStyle = 'rgba(38, 92, 58, 0.42)';
+    ctx.strokeStyle = real ? 'rgba(34, 197, 94, 0.68)' : 'rgba(38, 92, 58, 0.42)';
     ctx.lineWidth = 4;
     const weeds = [42, 74, 305, 492];
     for (const wx of weeds) {
@@ -1391,9 +1537,17 @@ class SquidGameWatch {
 
     // --- 右下の開いた黄金の宝箱（プリント層） ---
     const cx = 612, cy = 382;
-    // 宝箱の箱本体
-    ctx.fillStyle = 'rgba(138, 72, 24, 0.78)';
-    ctx.strokeStyle = 'rgba(65, 32, 10, 0.9)';
+    if (real) {
+      const chestGrad = ctx.createLinearGradient(cx, cy, cx, cy + 64);
+      chestGrad.addColorStop(0, '#9a3412');
+      chestGrad.addColorStop(0.5, '#7c2d12');
+      chestGrad.addColorStop(1, '#3b0704');
+      ctx.fillStyle = chestGrad;
+      ctx.strokeStyle = '#270905';
+    } else {
+      ctx.fillStyle = 'rgba(138, 72, 24, 0.78)';
+      ctx.strokeStyle = 'rgba(65, 32, 10, 0.9)';
+    }
     ctx.lineWidth = 3;
     ctx.beginPath();
     ctx.roundRect(cx, cy + 16, 84, 48, 5);
@@ -1411,16 +1565,25 @@ class SquidGameWatch {
     ctx.stroke();
 
     // 中の金貨・財宝の輝き
-    ctx.fillStyle = 'rgba(235, 185, 35, 0.88)';
+    if (real) {
+      const goldGrad = ctx.createRadialGradient(cx + 40, cy + 15, 3, cx + 44, cy + 18, 36);
+      goldGrad.addColorStop(0, '#fef9c3');
+      goldGrad.addColorStop(0.45, '#facc15');
+      goldGrad.addColorStop(0.85, '#ca8a04');
+      goldGrad.addColorStop(1, '#854d0e');
+      ctx.fillStyle = goldGrad;
+    } else {
+      ctx.fillStyle = 'rgba(235, 185, 35, 0.88)';
+    }
     ctx.beginPath();
     ctx.ellipse(cx + 44, cy + 18, 34, 11, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.strokeStyle = 'rgba(120, 80, 10, 0.8)';
+    ctx.strokeStyle = real ? '#713f12' : 'rgba(120, 80, 10, 0.8)';
     ctx.lineWidth = 1.8;
     ctx.stroke();
 
     // 宝箱の金具バンド
-    ctx.strokeStyle = 'rgba(215, 175, 65, 0.85)';
+    ctx.strokeStyle = real ? '#fde047' : 'rgba(215, 175, 65, 0.85)';
     ctx.lineWidth = 3.5;
     ctx.beginPath();
     ctx.moveTo(cx + 22, cy + 16);
@@ -1438,15 +1601,36 @@ class SquidGameWatch {
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
 
-    const hullFill = 'rgba(96, 62, 34, 0.34)';
-    const hullDark = 'rgba(68, 42, 22, 0.46)';
-    const hullStroke = 'rgba(58, 38, 20, 0.58)';
-    const rigStroke = 'rgba(44, 72, 78, 0.44)';
-    const sailFill = 'rgba(52, 92, 102, 0.22)';
-    const sailStroke = 'rgba(42, 78, 88, 0.40)';
+    const real = this._isRealColor();
+    let hullFill = 'rgba(96, 62, 34, 0.34)';
+    let hullDark = 'rgba(68, 42, 22, 0.46)';
+    let hullStroke = 'rgba(58, 38, 20, 0.58)';
+    let rigStroke = 'rgba(44, 72, 78, 0.44)';
+    let sailFill = 'rgba(52, 92, 102, 0.22)';
+    let sailStroke = 'rgba(42, 78, 88, 0.40)';
+
+    if (real) {
+      // GAME C: 写真のようにリアルな海底沈没船（朽ちた古材オーク・苔むした帆・青銅砲・黄金装飾）
+      const realHullGrad = ctx.createLinearGradient(340, 270, 710, 442);
+      realHullGrad.addColorStop(0, 'rgba(108, 70, 43, 0.88)');
+      realHullGrad.addColorStop(0.38, 'rgba(72, 44, 26, 0.92)');
+      realHullGrad.addColorStop(0.72, 'rgba(44, 27, 16, 0.95)');
+      realHullGrad.addColorStop(1, 'rgba(22, 13, 8, 0.97)');
+      hullFill = realHullGrad;
+      hullDark = 'rgba(24, 14, 8, 0.92)';
+      hullStroke = 'rgba(32, 18, 10, 0.94)';
+      rigStroke = 'rgba(148, 163, 152, 0.55)';
+
+      const realSailGrad = ctx.createLinearGradient(340, 165, 680, 315);
+      realSailGrad.addColorStop(0, 'rgba(214, 211, 196, 0.65)');
+      realSailGrad.addColorStop(0.5, 'rgba(142, 158, 148, 0.58)');
+      realSailGrad.addColorStop(1, 'rgba(71, 88, 82, 0.52)');
+      sailFill = realSailGrad;
+      sailStroke = 'rgba(94, 108, 100, 0.72)';
+    }
 
     // 1. 2本の巨大な傾いたマスト（メインマスト＆ミズンマスト）とバウスプリット（斜檣）
-    ctx.strokeStyle = hullStroke;
+    ctx.strokeStyle = real ? '#4a2e1b' : hullStroke;
     ctx.lineWidth = 5.5;
     ctx.beginPath();
     // メインマスト（中央〜やや右）
@@ -1525,7 +1709,7 @@ class SquidGameWatch {
     ctx.stroke();
 
     // 帆桁（太い横木）
-    ctx.strokeStyle = hullStroke;
+    ctx.strokeStyle = real ? '#5c3a21' : hullStroke;
     ctx.lineWidth = 3.5;
     ctx.beginPath();
     ctx.moveTo(392, 180); ctx.lineTo(522, 167);
@@ -1578,7 +1762,7 @@ class SquidGameWatch {
     ctx.stroke();
 
     // 船体の木目プランクライン（板張り）
-    ctx.strokeStyle = 'rgba(58, 36, 18, 0.38)';
+    ctx.strokeStyle = real ? 'rgba(180, 130, 85, 0.35)' : 'rgba(58, 36, 18, 0.38)';
     ctx.lineWidth = 2;
     const plankYs = [388, 406, 424];
     for (const py of plankYs) {
@@ -1589,7 +1773,7 @@ class SquidGameWatch {
     }
 
     // 船尾楼の手すり欄干（バラストレード）と舵輪（ラダーホイール）
-    ctx.strokeStyle = hullStroke;
+    ctx.strokeStyle = real ? '#a16207' : hullStroke;
     ctx.lineWidth = 2.2;
     ctx.beginPath();
     ctx.moveTo(632, 276);
@@ -1611,8 +1795,8 @@ class SquidGameWatch {
     ctx.stroke();
 
     // 船尾キャビンの豪華なアーチ飾り窓（4連ギャラリーウィンドウ）
-    ctx.fillStyle = 'rgba(218, 178, 78, 0.38)';
-    ctx.strokeStyle = hullStroke;
+    ctx.fillStyle = real ? 'rgba(250, 204, 21, 0.68)' : 'rgba(218, 178, 78, 0.38)';
+    ctx.strokeStyle = real ? '#ca8a04' : hullStroke;
     ctx.lineWidth = 2;
     for (let w = 0; w < 4; w++) {
       const wx = 636 + w * 17;
@@ -1625,6 +1809,7 @@ class SquidGameWatch {
 
     // 船腹に並ぶ大砲の砲門（ガンポート 6門）
     ctx.fillStyle = hullDark;
+    ctx.strokeStyle = real ? '#5c3a21' : hullStroke;
     for (let g = 0; g < 6; g++) {
       const gx = 386 + g * 38;
       const gy = 392 - g * 2.2;
@@ -1633,13 +1818,15 @@ class SquidGameWatch {
       ctx.fill();
       ctx.stroke();
       // 突き出た大砲の砲身
+      ctx.fillStyle = real ? '#2dd4bf' : hullDark;
       ctx.beginPath();
       ctx.arc(gx + 7, gy + 6, 3.5, 0, Math.PI * 2);
       ctx.fill();
+      ctx.fillStyle = hullDark;
     }
 
     // 船首から垂れ下がる錨（アンカー）
-    ctx.strokeStyle = hullStroke;
+    ctx.strokeStyle = real ? '#94a3b8' : hullStroke;
     ctx.lineWidth = 3;
     ctx.beginPath();
     ctx.moveTo(366, 368);
@@ -1652,8 +1839,30 @@ class SquidGameWatch {
     ctx.restore();
   }
 
-  // 液晶セグメント描画ヘルパー（非点灯ゴースト＋点灯時の反射影＆濃色インク）
-  _drawSegment(ctx, isLit, pathFn) {
+  // 液晶セグメント描画ヘルパー（GAME A/B: 1981年モノクロ液晶 / GAME C: 同じ形で妙にリアルな彩色）
+  _drawSegment(ctx, isLit, pathFn, realDrawFn = null) {
+    if (this._isRealColor()) {
+      if (!isLit) return;
+      ctx.save();
+      // 海中・船上のリアルな立体ドロップシャドウ
+      ctx.save();
+      ctx.translate(2.4, 3.0);
+      ctx.fillStyle = 'rgba(4, 12, 26, 0.38)';
+      ctx.strokeStyle = 'rgba(4, 12, 26, 0.38)';
+      pathFn(ctx);
+      ctx.restore();
+
+      if (realDrawFn) {
+        realDrawFn(ctx);
+      } else {
+        ctx.fillStyle = '#fef08a';
+        ctx.strokeStyle = '#fef08a';
+        pathFn(ctx);
+      }
+      ctx.restore();
+      return;
+    }
+
     ctx.save();
     if (isLit) {
       // 1. 反射板へのドロップシャドウ
@@ -1742,6 +1951,36 @@ class SquidGameWatch {
       c.beginPath();
       c.roundRect(x - 10, y + 11, 20, 16, 4);
       c.fill();
+    }, (c) => {
+      // GAME C: 同じ形で妙にリアルな銅製ヘルメット＆キャンバス潜水服
+      const suitGrad = c.createLinearGradient(x - 10, y + 11, x + 10, y + 27);
+      suitGrad.addColorStop(0, '#c2b28f');
+      suitGrad.addColorStop(0.55, '#8c7a56');
+      suitGrad.addColorStop(1, '#4a3f2a');
+      c.fillStyle = suitGrad;
+      c.beginPath();
+      c.roundRect(x - 10, y + 11, 20, 16, 4);
+      c.fill();
+
+      const helmGrad = c.createRadialGradient(x - 4, y - 4, 1.5, x, y, 11);
+      helmGrad.addColorStop(0, '#fef08a');
+      helmGrad.addColorStop(0.45, '#d97706');
+      helmGrad.addColorStop(0.82, '#9a3412');
+      helmGrad.addColorStop(1, '#431407');
+      c.fillStyle = helmGrad;
+      c.beginPath();
+      c.arc(x, y, 11, 0, Math.PI * 2);
+      c.fill();
+
+      // ガラス覗き窓＋中の肌色と反射
+      const glassGrad = c.createRadialGradient(x + 1, y - 2, 1, x + 2, y - 1, 5);
+      glassGrad.addColorStop(0, '#fed7aa');
+      glassGrad.addColorStop(0.55, '#38bdf8');
+      glassGrad.addColorStop(1, '#0c4a6e');
+      c.fillStyle = glassGrad;
+      c.beginPath();
+      c.arc(x + 2, y - 1, 5, 0, Math.PI * 2);
+      c.fill();
     });
   }
 
@@ -1763,6 +2002,38 @@ class SquidGameWatch {
       c.moveTo(x + 5, y + 34);
       c.lineTo(x + 9, y + 48);
       c.stroke();
+    }, (c) => {
+      // 足（重厚な潜水ズボンと鉛靴）
+      c.strokeStyle = '#6b5b3e';
+      c.lineWidth = 6;
+      c.lineCap = 'round';
+      c.beginPath();
+      c.moveTo(x - 5, y + 34);
+      c.lineTo(x - 8, y + 48);
+      c.moveTo(x + 5, y + 34);
+      c.lineTo(x + 9, y + 48);
+      c.stroke();
+
+      // 胴体（リアルなキャンバス潜水服）
+      const suitGrad = c.createLinearGradient(x - 10, y + 12, x + 10, y + 36);
+      suitGrad.addColorStop(0, '#d6c7a9');
+      suitGrad.addColorStop(0.5, '#948260');
+      suitGrad.addColorStop(1, '#4d412d');
+      c.fillStyle = suitGrad;
+      c.beginPath();
+      c.roundRect(x - 10, y + 12, 20, 24, 5);
+      c.fill();
+
+      // 真鍮・銅製ヘルメット
+      const helmGrad = c.createRadialGradient(x - 4, y - 4, 2, x, y, 12);
+      helmGrad.addColorStop(0, '#fef9c3');
+      helmGrad.addColorStop(0.42, '#ea580c');
+      helmGrad.addColorStop(0.8, '#9a3412');
+      helmGrad.addColorStop(1, '#431407');
+      c.fillStyle = helmGrad;
+      c.beginPath();
+      c.arc(x, y, 12, 0, Math.PI * 2);
+      c.fill();
     });
 
     // 生還時に宝袋を高々と掲げる腕＆宝袋セグメント（+3点ボーナス時）
@@ -1778,7 +2049,69 @@ class SquidGameWatch {
       c.beginPath();
       c.arc(x + 30, y - 10, 11, 0, Math.PI * 2);
       c.fill();
+    }, (c) => {
+      c.strokeStyle = '#948260';
+      c.lineWidth = 6;
+      c.lineCap = 'round';
+      c.beginPath();
+      c.moveTo(x + 6, y + 16);
+      c.lineTo(x + 24, y - 4);
+      c.stroke();
+
+      const bagGrad = c.createRadialGradient(x + 27, y - 13, 2, x + 30, y - 10, 11);
+      bagGrad.addColorStop(0, '#fef08a');
+      bagGrad.addColorStop(0.5, '#ca8a04');
+      bagGrad.addColorStop(1, '#713f12');
+      c.fillStyle = bagGrad;
+      c.beginPath();
+      c.arc(x + 30, y - 10, 11, 0, Math.PI * 2);
+      c.fill();
     });
+  }
+
+  _drawDiverLimbsPath(c, x, y, pose) {
+    c.lineWidth = 7;
+    if (pose === 'rope') {
+      c.beginPath();
+      c.moveTo(x + 8, y + 18);
+      c.lineTo(x + 24, y + 6);
+      c.moveTo(x - 6, y + 40);
+      c.lineTo(x - 12, y + 60);
+      c.moveTo(x + 6, y + 40);
+      c.lineTo(x + 14, y + 56);
+      c.stroke();
+    } else if (pose === 'walk1') {
+      c.beginPath();
+      c.moveTo(x - 10, y + 18);
+      c.lineTo(x - 24, y + 30);
+      c.moveTo(x + 10, y + 18);
+      c.lineTo(x + 24, y + 10);
+      c.moveTo(x - 6, y + 41);
+      c.lineTo(x - 18, y + 64);
+      c.moveTo(x + 6, y + 41);
+      c.lineTo(x + 16, y + 64);
+      c.stroke();
+    } else if (pose === 'walk2') {
+      c.beginPath();
+      c.moveTo(x - 10, y + 18);
+      c.lineTo(x - 22, y + 10);
+      c.moveTo(x + 10, y + 18);
+      c.lineTo(x + 24, y + 28);
+      c.moveTo(x - 5, y + 41);
+      c.lineTo(x - 12, y + 65);
+      c.moveTo(x + 6, y + 41);
+      c.lineTo(x + 20, y + 62);
+      c.stroke();
+    } else {
+      c.beginPath();
+      c.moveTo(x - 10, y + 20);
+      c.lineTo(x - 24, y + 32);
+      c.moveTo(x - 6, y + 41);
+      c.lineTo(x - 15, y + 65);
+      c.moveTo(x + 6, y + 41);
+      c.lineTo(x + 14, y + 65);
+      c.stroke();
+    }
   }
 
   _drawUnderwaterDiver(ctx, x, y, pose, isLit, hasBagLit) {
@@ -1812,51 +2145,59 @@ class SquidGameWatch {
       c.fill();
 
       // 4. ポーズ別の手足
-      c.lineWidth = 7;
-      if (pose === 'rope') {
-        // ロープを掴む腕と足
-        c.beginPath();
-        c.moveTo(x + 8, y + 18);
-        c.lineTo(x + 24, y + 6);
-        c.moveTo(x - 6, y + 40);
-        c.lineTo(x - 12, y + 60);
-        c.moveTo(x + 6, y + 40);
-        c.lineTo(x + 14, y + 56);
-        c.stroke();
-      } else if (pose === 'walk1') {
-        c.beginPath();
-        c.moveTo(x - 10, y + 18);
-        c.lineTo(x - 24, y + 30);
-        c.moveTo(x + 10, y + 18);
-        c.lineTo(x + 24, y + 10);
-        // 歩く足（鉛ブーツ）
-        c.moveTo(x - 6, y + 41);
-        c.lineTo(x - 18, y + 64);
-        c.moveTo(x + 6, y + 41);
-        c.lineTo(x + 16, y + 64);
-        c.stroke();
-      } else if (pose === 'walk2') {
-        c.beginPath();
-        c.moveTo(x - 10, y + 18);
-        c.lineTo(x - 22, y + 10);
-        c.moveTo(x + 10, y + 18);
-        c.lineTo(x + 24, y + 28);
-        c.moveTo(x - 5, y + 41);
-        c.lineTo(x - 12, y + 65);
-        c.moveTo(x + 6, y + 41);
-        c.lineTo(x + 20, y + 62);
-        c.stroke();
-      } else {
-        // chest (宝箱前)
-        c.beginPath();
-        c.moveTo(x - 10, y + 20);
-        c.lineTo(x - 24, y + 32);
-        c.moveTo(x - 6, y + 41);
-        c.lineTo(x - 15, y + 65);
-        c.moveTo(x + 6, y + 41);
-        c.lineTo(x + 14, y + 65);
-        c.stroke();
-      }
+      this._drawDiverLimbsPath(c, x, y, pose);
+    }, (c) => {
+      // GAME C: まったく同じ形・座標で、妙にリアルな潜水夫の色（銅ヘルメット・耐圧キャンバス服・気泡）
+      c.lineCap = 'round';
+      c.lineJoin = 'round';
+
+      // 手足（耐圧ゴム引きキャンバス生地の立体シェーディング）
+      const limbGrad = c.createLinearGradient(x - 24, y + 10, x + 24, y + 65);
+      limbGrad.addColorStop(0, '#b5a482');
+      limbGrad.addColorStop(0.55, '#78684b');
+      limbGrad.addColorStop(1, '#332b1d');
+      c.strokeStyle = limbGrad;
+      this._drawDiverLimbsPath(c, x, y, pose);
+
+      // 胴体（重厚なヴィンテージ潜水服＋胸部プロテクター陰影）
+      const suitGrad = c.createLinearGradient(x - 12, y + 13, x + 12, y + 43);
+      suitGrad.addColorStop(0, '#d8cba8');
+      suitGrad.addColorStop(0.35, '#9c8b67');
+      suitGrad.addColorStop(0.75, '#63553b');
+      suitGrad.addColorStop(1, '#362e1e');
+      c.fillStyle = suitGrad;
+      c.beginPath();
+      c.roundRect(x - 12, y + 13, 24, 30, 7);
+      c.fill();
+
+      // 潜水ヘルメット（磨かれた銅・真鍮のリアルな金属光沢）
+      const helmGrad = c.createRadialGradient(x - 5, y - 5, 2, x, y, 14);
+      helmGrad.addColorStop(0, '#fef9c3');
+      helmGrad.addColorStop(0.35, '#f59e0b');
+      helmGrad.addColorStop(0.72, '#b45309');
+      helmGrad.addColorStop(1, '#451a03');
+      c.fillStyle = helmGrad;
+      c.beginPath();
+      c.arc(x, y, 14, 0, Math.PI * 2);
+      c.fill();
+
+      // ヘルメット覗き窓（ガラスの反射＋中の潜水夫の肌色）
+      const visorGrad = c.createRadialGradient(x + 2, y - 3, 1, x + 4, y - 1, 6.5);
+      visorGrad.addColorStop(0, '#fde68a');
+      visorGrad.addColorStop(0.45, '#f5cba7');
+      visorGrad.addColorStop(0.78, '#0284c7');
+      visorGrad.addColorStop(1, '#082f49');
+      c.fillStyle = visorGrad;
+      c.beginPath();
+      c.arc(x + 4, y - 1, 6.5, 0, Math.PI * 2);
+      c.fill();
+
+      // 呼吸気泡（銀白色に輝くリアルな気泡）
+      c.fillStyle = 'rgba(224, 242, 254, 0.92)';
+      c.beginPath();
+      c.arc(x - 6, y - 20, 2.8, 0, Math.PI * 2);
+      c.arc(x - 2, y - 28, 3.6, 0, Math.PI * 2);
+      c.fill();
     });
 
     // 腰にぶら下げる「宝袋（TREASURE BAG）」独立液晶セグメント
@@ -1872,6 +2213,25 @@ class SquidGameWatch {
       c.closePath();
       c.fill();
       // 膨らんだ宝袋本体
+      c.beginPath();
+      c.arc(bx, by + 3, 11.5, 0, Math.PI * 2);
+      c.fill();
+    }, (c) => {
+      const bx = x - 22;
+      const by = y + 36;
+      const bagGrad = c.createRadialGradient(bx - 3, by - 1, 2, bx, by + 3, 12);
+      bagGrad.addColorStop(0, '#fef08a');
+      bagGrad.addColorStop(0.45, '#d97706');
+      bagGrad.addColorStop(0.85, '#78350f');
+      bagGrad.addColorStop(1, '#3b1506');
+      c.fillStyle = bagGrad;
+      c.beginPath();
+      c.moveTo(bx - 5, by - 12);
+      c.lineTo(bx + 5, by - 12);
+      c.lineTo(bx + 2, by - 6);
+      c.lineTo(bx - 2, by - 6);
+      c.closePath();
+      c.fill();
       c.beginPath();
       c.arc(bx, by + 3, 11.5, 0, Math.PI * 2);
       c.fill();
@@ -1892,6 +2252,23 @@ class SquidGameWatch {
       c.beginPath();
       c.arc(x + 82, y + 24, 7, 0, Math.PI * 2);
       c.fill();
+    }, (c) => {
+      c.strokeStyle = '#9c8b67';
+      c.lineWidth = 7.5;
+      c.lineCap = 'round';
+      c.beginPath();
+      c.moveTo(x + 10, y + 20);
+      c.lineTo(x + 48, y + 28);
+      c.lineTo(x + 76, y + 24);
+      c.stroke();
+      const goldGrad = c.createRadialGradient(x + 80, y + 22, 1, x + 82, y + 24, 7);
+      goldGrad.addColorStop(0, '#fef9c3');
+      goldGrad.addColorStop(0.55, '#facc15');
+      goldGrad.addColorStop(1, '#a16207');
+      c.fillStyle = goldGrad;
+      c.beginPath();
+      c.arc(x + 82, y + 24, 7, 0, Math.PI * 2);
+      c.fill();
     });
 
     // 腕セグメント2：宝箱から引き上げて自分の袋へ詰める
@@ -1905,12 +2282,30 @@ class SquidGameWatch {
       c.beginPath();
       c.arc(x + 36, y - 2, 7.5, 0, Math.PI * 2);
       c.fill();
+    }, (c) => {
+      c.strokeStyle = '#9c8b67';
+      c.lineWidth = 7.5;
+      c.lineCap = 'round';
+      c.beginPath();
+      c.moveTo(x + 10, y + 18);
+      c.lineTo(x + 32, y + 2);
+      c.stroke();
+      const goldGrad = c.createRadialGradient(x + 34, y - 4, 1, x + 36, y - 2, 7.5);
+      goldGrad.addColorStop(0, '#fef9c3');
+      goldGrad.addColorStop(0.55, '#facc15');
+      goldGrad.addColorStop(1, '#a16207');
+      c.fillStyle = goldGrad;
+      c.beginPath();
+      c.arc(x + 36, y - 2, 7.5, 0, Math.PI * 2);
+      c.fill();
     });
   }
 
   _drawGiantSquidBody(ctx) {
     // 巨大イカ（ダイオウイカ）の頭部・外套膜・三角エンペラ（常時点灯セグメント）
     const squidLit = true;
+    const eyeShift = (this.tickCount % 2 === 0) ? -3 : 3;
+
     this._drawSegment(ctx, squidLit, (c) => {
       c.save();
       // 1. イカ特有の三角形の大きなエンペラ（耳ヒレ）と槍型の外套膜（右上〜中央上）
@@ -1942,7 +2337,6 @@ class SquidGameWatch {
       c.restore();
 
       // 目の瞳孔（ティックに合わせてギョロッと動く）
-      const eyeShift = (this.tickCount % 2 === 0) ? -3 : 3;
       c.beginPath();
       c.arc(526 + eyeShift, 190, 7.5, 0, Math.PI * 2);
       c.arc(572 + eyeShift, 200, 7.5, 0, Math.PI * 2);
@@ -1952,6 +2346,78 @@ class SquidGameWatch {
       c.beginPath();
       c.roundRect(604, 216, 22, 14, 5);
       c.fill();
+      c.restore();
+    }, (c) => {
+      // GAME C: まったく同じ形・座標で、妙にリアルな生々しいスルメイカ／ダイオウイカの色素胞＆ぬめり感
+      c.save();
+
+      // 漏斗（半透明の赤갈色〜乳白色の肉質管）
+      const siphonGrad = c.createLinearGradient(604, 216, 626, 230);
+      siphonGrad.addColorStop(0, '#f4c2b8');
+      siphonGrad.addColorStop(0.5, '#be123c');
+      siphonGrad.addColorStop(1, '#4c0519');
+      c.fillStyle = siphonGrad;
+      c.beginPath();
+      c.roundRect(604, 216, 22, 14, 5);
+      c.fill();
+
+      // 外套膜とエンペラ（赤褐色〜深紅〜半透明ピンクベージュの生々しいグラデーション）
+      const mantleGrad = c.createLinearGradient(660, 95, 510, 220);
+      mantleGrad.addColorStop(0, '#450a0a');
+      mantleGrad.addColorStop(0.28, '#881337');
+      mantleGrad.addColorStop(0.58, '#be123c');
+      mantleGrad.addColorStop(0.84, '#e16a64');
+      mantleGrad.addColorStop(1, '#f8d2c9');
+      c.fillStyle = mantleGrad;
+      c.beginPath();
+      c.moveTo(648, 92);
+      c.lineTo(696, 152);
+      c.lineTo(652, 168);
+      c.quadraticCurveTo(628, 212, 598, 226);
+      c.lineTo(492, 206);
+      c.quadraticCurveTo(516, 168, 554, 138);
+      c.lineTo(528, 106);
+      c.closePath();
+      c.fill();
+
+      // 外套膜のぬめりハイライト（同じスリット座標 (638,114)->(568,165)）
+      c.strokeStyle = 'rgba(255, 228, 230, 0.62)';
+      c.lineWidth = 4;
+      c.lineCap = 'round';
+      c.beginPath();
+      c.moveTo(638, 114);
+      c.lineTo(568, 165);
+      c.stroke();
+
+      // 巨大イカのリアルな眼球（黄色がかった銀白色の強膜と血走りリム）
+      const drawRealEye = (ex, ey, rot) => {
+        const eyeGrad = c.createRadialGradient(ex - 2, ey - 2, 2, ex, ey, 16);
+        eyeGrad.addColorStop(0, '#fefce8');
+        eyeGrad.addColorStop(0.55, '#fde047');
+        eyeGrad.addColorStop(0.82, '#94a3b8');
+        eyeGrad.addColorStop(1, '#4c0519');
+        c.fillStyle = eyeGrad;
+        c.beginPath();
+        c.ellipse(ex, ey, 16, 13, rot, 0, Math.PI * 2);
+        c.fill();
+      };
+      drawRealEye(528, 188, -0.2);
+      drawRealEye(574, 198, 0.15);
+
+      // 漆黒の濡れた瞳孔（同じ座標・同じ半径 7.5）
+      c.fillStyle = '#09090b';
+      c.beginPath();
+      c.arc(526 + eyeShift, 190, 7.5, 0, Math.PI * 2);
+      c.arc(572 + eyeShift, 200, 7.5, 0, Math.PI * 2);
+      c.fill();
+
+      // 瞳孔内の濡れたキャッチライト（形を変えずに内側に極小の白い光点）
+      c.fillStyle = 'rgba(255, 255, 255, 0.88)';
+      c.beginPath();
+      c.arc(524 + eyeShift, 187, 2.1, 0, Math.PI * 2);
+      c.arc(570 + eyeShift, 197, 2.1, 0, Math.PI * 2);
+      c.fill();
+
       c.restore();
     });
   }
@@ -1999,14 +2465,16 @@ class SquidGameWatch {
         const isLit = t.len > sIdx;
 
         this._drawSegment(ctx, isLit, (c) => {
-          this._drawTaperedTentacleSegment(c, seg);
+          this._drawTaperedTentacleSegment(c, seg, false);
+        }, (c) => {
+          this._drawTaperedTentacleSegment(c, seg, true);
         });
       }
     }
   }
 
   // 根本が太く先端が細いイカの足セグメント＋リアルな輪っか状の吸盤（◎）を描画
-  _drawTaperedTentacleSegment(c, seg) {
+  _drawTaperedTentacleSegment(c, seg, isRealColor = false) {
     const { x1, y1, x2, y2, w1, w2, curve = 0, suckerDir = 1, isTip = false } = seg;
     const dx = x2 - x1;
     const dy = y2 - y1;
@@ -2045,6 +2513,22 @@ class SquidGameWatch {
       lowerPts.push([px - pnx * r, py - pny * r]);
     }
 
+    if (isRealColor) {
+      // GAME C: 触腕の背中側は赤褐色〜エンジ色、吸盤が並ぶ腹側は生々しい乳白ピンク色のグラデーション
+      const midSp = spinePts[5];
+      const armGrad = c.createLinearGradient(
+        midSp.px - midSp.pnx * suckerDir * (midSp.r + 4),
+        midSp.py - midSp.pny * suckerDir * (midSp.r + 4),
+        midSp.px + midSp.pnx * suckerDir * (midSp.r + 6),
+        midSp.py + midSp.pny * suckerDir * (midSp.r + 6)
+      );
+      armGrad.addColorStop(0, '#4c0519');
+      armGrad.addColorStop(0.45, '#9f1239');
+      armGrad.addColorStop(0.78, '#e16a64');
+      armGrad.addColorStop(1, '#fce7f3');
+      c.fillStyle = armGrad;
+    }
+
     // 1. テーパーのかかった触腕本体ポリゴンを描画
     c.beginPath();
     c.moveTo(upperPts[0][0], upperPts[0][1]);
@@ -2073,6 +2557,14 @@ class SquidGameWatch {
       const sx = sp.px + sp.pnx * suckerDir * offsetDist;
       const sy = sp.py + sp.pny * suckerDir * offsetDist;
 
+      if (isRealColor) {
+        const cupGrad = c.createRadialGradient(sx - 1, sy - 1, 0.5, sx, sy, sRadius);
+        cupGrad.addColorStop(0, '#fff1f2');
+        cupGrad.addColorStop(0.65, '#fecdd3');
+        cupGrad.addColorStop(1, '#be123c');
+        c.fillStyle = cupGrad;
+      }
+
       // 吸盤の根元の短い柄と外輪カップ
       c.beginPath();
       c.arc(sx, sy, sRadius, 0, Math.PI * 2);
@@ -2083,21 +2575,34 @@ class SquidGameWatch {
       }
     }
 
-    // 吸盤の中央のくぼみ（白抜きリングにして吸盤らしさを際立たせる）
+    // 吸盤の中央のくぼみ（LCD時は白抜きリング、GAME C時は生々しい暗赤色の吸盤穴）
     if (holeCenters.length > 0) {
-      c.save();
-      c.globalCompositeOperation = 'destination-out';
-      c.beginPath();
-      for (const h of holeCenters) {
-        c.moveTo(h.sx + h.hr, h.sy);
-        c.arc(h.sx, h.sy, h.hr, 0, Math.PI * 2);
+      if (isRealColor) {
+        c.fillStyle = '#4c0519';
+        c.beginPath();
+        for (const h of holeCenters) {
+          c.moveTo(h.sx + h.hr, h.sy);
+          c.arc(h.sx, h.sy, h.hr, 0, Math.PI * 2);
+        }
+        c.fill();
+      } else {
+        c.save();
+        c.globalCompositeOperation = 'destination-out';
+        c.beginPath();
+        for (const h of holeCenters) {
+          c.moveTo(h.sx + h.hr, h.sy);
+          c.arc(h.sx, h.sy, h.hr, 0, Math.PI * 2);
+        }
+        c.fill();
+        c.restore();
       }
-      c.fill();
-      c.restore();
     }
 
     // 3. 先端セグメント（isTip）は細くカールした触腕フックを描く
     if (isTip) {
+      if (isRealColor) {
+        c.strokeStyle = '#e16a64';
+      }
       c.lineWidth = Math.max(3.5, w2 * 0.85);
       c.lineCap = 'round';
       c.beginPath();
@@ -2142,42 +2647,84 @@ class SquidGameWatch {
       c.beginPath();
       c.roundRect(cx - 12, cy + 12, 24, 26, 6);
       c.fill();
+    }, (c) => {
+      // イカの巻き付き触腕
+      c.strokeStyle = '#9f1239';
+      c.lineWidth = 12;
+      c.lineCap = 'round';
+      c.beginPath();
+      c.moveTo(492, 186);
+      c.quadraticCurveTo(435, 168, cx + 10, cy + 18);
+      c.stroke();
+
+      // 胴体
+      const suitGrad = c.createLinearGradient(cx - 12, cy + 12, cx + 12, cy + 38);
+      suitGrad.addColorStop(0, '#d8cba8');
+      suitGrad.addColorStop(0.5, '#8c7a56');
+      suitGrad.addColorStop(1, '#3f3522');
+      c.fillStyle = suitGrad;
+      c.beginPath();
+      c.roundRect(cx - 12, cy + 12, 24, 26, 6);
+      c.fill();
+
+      // 頭部ヘルメット
+      const helmGrad = c.createRadialGradient(cx - 4, cy - 4, 2, cx, cy, 13);
+      helmGrad.addColorStop(0, '#fef9c3');
+      helmGrad.addColorStop(0.4, '#f59e0b');
+      helmGrad.addColorStop(0.8, '#9a3412');
+      helmGrad.addColorStop(1, '#451a03');
+      c.fillStyle = helmGrad;
+      c.beginPath();
+      c.arc(cx, cy, 13, 0, Math.PI * 2);
+      c.fill();
+
+      // 覗き窓
+      c.fillStyle = '#38bdf8';
+      c.beginPath();
+      c.arc(cx - 2, cy - 1, 5.5, 0, Math.PI * 2);
+      c.fill();
     });
 
-    // バタバタ手足フレームA（左腕上げ・右足上げ）
-    this._drawSegment(ctx, frameA, (c) => {
+    const drawFlailLimbsA = (c) => {
       c.lineWidth = 6.5;
       c.lineCap = 'round';
       c.beginPath();
-      // 左腕上・右腕下
       c.moveTo(cx - 10, cy + 16);
       c.lineTo(cx - 32, cy - 2);
       c.moveTo(cx + 10, cy + 20);
       c.lineTo(cx + 32, cy + 32);
-      // 左足下・右足上
       c.moveTo(cx - 8, cy + 36);
       c.lineTo(cx - 24, cy + 58);
       c.moveTo(cx + 8, cy + 36);
       c.lineTo(cx + 28, cy + 44);
       c.stroke();
-    });
+    };
 
-    // バタバタ手足フレームB（右腕上げ・左足上げ）
-    this._drawSegment(ctx, frameB, (c) => {
+    const drawFlailLimbsB = (c) => {
       c.lineWidth = 6.5;
       c.lineCap = 'round';
       c.beginPath();
-      // 左腕下・右腕上
       c.moveTo(cx - 10, cy + 20);
       c.lineTo(cx - 32, cy + 32);
       c.moveTo(cx + 10, cy + 16);
       c.lineTo(cx + 32, cy - 4);
-      // 左足上・右足下
       c.moveTo(cx - 8, cy + 36);
       c.lineTo(cx - 28, cy + 44);
       c.moveTo(cx + 8, cy + 36);
       c.lineTo(cx + 22, cy + 58);
       c.stroke();
+    };
+
+    // バタバタ手足フレームA（左腕上げ・右足上げ）
+    this._drawSegment(ctx, frameA, drawFlailLimbsA, (c) => {
+      c.strokeStyle = '#9c8b67';
+      drawFlailLimbsA(c);
+    });
+
+    // バタバタ手足フレームB（右腕上げ・左足上げ）
+    this._drawSegment(ctx, frameB, drawFlailLimbsB, (c) => {
+      c.strokeStyle = '#9c8b67';
+      drawFlailLimbsB(c);
     });
   }
 
@@ -2185,9 +2732,10 @@ class SquidGameWatch {
      7-Segment Digital Display & LCD Status Text
      -------------------------------------------------------------------------- */
   _drawTopRightHudSegments(ctx) {
-    // モード表示 (GAME A / GAME B / TIME)
-    this._drawLcdLabel(ctx, 326, 32, 'GAME A', this.state !== 'TIME' && this.gameMode === 'A');
-    this._drawLcdLabel(ctx, 326, 54, 'GAME B', this.state !== 'TIME' && this.gameMode === 'B');
+    // モード表示 (GAME A / GAME B / GAME C / TIME / BONUS)
+    this._drawLcdLabel(ctx, 324, 26, 'GAME A', this.state !== 'TIME' && this.gameMode === 'A', 12.5);
+    this._drawLcdLabel(ctx, 324, 44, 'GAME B', this.state !== 'TIME' && this.gameMode === 'B', 12.5);
+    this._drawLcdLabel(ctx, 324, 62, 'GAME C', this.state !== 'TIME' && this.gameMode === 'C', 12.5);
     this._drawLcdLabel(ctx, 412, 32, 'TIME', this.state === 'TIME');
     this._drawLcdLabel(ctx, 412, 54, 'BONUS', this.bonusTimer > 0 || this.state === 'UNLOADING');
 
@@ -2231,6 +2779,11 @@ class SquidGameWatch {
     this._drawSegment(ctx, isLit, (c) => {
       c.font = `900 ${fontSize}px "Arial Black", Impact, sans-serif`;
       c.letterSpacing = '1px';
+      c.fillText(text, x, y);
+    }, (c) => {
+      c.font = `900 ${fontSize}px "Arial Black", Impact, sans-serif`;
+      c.letterSpacing = '1px';
+      c.fillStyle = '#fef08a';
       c.fillText(text, x, y);
     });
   }

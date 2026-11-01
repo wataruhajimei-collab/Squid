@@ -175,7 +175,7 @@ export async function handleApiRequest(request, env) {
       }
 
       // --- 個人ハイスコアランキング（デフォルト）---
-      if (gameModeFilter && (gameModeFilter === "A" || gameModeFilter === "B")) {
+      if (gameModeFilter && (gameModeFilter === "A" || gameModeFilter === "B" || gameModeFilter === "C")) {
         leaderboard = leaderboard.filter(e => (e.gameMode || "A") === gameModeFilter);
       }
 
@@ -227,7 +227,7 @@ export async function handleApiRequest(request, env) {
 
       const name = String(body.name).trim().substring(0, 12) || "DIVER";
       const score = Math.min(99999, Math.max(0, Math.floor(body.score)));
-      const gameMode = body.gameMode === "B" ? "B" : "A";
+      const gameMode = (body.gameMode === "B" || body.gameMode === "C") ? body.gameMode : "A";
       const bags = Math.max(0, Math.floor(body.bags || 0));
       const date = body.date || new Date().toISOString();
       const playerId = body.playerId ? String(body.playerId).substring(0, 64) : null;
