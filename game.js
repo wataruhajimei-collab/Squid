@@ -114,10 +114,15 @@ class PiezoSoundEngine {
     this.beep(1760, 0.045, 0.04, 'square', 0.095);
   }
 
-  // 船に生還して+3点ボーナスが入る時のカウント音（「ピ・ピ・ピ！」）
+  // 船に生還して布袋から金を降ろし+3点ボーナスが入る時のカウント音＆金貨ジャラジャラ音（「チャリッ・ピ・ピ・ピ！」）
   boatBonusTick(stepIdx) {
     const freqs = [1568, 1760, 2093];
-    this.beep(freqs[stepIdx % 3], 0.05, 0, 'square', 0.1);
+    const base = freqs[stepIdx % 3];
+    // 金貨が甲板にこぼれ落ちる金属チャイム装飾音
+    this.beep(base * 1.5, 0.018, 0.0, 'triangle', 0.06);
+    this.beep(base * 1.25, 0.020, 0.022, 'triangle', 0.065);
+    // 本家生還ボーナス音
+    this.beep(base, 0.055, 0.042, 'square', 0.1);
   }
 
   // イカの足に捕まってバタバタもがく時の警告ブザー音
@@ -293,10 +298,15 @@ class SquidGameWatch {
       });
     }
 
-    // GAME C: 袋に詰めた金貨の量・袋の揺れ・飛び交う金貨パーティクル
+    // GAME C: 袋に詰めた金貨の量・袋の揺れ・飛び交う金貨パーティクル・船上荷下ろし演出
     this.bagGoldCount = 0;
     this.bagStuffBounce = 0;
     this.goldCoinsInFlight = [];
+    this.unloadElapsed = 0;
+    this.unloadStartGold = 0;
+    this.demoUnloadTimer = 0;
+    this.boatUnloadParticles = [];
+    this.boatDeckCoins = [];
 
     // GAME C: 流れる多層雲・羽ばたく海鳥・星空・季節＆天候パーティクル・海中魚群・リアル海藻
     this.skyClouds = [
@@ -1059,6 +1069,11 @@ class SquidGameWatch {
     this.bagGoldCount = 0;
     this.bagStuffBounce = 0;
     this.goldCoinsInFlight = [];
+    this.unloadElapsed = 0;
+    this.unloadStartGold = 0;
+    this.demoUnloadTimer = 0;
+    this.boatUnloadParticles = [];
+    this.boatDeckCoins = [];
     this.grabAnimPhase = 0;
     this.grabAnimTimer = 0;
     this.unloadTicksLeft = 0;
@@ -1139,14 +1154,17 @@ class SquidGameWatch {
         this._spawnDiverBubbleBurst(7);
         this._checkCollisionImmediate();
       } else if (this.diverPos === 1) {
-        // 財宝袋(hasBag)を持っている時だけ船上(pos=0)へ上がって+3点ボーナス！
+        // 財宝袋(hasBag)を持っている時だけ船上(pos=0)へ上がって満杯の布袋から金を船に降ろす+3点ボーナス演出！
         if (this.hasBag) {
           this.diverPos = 0;
           this.state = 'UNLOADING';
           this.unloadTicksLeft = 3;
           this.unloadTimer = 0;
+          this.unloadElapsed = 0;
+          this.unloadStartGold = Math.max(4, this.bagGoldCount || 3);
           this.bagsReturned += 1;
-          this._setStatusText('🙌 生還成功！ +3 PTS BONUS!');
+          this._spawnBoatUnloadGoldWave(0);
+          this._setStatusText('🙌 生還成功！ 満杯の布袋から金を船へ荷下ろし中 (+3 PTS BONUS!)');
         } else {
           // まだ宝を持っていない時はロープ位置で待機音のみ
           this.sound.step();
@@ -1199,6 +1217,40 @@ class SquidGameWatch {
     }
     if (this.goldCoinsInFlight.length > 48) {
       this.goldCoinsInFlight.splice(0, this.goldCoinsInFlight.length - 48);
+    }
+  }
+
+  // 船に戻った時、満杯の布袋の口(x≈198, y≈48)から船の甲板(x≈186..224, y≈82..88)へ金貨・金塊・宝石をザクザク降ろすパーティクル波を生成
+  _spawnBoatUnloadGoldWave(waveIdx = 0) {
+    if (!this.boatUnloadParticles) this.boatUnloadParticles = [];
+    const types = ['coin', 'coin', 'ingot', 'coin', 'ruby', 'coin', 'ingot', 'emerald', 'coin'];
+    const count = 9 + Math.min(8, (this.bagGoldCount || 2) * 2);
+    // 布袋の口の位置（ダイバー(168,52)が右前方の甲板へ向けて傾けた袋の口）
+    const mouthX = 198 + (waveIdx % 2 === 0 ? 2 : -2);
+    const mouthY = 48 + waveIdx * 1.5;
+
+    for (let i = 0; i < count; i++) {
+      const kind = types[(i + waveIdx * 3) % types.length];
+      const spreadX = (Math.random() - 0.42) * 34;
+      this.boatUnloadParticles.push({
+        kind,
+        delay: i * 0.018,
+        x: mouthX + (Math.random() - 0.5) * 7,
+        y: mouthY + (Math.random() - 0.5) * 5,
+        vx: spreadX,
+        vy: 32 + Math.random() * 48,
+        gravity: 290 + Math.random() * 80,
+        targetDeckY: 81.5 + Math.random() * 6.5,
+        bounces: 0,
+        rot: Math.random() * Math.PI * 2,
+        rotSpeed: (Math.random() - 0.5) * 20,
+        r: kind === 'ingot' ? 4.3 : (2.9 + (i % 3) * 0.55),
+        alpha: 1.0,
+        sparkle: Math.random() < 0.45
+      });
+    }
+    if (this.boatUnloadParticles.length > 72) {
+      this.boatUnloadParticles.splice(0, this.boatUnloadParticles.length - 72);
     }
   }
 
@@ -1393,6 +1445,52 @@ class SquidGameWatch {
       }
     }
 
+    // 船に戻った時、満杯の布袋から船の甲板へ降り注ぐ金貨・金塊・宝石の物理バウンド更新
+    if (this.boatUnloadParticles && this.boatUnloadParticles.length > 0) {
+      if (!this.boatDeckCoins) this.boatDeckCoins = [];
+      for (let i = this.boatUnloadParticles.length - 1; i >= 0; i--) {
+        const p = this.boatUnloadParticles[i];
+        if (p.delay > 0) {
+          p.delay -= dt;
+          continue;
+        }
+        p.vy += p.gravity * dt;
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        p.rot += p.rotSpeed * dt;
+
+        // 船の甲板範囲内に収める
+        if (p.x < 180) { p.x = 180; p.vx = Math.abs(p.vx) * 0.5; }
+        if (p.x > 224) { p.x = 224; p.vx = -Math.abs(p.vx) * 0.5; }
+
+        if (p.y >= p.targetDeckY) {
+          p.y = p.targetDeckY;
+          if (p.bounces < 1) {
+            p.bounces += 1;
+            p.vy = -(42 + Math.random() * 34);
+            p.vx *= 0.65;
+            p.rotSpeed *= 0.6;
+          } else {
+            // 甲板上の金貨の山へ定着
+            if (this.boatDeckCoins.length < 44) {
+              this.boatDeckCoins.push({
+                kind: p.kind,
+                x: p.x,
+                y: p.targetDeckY - Math.min(6.5, this.boatDeckCoins.length * 0.14),
+                r: p.r,
+                rot: (Math.random() - 0.5) * 0.45
+              });
+            }
+            this.boatUnloadParticles.splice(i, 1);
+          }
+        }
+      }
+    }
+
+    if (this.demoUnloadTimer > 0) {
+      this.demoUnloadTimer = Math.max(0, this.demoUnloadTimer - dt);
+    }
+
     // 空の雲・海鳥・季節天候パーティクル・海中魚の移動更新
     const env = this._getEnvAtmosphere();
     const windMul = 1.0 + env.rainIntensity * 0.85;
@@ -1548,13 +1646,16 @@ class SquidGameWatch {
       }
     }
 
-    // 1. 船上での+3点ボーナス荷下ろしステート
+    // 1. 船上での+3点ボーナス荷下ろしステート（満杯の布袋を逆さに傾けて金を船に降ろす演出）
     if (this.state === 'UNLOADING') {
       this.unloadTimer += dt;
-      if (this.unloadTimer >= 0.26) {
+      this.unloadElapsed += dt;
+      if (this.unloadTimer >= 0.30) {
         this.unloadTimer = 0;
         if (this.unloadTicksLeft > 0) {
-          this.sound.boatBonusTick(3 - this.unloadTicksLeft);
+          const stepIdx = 3 - this.unloadTicksLeft;
+          this.sound.boatBonusTick(stepIdx);
+          this._spawnBoatUnloadGoldWave(stepIdx + 1);
           this._addScore(1);
           this.unloadTicksLeft -= 1;
         } else {
@@ -1685,6 +1786,9 @@ class SquidGameWatch {
       } else {
         this.grabAnimPhase = 1;
         this.grabAnimTimer = 0.2;
+        this.bagGoldCount = (this.bagGoldCount || 0) + 1;
+        this.bagStuffBounce = 1.0;
+        this._spawnGoldStuffingBurst();
         if (Math.random() < 0.45) {
           this.hasBag = true;
         }
@@ -1698,9 +1802,15 @@ class SquidGameWatch {
       } else {
         this.diverPos = 0;
         this.hasBag = false;
+        this.demoUnloadTimer = 0.90;
+        this.unloadElapsed = 0;
+        this._spawnBoatUnloadGoldWave(0);
         setTimeout(() => {
-          if (this.state === 'TIME') this.diverPos = 1;
-        }, 500);
+          if (this.state === 'TIME') {
+            this.diverPos = 1;
+            this.bagGoldCount = 0;
+          }
+        }, 900);
       }
     }
   }
@@ -2974,13 +3084,21 @@ class SquidGameWatch {
   }
 
   _drawBoatBowDiver(ctx, x, y, isLit, isUnloading) {
-    // 船首に立つダイバー本体
+    const isDemoUnloading = this.state === 'TIME' && this.diverPos === 0 && (this.demoUnloadTimer > 0);
+    const activeUnload = isLit && (isUnloading || isDemoUnloading || this.hasBag);
+    const unloadProg = (isUnloading || isDemoUnloading)
+      ? Math.min(1, (this.unloadElapsed || 0) / 1.05)
+      : 0;
+    // 荷下ろし中は布袋を振るリズムに合わせてダイバーの上半身もわずかに前傾して揺れる
+    const bodyLeanX = activeUnload ? Math.sin((this.unloadElapsed || 0) * 26) * 1.4 + 1.5 : 0;
+
+    // 1. 船首に立つダイバー本体
     this._drawSegment(ctx, isLit, (c) => {
       c.beginPath();
-      c.arc(x, y, 12, 0, Math.PI * 2);
+      c.arc(x + bodyLeanX, y, 12, 0, Math.PI * 2);
       c.fill();
       c.beginPath();
-      c.roundRect(x - 10, y + 12, 20, 24, 5);
+      c.roundRect(x - 10 + bodyLeanX * 0.7, y + 12, 20, 24, 5);
       c.fill();
       // 足
       c.lineWidth = 6;
@@ -3010,52 +3128,425 @@ class SquidGameWatch {
       suitGrad.addColorStop(1, '#4d412d');
       c.fillStyle = suitGrad;
       c.beginPath();
-      c.roundRect(x - 10, y + 12, 20, 24, 5);
+      c.roundRect(x - 10 + bodyLeanX * 0.7, y + 12, 20, 24, 5);
       c.fill();
 
       // 真鍮・銅製ヘルメット
-      const helmGrad = c.createRadialGradient(x - 4, y - 4, 2, x, y, 12);
+      const hx = x + bodyLeanX;
+      const helmGrad = c.createRadialGradient(hx - 4, y - 4, 2, hx, y, 12);
       helmGrad.addColorStop(0, '#fef9c3');
       helmGrad.addColorStop(0.42, '#ea580c');
       helmGrad.addColorStop(0.8, '#9a3412');
       helmGrad.addColorStop(1, '#431407');
       c.fillStyle = helmGrad;
       c.beginPath();
-      c.arc(x, y, 12, 0, Math.PI * 2);
+      c.arc(hx, y, 12, 0, Math.PI * 2);
+      c.fill();
+
+      // ヘルメット覗き窓
+      const glassGrad = c.createRadialGradient(hx + 2, y - 2, 1, hx + 3, y - 1, 5);
+      glassGrad.addColorStop(0, '#fde68a');
+      glassGrad.addColorStop(0.55, '#38bdf8');
+      glassGrad.addColorStop(1, '#0c4a6e');
+      c.fillStyle = glassGrad;
+      c.beginPath();
+      c.arc(hx + 3, y - 1, 5, 0, Math.PI * 2);
       c.fill();
     });
 
-    // 生還時に宝袋を高々と掲げる腕＆宝袋セグメント（+3点ボーナス時）
-    const bagRaisedLit = isLit && (isUnloading || this.hasBag);
-    this._drawSegment(ctx, bagRaisedLit, (c) => {
-      c.lineWidth = 6;
-      c.lineCap = 'round';
+    // 2. 船の甲板上に積み上がった黄金の山（LCDゴースト＆点灯セグメント＋リアル金貨山）
+    const hasDeckPile = (this.bagsReturned > 0) || activeUnload || (this.boatDeckCoins && this.boatDeckCoins.length > 0);
+    this._drawSegment(ctx, hasDeckPile, (c) => {
+      // 甲板上の金貨マウンドシルエット
       c.beginPath();
-      c.moveTo(x + 6, y + 16);
-      c.lineTo(x + 24, y - 4);
-      c.stroke();
-      // 掲げた宝袋
-      c.beginPath();
-      c.arc(x + 30, y - 10, 11, 0, Math.PI * 2);
+      c.moveTo(x + 14, y + 32);
+      c.quadraticCurveTo(x + 32, y + 20, x + 52, y + 32);
+      c.closePath();
       c.fill();
     }, (c) => {
-      c.strokeStyle = '#948260';
+      this._drawBoatDeckTreasureMound(c, x + 32, y + 32, unloadProg);
+    });
+
+    // GAME A / B でも船の甲板上に積み上がったリアルな金貨・金塊の山を描画
+    if (!this._isRealColor() && hasDeckPile) {
+      ctx.save();
+      this._drawBoatDeckTreasureMound(ctx, x + 32, y + 32, unloadProg);
+      ctx.restore();
+    }
+
+    // 3. 生還時に満杯の布袋を逆さに傾けて揺すり、金を船に降ろす腕＆布袋セグメント
+    this._drawSegment(ctx, activeUnload, (c) => {
+      const shakeY = Math.sin((this.unloadElapsed || 0) * 28) * 2.5;
+      const bagScale = Math.max(0.58, 1.0 - unloadProg * 0.42);
       c.lineWidth = 6;
       c.lineCap = 'round';
+      // 両腕で布袋の底と口元を持って傾ける
       c.beginPath();
-      c.moveTo(x + 6, y + 16);
-      c.lineTo(x + 24, y - 4);
+      c.moveTo(x + 6, y + 15);
+      c.lineTo(x + 25, y - 10 + shakeY);
+      c.moveTo(x + 8, y + 22);
+      c.lineTo(x + 28, y - 1 + shakeY);
       c.stroke();
 
-      const bagGrad = c.createRadialGradient(x + 27, y - 13, 2, x + 30, y - 10, 11);
-      bagGrad.addColorStop(0, '#fef08a');
-      bagGrad.addColorStop(0.5, '#ca8a04');
-      bagGrad.addColorStop(1, '#713f12');
-      c.fillStyle = bagGrad;
+      // 逆さに傾けた布袋本体（金が減るにつれて少しずつしぼむ）
+      c.save();
+      c.translate(x + 30, y - 8 + shakeY);
+      c.rotate(2.35);
+      c.scale(bagScale, 1.08);
       c.beginPath();
-      c.arc(x + 30, y - 10, 11, 0, Math.PI * 2);
+      c.arc(0, 0, 11.5, 0, Math.PI * 2);
       c.fill();
+      // 下向きに開いた布袋の口
+      c.beginPath();
+      c.moveTo(-6, -14);
+      c.lineTo(6, -14);
+      c.lineTo(3, -8);
+      c.lineTo(-3, -8);
+      c.closePath();
+      c.fill();
+      c.restore();
+
+      // 布袋の口から甲板へこぼれ落ちる金貨・金塊ストリーム（LCDドット列）
+      if (unloadProg < 0.92) {
+        const dropPhase = Math.floor((this.unloadElapsed || 0) * 18) % 3;
+        for (let d = 0; d < 4; d++) {
+          const dy = (y + 4) + d * 6.5 + dropPhase * 2.0;
+          const dx = (x + 30) + ((d % 2 === 0) ? -2.5 : 2.5);
+          c.beginPath();
+          c.arc(dx, dy, 2.8, 0, Math.PI * 2);
+          c.fill();
+        }
+      }
+    }, (c) => {
+      this._drawRealisticBoatBagUnloading(c, x, y, unloadProg);
     });
+
+    // GAME A / B でも満杯の布袋から金貨・金塊がザクザク船に降り注ぐリアルな質感アニメーションを重ねて描画
+    if (!this._isRealColor() && activeUnload) {
+      ctx.save();
+      this._drawRealisticBoatBagUnloading(ctx, x, y, unloadProg);
+      ctx.restore();
+    }
+  }
+
+  // 船の甲板(x≈200, y≈84)に積み上がるリアルな金貨・金塊・宝石の山を描画
+  _drawBoatDeckTreasureMound(c, deckX, deckY, unloadProg = 0) {
+    c.save();
+    const bagsCount = Math.max(1, this.bagsReturned || 1);
+    const pileScale = Math.min(1.35, 0.55 + Math.min(4, bagsCount) * 0.16 + unloadProg * 0.25);
+    const moundW = 20 * pileScale;
+    const moundH = 8.5 * pileScale;
+
+    // 1. 黄金のベースマウンド（甲板に広がる金貨の輝き）
+    const mGrad = c.createRadialGradient(deckX - 2, deckY - moundH * 0.4, 1.5, deckX, deckY, moundW);
+    mGrad.addColorStop(0, '#fef9c3');
+    mGrad.addColorStop(0.45, '#facc15');
+    mGrad.addColorStop(0.82, '#ca8a04');
+    mGrad.addColorStop(1, '#713f12');
+    c.fillStyle = mGrad;
+    c.strokeStyle = '#713f12';
+    c.lineWidth = 1.1;
+    c.beginPath();
+    c.moveTo(deckX - moundW, deckY + 1.5);
+    c.quadraticCurveTo(deckX, deckY - moundH * 1.6, deckX + moundW, deckY + 1.5);
+    c.closePath();
+    c.fill();
+    c.stroke();
+
+    // 2. 甲板の上に重なる黄金の延べ棒（インゴット）と金貨・宝石のディテール
+    const baseIngots = [
+      [-8, -1.5, -0.12], [6, -1.2, 0.15], [0, -4.2, 0.04]
+    ];
+    for (const [ix, iy, irot] of baseIngots) {
+      c.save();
+      c.translate(deckX + ix * pileScale, deckY + iy * pileScale);
+      c.rotate(irot);
+      c.fillStyle = '#fde047';
+      c.strokeStyle = '#854d0e';
+      c.lineWidth = 0.85;
+      c.beginPath();
+      c.roundRect(-4.2, -2.1, 8.4, 4.2, 1.0);
+      c.fill();
+      c.stroke();
+      c.fillStyle = '#fef9c3';
+      c.fillRect(-2.8, -1.2, 5.6, 1.1);
+      c.restore();
+    }
+
+    // 3. 荷下ろしで実際に跳ねて定着した個別の金貨・金塊・ルビー・エメラルド
+    if (this.boatDeckCoins && this.boatDeckCoins.length > 0) {
+      for (const dc of this.boatDeckCoins) {
+        c.save();
+        c.translate(dc.x, dc.y);
+        c.rotate(dc.rot);
+        if (dc.kind === 'ingot') {
+          c.fillStyle = '#facc15';
+          c.strokeStyle = '#713f12';
+          c.lineWidth = 0.75;
+          c.beginPath();
+          c.roundRect(-3.6, -1.8, 7.2, 3.6, 0.9);
+          c.fill();
+          c.stroke();
+        } else if (dc.kind === 'ruby' || dc.kind === 'emerald') {
+          c.fillStyle = dc.kind === 'ruby' ? '#ef4444' : '#10b981';
+          c.strokeStyle = '#ffffff';
+          c.lineWidth = 0.6;
+          c.beginPath();
+          c.arc(0, 0, 2.2, 0, Math.PI * 2);
+          c.fill();
+          c.stroke();
+        } else {
+          c.fillStyle = '#fde047';
+          c.strokeStyle = '#854d0e';
+          c.lineWidth = 0.7;
+          c.beginPath();
+          c.ellipse(0, 0, dc.r * 0.85, dc.r * 0.55, 0, 0, Math.PI * 2);
+          c.fill();
+          c.stroke();
+        }
+        c.restore();
+      }
+    }
+
+    // 4. 甲板の金貨山のキラリと光るスパークル
+    const sparkleA = 0.5 + 0.5 * Math.sin(this.bioTime * 8.0);
+    c.strokeStyle = `rgba(255, 255, 255, ${sparkleA.toFixed(3)})`;
+    c.lineWidth = 1.2;
+    const sx = deckX + Math.sin(Math.floor(this.bioTime * 3.5)) * 8;
+    const sy = deckY - moundH * 0.65;
+    c.beginPath();
+    c.moveTo(sx - 3.5, sy); c.lineTo(sx + 3.5, sy);
+    c.moveTo(sx, sy - 3.5); c.lineTo(sx, sy + 3.5);
+    c.stroke();
+
+    c.restore();
+  }
+
+  // 船に戻ったダイバーが「満杯の布袋」を逆さに傾けて振り、金貨・金塊・宝石を甲板へザクザク降ろすリアルアニメーション
+  _drawRealisticBoatBagUnloading(c, x, y, unloadProg) {
+    c.save();
+    const elapsed = this.unloadElapsed || 0;
+    // 布袋を上下に振って金を振り落とすモーション
+    const shakeWave = Math.sin(elapsed * 28);
+    const shakeY = shakeWave * 3.2;
+    const shakeRot = Math.cos(elapsed * 28) * 0.16;
+
+    // 最初はパンパンの満杯(fullness=1.0)から、金が甲板に降り注ぐにつれて布袋がしぼんでシワが寄る(fullness->0.22)
+    const fullness = Math.max(0.22, 1.0 - Math.max(0, unloadProg - 0.08) * 0.85);
+    // 袋を逆さまに傾ける角度（最初は持ち上げ、すぐに口を甲板へ向けて逆さまに傾ける）
+    const tiltProgress = Math.min(1, elapsed / 0.16);
+    const bagAngle = -0.3 + tiltProgress * 2.72 + shakeRot;
+
+    const bagCenterX = x + 30;
+    const bagCenterY = y - 7 + shakeY;
+
+    // 1. ダイバーの両腕（右腕で布袋の底角を持ち上げて振り、左腕で布袋の口元を支える）
+    const armGrad = c.createLinearGradient(x + 6, y + 14, bagCenterX, bagCenterY);
+    armGrad.addColorStop(0, '#c2b28f');
+    armGrad.addColorStop(0.6, '#8c7a56');
+    armGrad.addColorStop(1, '#4a3f2a');
+    c.strokeStyle = armGrad;
+    c.lineWidth = 6.2;
+    c.lineCap = 'round';
+    c.lineJoin = 'round';
+    c.beginPath();
+    // 上側の腕（布袋の底角を掴んで振る）
+    c.moveTo(x + 6, y + 15);
+    c.quadraticCurveTo(x + 16, y - 4 + shakeY * 0.5, bagCenterX - 3, bagCenterY - 8);
+    // 下側の腕（布袋の首元を支える）
+    c.moveTo(x + 8, y + 23);
+    c.quadraticCurveTo(x + 19, y + 14 + shakeY * 0.5, bagCenterX - 2, bagCenterY + 5);
+    c.stroke();
+
+    // 2. 満杯の布袋（麻布・帆布の織り目・内部の金貨の凹凸・ほどけた麻紐・開いた袋口）
+    c.save();
+    c.translate(bagCenterX, bagCenterY);
+    c.rotate(bagAngle);
+
+    const rx = 7.8 + fullness * 6.8; // 満杯時は横幅14.6pxのぷっくり布袋 -> 空になると7.8pxのしぼんだ布袋
+    const ry = 13.0 + fullness * 2.2;
+
+    // (A) ほどけて揺れる麻紐（ドローストリング）
+    c.strokeStyle = '#fef08a';
+    c.lineWidth = 1.5;
+    c.beginPath();
+    c.moveTo(-4, -9);
+    c.quadraticCurveTo(-10 - shakeWave * 2.5, -5, -12, 2 + shakeWave * 3);
+    c.moveTo(4, -9);
+    c.quadraticCurveTo(10 + shakeWave * 2.5, -4, 11, 3 - shakeWave * 3);
+    c.stroke();
+
+    // (B) ガバッと大きく開いた布袋の口フリル
+    const mouthW = 6.5 + fullness * 3.5;
+    const neckGrad = c.createLinearGradient(-mouthW, -18, mouthW, -8);
+    neckGrad.addColorStop(0, '#78350f');
+    neckGrad.addColorStop(0.5, '#b45309');
+    neckGrad.addColorStop(1, '#451a03');
+    c.fillStyle = neckGrad;
+    c.strokeStyle = '#451a03';
+    c.lineWidth = 1.2;
+    c.beginPath();
+    c.moveTo(-mouthW, -17.5);
+    c.lineTo(-mouthW * 0.6, -19.2);
+    c.lineTo(0, -17.2);
+    c.lineTo(mouthW * 0.6, -19.2);
+    c.lineTo(mouthW, -17.5);
+    c.lineTo(4.2, -8.5);
+    c.lineTo(-4.2, -8.5);
+    c.closePath();
+    c.fill();
+    c.stroke();
+
+    // (C) 布袋の口元から今まさに溢れ出している金貨・金塊・宝石の塊
+    if (fullness > 0.25) {
+      const mouthCoins = [
+        [-3.8, -16.5, 3.1, '#fde047'],
+        [0.0,  -18.0, 3.5, '#facc15'],
+        [3.8,  -16.2, 3.0, '#fde047'],
+        [-1.8, -14.8, 2.7, '#ef4444'],
+        [2.2,  -14.8, 2.6, '#10b981']
+      ];
+      for (const [mcx, mcy, mcr, mcol] of mouthCoins) {
+        c.fillStyle = mcol;
+        c.strokeStyle = '#713f12';
+        c.lineWidth = 0.75;
+        c.beginPath();
+        c.arc(mcx * fullness, mcy, mcr * (0.65 + fullness * 0.35), 0, Math.PI * 2);
+        c.fill();
+        c.stroke();
+      }
+    }
+
+    // (D) 布袋本体（満杯時はゴツゴツと膨らみ、空になるにつれて布のたるみヒダができる）
+    const sackGrad = c.createRadialGradient(-rx * 0.3, -ry * 0.25, 1.5, 0, 0, Math.max(rx, ry) + 2);
+    sackGrad.addColorStop(0, '#fef3c7');
+    sackGrad.addColorStop(0.32, '#eab308');
+    sackGrad.addColorStop(0.68, '#b45309');
+    sackGrad.addColorStop(1, '#451a03');
+    c.fillStyle = sackGrad;
+    c.strokeStyle = '#451a03';
+    c.lineWidth = 1.25;
+
+    c.beginPath();
+    c.ellipse(0, 1.5, rx, ry, 0, 0, Math.PI * 2);
+    c.fill();
+    c.stroke();
+
+    // (E) 布袋の織り目テクスチャ＆満杯時の金貨の張り出し凹凸／空になった時の縦シワ
+    if (fullness > 0.48) {
+      // 満杯〜中盤：袋の中から金貨や金塊が布地を押し広げているリアルな凹凸ハイライト
+      const bulges = [
+        [-rx * 0.42, -2.5, 3.8 * fullness],
+        [rx * 0.38, -1.8, 3.6 * fullness],
+        [-rx * 0.28, 4.8, 4.1 * fullness],
+        [rx * 0.32, 4.5, 3.7 * fullness],
+        [0, 1.2, 4.3 * fullness]
+      ];
+      c.strokeStyle = 'rgba(254, 249, 195, 0.42)';
+      c.lineWidth = 1.05;
+      for (const [bx, by, br] of bulges) {
+        c.beginPath();
+        c.arc(bx, by, br, -0.8, 1.5);
+        c.stroke();
+      }
+    } else {
+      // 終盤：金が抜けてしぼんだ布袋のリアルな縦ドレープ（布のたるみシワ）
+      c.strokeStyle = 'rgba(69, 26, 3, 0.55)';
+      c.lineWidth = 1.1;
+      for (const fx of [-3.2, 0, 3.2]) {
+        c.beginPath();
+        c.moveTo(fx * 0.7, -7);
+        c.quadraticCurveTo(fx * 1.3, 1.5, fx * 0.8, 10);
+        c.stroke();
+      }
+    }
+
+    // 麻布のクロスハッチ織り目ラインと縫い目ステッチ
+    c.strokeStyle = 'rgba(120, 53, 15, 0.28)';
+    c.lineWidth = 0.75;
+    c.beginPath();
+    c.moveTo(-rx * 0.65, -2); c.lineTo(rx * 0.65, -2);
+    c.moveTo(-rx * 0.72, 3);  c.lineTo(rx * 0.72, 3);
+    c.moveTo(-rx * 0.55, 8);  c.lineTo(rx * 0.55, 8);
+    c.stroke();
+
+    // 口元の縛り目リング
+    c.strokeStyle = '#fde68a';
+    c.lineWidth = 1.7;
+    c.beginPath();
+    c.moveTo(-4.5, -8.5);
+    c.quadraticCurveTo(0, -7.0, 4.5, -8.5);
+    c.stroke();
+
+    c.restore();
+
+    // 3. 傾けた布袋の口から船の甲板へザクザク降り注ぐ金貨・黄金の延べ棒・宝石の滝ストリーム
+    if (this.boatUnloadParticles && this.boatUnloadParticles.length > 0) {
+      for (const p of this.boatUnloadParticles) {
+        if (p.delay > 0) continue;
+        c.save();
+        c.translate(p.x, p.y);
+        c.rotate(p.rot);
+
+        if (p.kind === 'ingot') {
+          // 黄金の延べ棒（インゴット）
+          const ig = c.createLinearGradient(-p.r, -p.r * 0.5, p.r, p.r * 0.5);
+          ig.addColorStop(0, '#fef9c3');
+          ig.addColorStop(0.45, '#facc15');
+          ig.addColorStop(1, '#a16207');
+          c.fillStyle = ig;
+          c.strokeStyle = '#713f12';
+          c.lineWidth = 0.9;
+          c.beginPath();
+          c.roundRect(-p.r, -p.r * 0.55, p.r * 2, p.r * 1.1, 1.2);
+          c.fill();
+          c.stroke();
+          c.fillStyle = '#ffffff';
+          c.fillRect(-p.r * 0.6, -p.r * 0.28, p.r * 1.2, p.r * 0.28);
+        } else if (p.kind === 'ruby' || p.kind === 'emerald') {
+          // ルビー・エメラルドの宝石
+          c.fillStyle = p.kind === 'ruby' ? '#f43f5e' : '#10b981';
+          c.strokeStyle = '#ffffff';
+          c.lineWidth = 0.75;
+          c.beginPath();
+          c.moveTo(0, -p.r);
+          c.lineTo(p.r * 0.85, 0);
+          c.lineTo(0, p.r);
+          c.lineTo(-p.r * 0.85, 0);
+          c.closePath();
+          c.fill();
+          c.stroke();
+        } else {
+          // くるくる3D回転しながら船に降り注ぐ金貨
+          const squash = Math.max(0.30, Math.abs(Math.cos(p.rot * 1.7)));
+          const cg = c.createRadialGradient(-0.8, -0.8, 0.4, 0, 0, p.r);
+          cg.addColorStop(0, '#ffffff');
+          cg.addColorStop(0.38, '#fde047');
+          cg.addColorStop(0.82, '#eab308');
+          cg.addColorStop(1, '#854d0e');
+          c.fillStyle = cg;
+          c.strokeStyle = '#713f12';
+          c.lineWidth = 0.8;
+          c.beginPath();
+          c.ellipse(0, 0, p.r, p.r * squash, 0, 0, Math.PI * 2);
+          c.fill();
+          c.stroke();
+        }
+
+        // 落下中の金貨のキラめきスパークル
+        if (p.sparkle && Math.sin(this.bioTime * 24 + p.rot) > 0.3) {
+          c.strokeStyle = 'rgba(255, 255, 255, 0.9)';
+          c.lineWidth = 1.0;
+          c.beginPath();
+          c.moveTo(-3.2, 0); c.lineTo(3.2, 0);
+          c.moveTo(0, -3.2); c.lineTo(0, 3.2);
+          c.stroke();
+        }
+        c.restore();
+      }
+    }
+
+    c.restore();
   }
 
   _drawDiverLimbsPath(c, x, y, pose) {
