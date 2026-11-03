@@ -1010,16 +1010,16 @@ html, body {
     margin: 0;
     padding:
       0
-      max(8px, env(safe-area-inset-right, 8px))
+      max(12px, env(safe-area-inset-right, 12px))
       0
-      max(8px, env(safe-area-inset-left, 8px));
+      max(12px, env(safe-area-inset-left, 12px));
     display: grid;
-    /* 画面両脇にボタン用スペース（min 64px, 目安 11-13vw）を確保し、中央にゲーム画面を配置 */
-    grid-template-columns: minmax(68px, 1fr) auto minmax(68px, 1fr);
+    /* 左右ボタン列に十分な幅(min 84px〜目安16vw)をしっかり確保 */
+    grid-template-columns: minmax(84px, 1fr) auto minmax(84px, 1fr);
     grid-template-rows: auto 1fr auto;
     align-items: center;
     justify-items: stretch;
-    gap: 6px 12px;
+    gap: 8px 16px;
     background: #0c0e0b;
     border: none;
     border-radius: 0;
@@ -1041,9 +1041,9 @@ html, body {
   }
 
   /* Center Column: 3:2 Play Screen
-     スマホ(19.5:9〜16:9)では上下フル(100dvh)でぴったり左右ボタン配置。
-     iPad(4:3 / 10:7など)では左右が詰まらないよう上下に余白を空け、
-     画面幅の70%〜72%以内でスマホ同様のゆったりした左右ボタン余白を自動確保 */
+     - 横長スマホ(19.5:9や16:9): 左右に余裕があるため上下フル(100dvh)でぴったり左右ボタン配置。
+     - iPad(4:3 / 10:7 / 3:2): 左右が詰まらないよう上下にしっかり余白を空け、
+       画面幅の62vw（または100dvw - 210px）に抑えてスマホ同様のゆったりした配置にする */
   .metal-plate {
     grid-column: 2;
     grid-row: 1 / 4;
@@ -1078,15 +1078,16 @@ html, body {
 
   .lcd-glass-frame {
     aspect-ratio: 3 / 2;
-    /* iPad等で左右が詰まらないよう、幅を最大 (100dvw - 160px) および 100dvw * 0.70 に制限。
-       これによりiPad横向きでは上下に自然な空きができ、スマホのような黄金比配置を保つ */
-    width: min(calc(100dvh * 1.5), calc(100dvw - 160px), 71dvw);
+    /* iPad等で左右が狭くならないよう、最大幅を62dvw(左右に計38%の余白)かつ(100dvw - 210px)に制限。
+       これによりiPad横向きでは上下に自然な余白（黒帯）ができ、スマホと全く同じ快適なボタン距離を確保 */
+    width: min(calc(100dvh * 1.5), calc(100dvw - 210px), 62dvw);
     height: auto;
     max-height: 100dvh;
-    border-radius: 6px;
+    border-radius: 8px;
     border: none;
     margin: 0;
     padding: 0;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.65);
   }
 
   #lcdCanvas {
@@ -1129,10 +1130,10 @@ html, body {
     grid-row: 3;
     align-self: end;
     justify-self: stretch;
-    margin-bottom: max(6px, env(safe-area-inset-bottom, 6px));
+    margin-bottom: max(8px, env(safe-area-inset-bottom, 8px));
     width: 100%;
-    max-width: 160px;
-    height: clamp(82px, 32dvh, 140px);
+    max-width: 150px;
+    height: clamp(80px, 28dvh, 126px);
   }
 
   /* Right Side (Outside Screen): Top Utility Buttons */
@@ -1198,10 +1199,10 @@ html, body {
     grid-row: 3;
     align-self: end;
     justify-self: stretch;
-    margin-bottom: max(6px, env(safe-area-inset-bottom, 6px));
+    margin-bottom: max(8px, env(safe-area-inset-bottom, 8px));
     width: 100%;
-    max-width: 160px;
-    height: clamp(82px, 32dvh, 140px);
+    max-width: 150px;
+    height: clamp(80px, 28dvh, 126px);
   }
 
   .btn-arrow {
