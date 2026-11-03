@@ -2942,17 +2942,367 @@ class SquidGameWatch {
     ctx.restore();
   }
 
-  // 液晶セグメント描画ヘルパー（GAME A/B: 1981年モノクロ液晶 / GAME C: 同じ形で妙にリアルな彩色）
-  _drawSegment(ctx, isLit, pathFn, realDrawFn = null, shadowAlpha = 0.38) {
+  // GAME C: 太陽・満月・朝焼け・夕焼け・快晴・雨天・水深に応じたダイバーのライティング＆逆向き影ベクトルを算出
+  _getDiverLighting(x, y) {
+    const env = this._getEnvAtmosphere();
+
+    // 夜間ウェイト (0.0: 昼〜薄明, 1.0: 満月の夜)
+    let nightWeight = 0;
+    if (env.todIdx === 3) nightWeight = 1.0 - env.todSmooth * 0.45;
+    else if (env.todIdx === 2) nightWeight = Math.max(0, (env.todSmooth - 0.35) / 0.65);
+    else if (env.todIdx === 0) nightWeight = Math.max(0, 0.55 - env.todSmooth * 0.9);
+
+    // 太陽と満月の現在座標（空の描画と完全同期）
+    const sunProg = Math.min(1, Math.max(0, (env.todCycle < 3.2 ? env.todCycle : 0) / 2.8));
+    const sunX = 165 + sunProg * 330;
+    const sunY = 78 - Math.sin(sunProg * Math.PI) * 52;
+    const moonX = 335 + Math.sin(this.bioTime * 0.02) * 45;
+    const moonY = 34;
+
+    const moonBlend = Math.max(0, Math.min(1, (nightWeight - 0.32) / 0.45));
+    const lightX = sunX + (moonX - sunX) * moonBlend;
+    const lightY = sunY + (moonY - sunY) * moonBlend;
+
+    // 水中では水面の波によって入射角がわずかに屈折・揺動する
+    const isUnderwater = y > 108;
+    const waveRefractX = isUnderwater ? Math.sin(this.bioTime * 2.9 + x * 0.045) * 16 : 0;
+
+    // 光源(lightX, lightY)からダイバー(x, y)へ向かうベクトル＝「光源と逆向き（影が伸びる方向）」
+    const rawDx = (x - lightX) * 1.35 + waveRefractX;
+    const rawDy = Math.max(34, (y - lightY) * 0.68);
+    const dist = Math.hypot(rawDx, rawDy) || 1;
+    const nx = rawDx / dist; // 影のX方向（光源は -nx 側）
+    const ny = rawDy / dist; // 影のY方向（光源は -ny 側）
+
+    // 4つの時間帯別ダイバー照光パレット (0:朝焼け, 1:快晴真昼, 2:夕焼け, 3:満月の夜)
+    const palettes = [
+      { // 0: 朝焼け (Dawn - 東からの薔薇色・琥珀ゴールドの朝日)
+        helmSpec: [255, 237, 213],
+        helmMid:  [251, 146, 60],
+        helmDark: [154, 52, 78],
+        helmDeep: [59, 20, 48],
+        suitLit:  [248, 210, 180],
+        suitMid:  [186, 136, 110],
+        suitShadow: [96, 58, 70],
+        suitDeep: [46, 24, 38],
+        visorSpec: [254, 215, 170],
+        visorMid:  [244, 114, 182],
+        visorDark: [49, 46, 129],
+        sackLit:  [255, 238, 220],
+        sackMid:  [228, 185, 148],
+        sackDark: [138, 86, 68],
+        rimRgb:   [253, 186, 116],
+        shadowRgb: [22, 9, 36],
+        lenMul:   1.34
+      },
+      { // 1: 真昼・快晴 (Midday - 眩しい太陽の白金・黄金光とエメラルド水光)
+        helmSpec: [255, 255, 242],
+        helmMid:  [245, 158, 11],
+        helmDark: [180, 83, 9],
+        helmDeep: [69, 26, 3],
+        suitLit:  [236, 224, 192],
+        suitMid:  [164, 146, 110],
+        suitShadow: [94, 80, 54],
+        suitDeep: [48, 38, 24],
+        visorSpec: [254, 249, 195],
+        visorMid:  [56, 189, 248],
+        visorDark: [8, 47, 73],
+        sackLit:  [252, 246, 230],
+        sackMid:  [230, 211, 173],
+        sackDark: [138, 107, 59],
+        rimRgb:   [254, 243, 150],
+        shadowRgb: [4, 14, 28],
+        lenMul:   1.02
+      },
+      { // 2: 夕焼け (Sunset - 西からの紅蓮・茜色の強烈な夕日)
+        helmSpec: [254, 215, 170],
+        helmMid:  [234, 88, 12],
+        helmDark: [153, 27, 27],
+        helmDeep: [52, 12, 28],
+        suitLit:  [246, 174, 124],
+        suitMid:  [176, 102, 74],
+        suitShadow: [90, 38, 48],
+        suitDeep: [42, 15, 28],
+        visorSpec: [253, 186, 116],
+        visorMid:  [249, 115, 22],
+        visorDark: [49, 16, 42],
+        sackLit:  [254, 222, 192],
+        sackMid:  [222, 158, 112],
+        sackDark: [128, 62, 46],
+        rimRgb:   [251, 113, 36],
+        shadowRgb: [26, 8, 32],
+        lenMul:   1.38
+      },
+      { // 3: 満月の夜 (Full Moon - 青銀色の神秘的な月光と濃紺の闇)
+        helmSpec: [224, 242, 254],
+        helmMid:  [96, 165, 250],
+        helmDark: [30, 58, 138],
+        helmDeep: [9, 14, 32],
+        suitLit:  [168, 196, 224],
+        suitMid:  [100, 126, 156],
+        suitShadow: [45, 62, 90],
+        suitDeep: [15, 23, 42],
+        visorSpec: [224, 242, 254],
+        visorMid:  [56, 189, 248],
+        visorDark: [2, 6, 23],
+        sackLit:  [204, 224, 242],
+        sackMid:  [138, 162, 188],
+        sackDark: [52, 70, 96],
+        rimRgb:   [186, 230, 253],
+        shadowRgb: [2, 6, 20],
+        lenMul:   1.16
+      }
+    ];
+
+    const pA = palettes[env.todIdx % 4];
+    const pB = palettes[(env.todIdx + 1) % 4];
+    const t = env.todSmooth;
+
+    // 雨天時（rainIntensity: 0..1）は雲で直射光が拡散し、濡れたスレートブルーグレーの色調へシフト
+    const rainMix = env.rainIntensity * 0.56;
+    const depthRatio = isUnderwater ? Math.min(1, Math.max(0, (y - 108) / 310)) : 0;
+
+    const mixRgbArr = (cA, cB, overcastRgb) => {
+      let r = cA[0] + (cB[0] - cA[0]) * t;
+      let g = cA[1] + (cB[1] - cA[1]) * t;
+      let b = cA[2] + (cB[2] - cA[2]) * t;
+      // 雨天時のスレートシフト
+      r = r * (1 - rainMix) + overcastRgb[0] * rainMix;
+      g = g * (1 - rainMix) + overcastRgb[1] * rainMix;
+      b = b * (1 - rainMix) + overcastRgb[2] * rainMix;
+      // 水深によるわずかな海中青緑フィルター
+      if (depthRatio > 0) {
+        const dMix = depthRatio * 0.18;
+        r = r * (1 - dMix) + 18 * dMix;
+        g = g * (1 - dMix) + 118 * dMix;
+        b = b * (1 - dMix) + 148 * dMix;
+      }
+      return [Math.round(r), Math.round(g), Math.round(b)];
+    };
+
+    const toCss = (arr, alpha = 1) =>
+      alpha >= 0.999 ? `rgb(${arr[0]}, ${arr[1]}, ${arr[2]})` : `rgba(${arr[0]}, ${arr[1]}, ${arr[2]}, ${alpha.toFixed(3)})`;
+
+    const helmSpecArr = mixRgbArr(pA.helmSpec, pB.helmSpec, [203, 213, 225]);
+    const helmMidArr  = mixRgbArr(pA.helmMid,  pB.helmMid,  [100, 116, 139]);
+    const helmDarkArr = mixRgbArr(pA.helmDark, pB.helmDark, [51, 65, 85]);
+    const helmDeepArr = mixRgbArr(pA.helmDeep, pB.helmDeep, [15, 23, 42]);
+
+    const suitLitArr    = mixRgbArr(pA.suitLit,    pB.suitLit,    [162, 174, 188]);
+    const suitMidArr    = mixRgbArr(pA.suitMid,    pB.suitMid,    [104, 116, 130]);
+    const suitShadowArr = mixRgbArr(pA.suitShadow, pB.suitShadow, [56, 68, 82]);
+    const suitDeepArr   = mixRgbArr(pA.suitDeep,   pB.suitDeep,   [24, 32, 44]);
+
+    const visorSpecArr = mixRgbArr(pA.visorSpec, pB.visorSpec, [226, 232, 240]);
+    const visorMidArr  = mixRgbArr(pA.visorMid,  pB.visorMid,  [100, 116, 139]);
+    const visorDarkArr = mixRgbArr(pA.visorDark, pB.visorDark, [15, 23, 42]);
+
+    const sackLitArr  = mixRgbArr(pA.sackLit,  pB.sackLit,  [188, 196, 206]);
+    const sackMidArr  = mixRgbArr(pA.sackMid,  pB.sackMid,  [136, 144, 154]);
+    const sackDarkArr = mixRgbArr(pA.sackDark, pB.sackDark, [68, 76, 88]);
+
+    const rimArr    = mixRgbArr(pA.rimRgb,    pB.rimRgb,    [186, 206, 226]);
+    const shadowArr = mixRgbArr(pA.shadowRgb, pB.shadowRgb, [10, 18, 30]);
+
+    const lenMul = (pA.lenMul + (pB.lenMul - pA.lenMul) * t) * (1 - env.rainIntensity * 0.15);
+    const directStrength = Math.max(0.28, (1.0 - env.rainIntensity * 0.58) * (1.0 - depthRatio * 0.22));
+
+    return {
+      nx,
+      ny,
+      lightX,
+      lightY,
+      isUnderwater,
+      rainIntensity: env.rainIntensity,
+      nightWeight,
+      directStrength,
+      lenMul,
+      helmSpec: toCss(helmSpecArr),
+      helmMid:  toCss(helmMidArr),
+      helmDark: toCss(helmDarkArr),
+      helmDeep: toCss(helmDeepArr),
+      suitLit:    toCss(suitLitArr),
+      suitMid:    toCss(suitMidArr),
+      suitShadow: toCss(suitShadowArr),
+      suitDeep:   toCss(suitDeepArr),
+      visorSpec: toCss(visorSpecArr),
+      visorMid:  toCss(visorMidArr),
+      visorDark: toCss(visorDarkArr),
+      sackLit:  toCss(sackLitArr),
+      sackMid:  toCss(sackMidArr),
+      sackDark: toCss(sackDarkArr),
+      rimArr,
+      rimColor: (a = 1) => toCss(rimArr, a),
+      shadowArr,
+      shadowColor: (a = 1) => toCss(shadowArr, a)
+    };
+  }
+
+  // 光源（太陽・夕日・朝日・満月）と逆向きに伸び、水流や波の屈折でリアルに揺らぐダイバーの影を描画
+  _drawWaveringDiverShadow(ctx, pivotX, pivotY, pathFn, opts = {}) {
+    const lt = this._getDiverLighting(pivotX, pivotY);
+    const isUnderwater = opts.isUnderwater !== false;
+    const footOffsetY = opts.footOffsetY || 58;
+    const baseAlpha = (opts.shadowAlpha || 0.44) * (0.65 + lt.directStrength * 0.45);
+
+    // 影が伸びる距離（朝焼け・夕焼けなど光源が低い時や横から差す時ほど長く伸びる）
+    const reach = (isUnderwater ? 19.0 : 12.5) * (1.0 + Math.abs(lt.nx) * 0.58) * lt.lenMul;
+    // 光線と直交する法線ベクトル（この方向に進行波で影がゆらゆら揺らぐ）
+    const perpX = -lt.ny;
+    const perpY = lt.nx;
+
+    ctx.save();
+
+    // 1. 足元の海底・甲板に落ちて光源と逆向きに波打ちながら伸びる接地キャストシャドウ
+    if (opts.drawGroundShadow) {
+      const footX = pivotX;
+      const footY = pivotY + footOffsetY;
+      const groundReachX = lt.nx * reach * 1.45;
+      const groundReachY = Math.max(2.5, lt.ny * reach * 0.36);
+
+      for (let g = 0; g < 4; g++) {
+        const gu = (g + 0.5) / 4;
+        const gPhase = this.bioTime * (isUnderwater ? 4.8 : 2.6) - gu * 2.6 + pivotX * 0.03;
+        const gWave = Math.sin(gPhase) + 0.4 * Math.cos(gPhase * 1.9);
+        const gSway = gWave * (isUnderwater ? 3.8 : 1.4) * gu;
+
+        const gx = footX + groundReachX * gu + perpX * gSway;
+        const gy = footY + groundReachY * gu + perpY * gSway * 0.45;
+        const rx = (13.5 + gu * 7.5) * (1 + Math.sin(gPhase * 1.3) * 0.12);
+        const ry = (4.2 + gu * 2.2) * (1 + Math.cos(gPhase * 1.5) * 0.12);
+        const gAlpha = baseAlpha * (0.44 - gu * 0.26);
+
+        ctx.fillStyle = lt.shadowColor(gAlpha);
+        ctx.beginPath();
+        ctx.ellipse(gx, gy, rx, ry, Math.atan2(groundReachY, groundReachX) * 0.35, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    // 2. ダイバー自身のシルエットが光源と逆向き(lt.nx, lt.ny)へ伸び、先端に向かって進行波でリアルに揺らぐ4層シャドウ
+    const centerY = pivotY + footOffsetY * 0.45;
+    const layers = 4;
+    for (let i = layers - 1; i >= 0; i--) {
+      const u = (i + 1) / layers; // 0.25(根元・濃) 〜 1.00(先端・淡く大きく揺らぐ)
+      const phase = this.bioTime * (isUnderwater ? 4.8 : 2.8) - u * 2.7 + pivotX * 0.025 + pivotY * 0.015;
+      const wave1 = Math.sin(phase);
+      const wave2 = Math.cos(phase * 1.45 + 0.7);
+      const wave3 = Math.sin(phase * 2.2 - 0.5);
+
+      const swayAmp = (isUnderwater ? 4.6 : 1.7) * u * (1.0 + lt.rainIntensity * 0.3);
+      const swayPerp = (wave1 * 0.72 + wave3 * 0.28) * swayAmp;
+      const swayAlong = wave2 * swayAmp * 0.35;
+
+      const offX = lt.nx * reach * u + perpX * swayPerp + lt.nx * swayAlong;
+      const offY = lt.ny * reach * u * 0.86 + perpY * swayPerp * 0.65 + lt.ny * swayAlong * 0.5;
+
+      // 水流と水面屈折によるシルエットのせん断（シアー）変形と伸縮揺らぎ
+      const skewX = lt.nx * 0.16 * u + (wave1 * 0.095 + wave3 * 0.04) * u * (isUnderwater ? 1.0 : 0.35);
+      const skewY = (wave2 * 0.06) * u * (isUnderwater ? 1.0 : 0.35);
+      const scaleX = 1.0 + 0.05 * u + wave2 * 0.045 * u;
+      const scaleY = 1.0 + 0.08 * u + wave1 * 0.045 * u;
+
+      const layerAlpha = baseAlpha * (0.42 - u * 0.24);
+      const col = lt.shadowColor(layerAlpha);
+
+      ctx.save();
+      ctx.translate(pivotX + offX, centerY + offY);
+      ctx.transform(scaleX, skewY, skewX, scaleY, 0, 0);
+      ctx.translate(-pivotX, -centerY);
+      ctx.fillStyle = col;
+      ctx.strokeStyle = col;
+      pathFn(ctx);
+      ctx.restore();
+    }
+
+    ctx.restore();
+  }
+
+  // ダイバーの光源側エッジに輝くリムライト（太陽・夕日・朝日・満月の照り返し）と水中コースティクス（波紋光）を描画
+  _drawDiverDirectionalRimAndCaustics(c, hx, hy, helmR, bodyW, bodyH, lt, isUnderwater = true) {
+    c.save();
+    // 光源が存在する方向角 (-lt.nx, -lt.ny)
+    const lightAngle = Math.atan2(-lt.ny, -lt.nx);
+
+    // 1. ヘルメットの光源側エッジに走る鮮やかなリムライト（夕焼けなら茜色、満月なら青銀色、快晴なら黄金色）
+    const rimAlpha = Math.min(0.95, 0.45 + lt.directStrength * 0.48);
+    c.strokeStyle = lt.rimColor(rimAlpha);
+    c.lineWidth = 2.1;
+    c.lineCap = 'round';
+    c.beginPath();
+    c.arc(hx, hy, helmR - 0.8, lightAngle - 1.05, lightAngle + 1.05);
+    c.stroke();
+
+    // 2. 潜水服の肩〜胴体の光源側エッジに当たるリムハイライト
+    const shoulderX = hx - lt.nx * (bodyW * 0.46);
+    const bodyTopY = hy + helmR - 1;
+    const rimGrad = c.createLinearGradient(
+      shoulderX,
+      bodyTopY,
+      hx + lt.nx * (bodyW * 0.45),
+      bodyTopY + bodyH
+    );
+    rimGrad.addColorStop(0, lt.rimColor(rimAlpha * 0.72));
+    rimGrad.addColorStop(0.42, lt.rimColor(rimAlpha * 0.22));
+    rimGrad.addColorStop(1, lt.rimColor(0));
+    c.fillStyle = rimGrad;
+    c.beginPath();
+    c.roundRect(hx - bodyW * 0.5, bodyTopY, bodyW, bodyH, 6);
+    c.fill();
+
+    // 3. 海中ダイバーの表面をゆらゆら揺れ動く水面屈折光（コースティクス波紋）
+    if (isUnderwater) {
+      c.save();
+      c.beginPath();
+      c.arc(hx, hy, helmR, 0, Math.PI * 2);
+      c.roundRect(hx - bodyW * 0.5, bodyTopY, bodyW, bodyH, 6);
+      c.clip();
+
+      const causticAlpha = (0.16 + lt.directStrength * 0.24) * (1 - lt.rainIntensity * 0.45);
+      c.strokeStyle = lt.rimColor(causticAlpha);
+      c.lineWidth = 1.8;
+      for (let k = -1; k <= 1; k++) {
+        const waveShift = ((this.bioTime * 16 + k * 14 + hx * 0.2) % 38) - 14;
+        const cy = hy - 8 + waveShift;
+        const curveSway = Math.sin(this.bioTime * 5.2 + k * 1.7 + hx * 0.08) * 4.5;
+        c.beginPath();
+        c.moveTo(hx - 15, cy - lt.nx * 5);
+        c.quadraticCurveTo(hx, cy + curveSway, hx + 15, cy + lt.nx * 5);
+        c.stroke();
+      }
+      c.restore();
+    }
+
+    c.restore();
+  }
+
+  // 液晶セグメント描画ヘルパー（GAME A/B: 1981年モノクロ液晶 / GAME C: 同じ形で妙にリアルな彩色＆光源連動の揺らぎ影）
+  _drawSegment(ctx, isLit, pathFn, realDrawFn = null, shadowAlpha = 0.38, shadowOpts = null) {
     if (this._isRealColor()) {
       if (!isLit) return;
       ctx.save();
-      // 海中・船上のリアルな立体ドロップシャドウ（活イカの透明状態時は影も薄く透ける）
-      if (shadowAlpha > 0.01) {
+      if (shadowOpts && shadowOpts.isDiver) {
+        // ダイバー専用：光源と逆向きに伸び、水流と波でリアルに揺らぐ多層シャドウ
+        this._drawWaveringDiverShadow(ctx, shadowOpts.pivotX, shadowOpts.pivotY, pathFn, {
+          ...shadowOpts,
+          shadowAlpha
+        });
+      } else if (shadowAlpha > 0.01) {
+        // イカやHUD等のドロップシャドウ（HUD以外は光源の逆向き＋微細な水中揺らぎを反映）
         ctx.save();
-        ctx.translate(2.4, 3.0);
-        ctx.fillStyle = `rgba(4, 12, 26, ${shadowAlpha.toFixed(3)})`;
-        ctx.strokeStyle = `rgba(4, 12, 26, ${shadowAlpha.toFixed(3)})`;
+        if (shadowOpts === 'hud') {
+          ctx.translate(2.4, 3.0);
+          ctx.fillStyle = `rgba(4, 12, 26, ${shadowAlpha.toFixed(3)})`;
+          ctx.strokeStyle = `rgba(4, 12, 26, ${shadowAlpha.toFixed(3)})`;
+        } else {
+          const lt = this._getDiverLighting(540, 220);
+          const swX = Math.sin(this.bioTime * 4.2) * 1.4;
+          const swY = Math.cos(this.bioTime * 3.6) * 1.1;
+          ctx.translate(lt.nx * 7.5 + swX, lt.ny * 6.5 + swY);
+          const col = lt.shadowColor(shadowAlpha);
+          ctx.fillStyle = col;
+          ctx.strokeStyle = col;
+        }
         pathFn(ctx);
         ctx.restore();
       }
@@ -3060,35 +3410,65 @@ class SquidGameWatch {
       c.roundRect(x - 10, y + 11, 20, 16, 4);
       c.fill();
     }, (c) => {
-      // GAME C: 同じ形で妙にリアルな銅製ヘルメット＆キャンバス潜水服
-      const suitGrad = c.createLinearGradient(x - 10, y + 11, x + 10, y + 27);
-      suitGrad.addColorStop(0, '#c2b28f');
-      suitGrad.addColorStop(0.55, '#8c7a56');
-      suitGrad.addColorStop(1, '#4a3f2a');
+      // GAME C: 太陽・満月・朝焼け・夕焼け・雨天の光源に合わせて照らされた銅ヘルメット＆潜水服
+      const lt = this._getDiverLighting(x, y);
+      const suitGrad = c.createLinearGradient(
+        x - lt.nx * 12,
+        y + 11 - lt.ny * 8,
+        x + lt.nx * 12,
+        y + 27 + lt.ny * 8
+      );
+      suitGrad.addColorStop(0, lt.suitLit);
+      suitGrad.addColorStop(0.52, lt.suitMid);
+      suitGrad.addColorStop(1, lt.suitDeep);
       c.fillStyle = suitGrad;
       c.beginPath();
       c.roundRect(x - 10, y + 11, 20, 16, 4);
       c.fill();
 
-      const helmGrad = c.createRadialGradient(x - 4, y - 4, 1.5, x, y, 11);
-      helmGrad.addColorStop(0, '#fef08a');
-      helmGrad.addColorStop(0.45, '#d97706');
-      helmGrad.addColorStop(0.82, '#9a3412');
-      helmGrad.addColorStop(1, '#431407');
+      const helmGrad = c.createRadialGradient(
+        x - lt.nx * 5.2,
+        y - lt.ny * 5.2,
+        1.5,
+        x,
+        y,
+        11
+      );
+      helmGrad.addColorStop(0, lt.helmSpec);
+      helmGrad.addColorStop(0.42, lt.helmMid);
+      helmGrad.addColorStop(0.80, lt.helmDark);
+      helmGrad.addColorStop(1, lt.helmDeep);
       c.fillStyle = helmGrad;
       c.beginPath();
       c.arc(x, y, 11, 0, Math.PI * 2);
       c.fill();
 
-      // ガラス覗き窓＋中の肌色と反射
-      const glassGrad = c.createRadialGradient(x + 1, y - 2, 1, x + 2, y - 1, 5);
-      glassGrad.addColorStop(0, '#fed7aa');
-      glassGrad.addColorStop(0.55, '#38bdf8');
-      glassGrad.addColorStop(1, '#0c4a6e');
+      // ガラス覗き窓＋空の色（朝日・夕日・月光・快晴）の反射
+      const glassGrad = c.createRadialGradient(
+        x + 2 - lt.nx * 2,
+        y - 1 - lt.ny * 2,
+        0.8,
+        x + 2,
+        y - 1,
+        5
+      );
+      glassGrad.addColorStop(0, lt.visorSpec);
+      glassGrad.addColorStop(0.55, lt.visorMid);
+      glassGrad.addColorStop(1, lt.visorDark);
       c.fillStyle = glassGrad;
       c.beginPath();
       c.arc(x + 2, y - 1, 5, 0, Math.PI * 2);
       c.fill();
+
+      // 光源方向のリムライト
+      this._drawDiverDirectionalRimAndCaustics(c, x, y, 11, 20, 16, lt, false);
+    }, 0.42, {
+      isDiver: true,
+      pivotX: x,
+      pivotY: y,
+      isUnderwater: false,
+      footOffsetY: 26,
+      drawGroundShadow: true
     });
   }
 
@@ -3117,8 +3497,17 @@ class SquidGameWatch {
       c.lineTo(x + 9, y + 48);
       c.stroke();
     }, (c) => {
-      // GAME C 専用：足（重厚な潜水ズボンと鉛靴）
-      c.strokeStyle = '#6b5b3e';
+      const lt = this._getDiverLighting(x, y);
+      // GAME C 専用：足（重厚な潜水ズボンと鉛靴・光源シェーディング）
+      const legGrad = c.createLinearGradient(
+        x - lt.nx * 10,
+        y + 34,
+        x + lt.nx * 10,
+        y + 48
+      );
+      legGrad.addColorStop(0, lt.suitMid);
+      legGrad.addColorStop(1, lt.suitDeep);
+      c.strokeStyle = legGrad;
       c.lineWidth = 6;
       c.lineCap = 'round';
       c.beginPath();
@@ -3128,37 +3517,67 @@ class SquidGameWatch {
       c.lineTo(x + 9, y + 48);
       c.stroke();
 
-      // 胴体（リアルなキャンバス潜水服）
-      const suitGrad = c.createLinearGradient(x - 10, y + 12, x + 10, y + 36);
-      suitGrad.addColorStop(0, '#d6c7a9');
-      suitGrad.addColorStop(0.5, '#948260');
-      suitGrad.addColorStop(1, '#4d412d');
+      // 胴体（太陽・満月・夕焼け・雨天の色で照らされたキャンバス潜水服）
+      const suitGrad = c.createLinearGradient(
+        x - lt.nx * 12,
+        y + 12 - lt.ny * 10,
+        x + lt.nx * 12,
+        y + 36 + lt.ny * 10
+      );
+      suitGrad.addColorStop(0, lt.suitLit);
+      suitGrad.addColorStop(0.48, lt.suitMid);
+      suitGrad.addColorStop(0.82, lt.suitShadow);
+      suitGrad.addColorStop(1, lt.suitDeep);
       c.fillStyle = suitGrad;
       c.beginPath();
       c.roundRect(x - 10 + bodyLeanX * 0.7, y + 12, 20, 24, 5);
       c.fill();
 
-      // 真鍮・銅製ヘルメット
+      // 真鍮・銅製ヘルメット（光源方向にハイライトが移動）
       const hx = x + bodyLeanX;
-      const helmGrad = c.createRadialGradient(hx - 4, y - 4, 2, hx, y, 12);
-      helmGrad.addColorStop(0, '#fef9c3');
-      helmGrad.addColorStop(0.42, '#ea580c');
-      helmGrad.addColorStop(0.8, '#9a3412');
-      helmGrad.addColorStop(1, '#431407');
+      const helmGrad = c.createRadialGradient(
+        hx - lt.nx * 5.6,
+        y - lt.ny * 5.6,
+        1.8,
+        hx,
+        y,
+        12
+      );
+      helmGrad.addColorStop(0, lt.helmSpec);
+      helmGrad.addColorStop(0.40, lt.helmMid);
+      helmGrad.addColorStop(0.78, lt.helmDark);
+      helmGrad.addColorStop(1, lt.helmDeep);
       c.fillStyle = helmGrad;
       c.beginPath();
       c.arc(hx, y, 12, 0, Math.PI * 2);
       c.fill();
 
       // ヘルメット覗き窓
-      const glassGrad = c.createRadialGradient(hx + 2, y - 2, 1, hx + 3, y - 1, 5);
-      glassGrad.addColorStop(0, '#fde68a');
-      glassGrad.addColorStop(0.55, '#38bdf8');
-      glassGrad.addColorStop(1, '#0c4a6e');
+      const glassGrad = c.createRadialGradient(
+        hx + 3 - lt.nx * 2.2,
+        y - 1 - lt.ny * 2.2,
+        0.9,
+        hx + 3,
+        y - 1,
+        5
+      );
+      glassGrad.addColorStop(0, lt.visorSpec);
+      glassGrad.addColorStop(0.55, lt.visorMid);
+      glassGrad.addColorStop(1, lt.visorDark);
       c.fillStyle = glassGrad;
       c.beginPath();
       c.arc(hx + 3, y - 1, 5, 0, Math.PI * 2);
       c.fill();
+
+      // 光源方向のリムライト
+      this._drawDiverDirectionalRimAndCaustics(c, hx, y, 12, 20, 24, lt, false);
+    }, 0.44, {
+      isDiver: true,
+      pivotX: x,
+      pivotY: y,
+      isUnderwater: false,
+      footOffsetY: 46,
+      drawGroundShadow: true
     });
 
     // GAME C 専用：船の甲板上に積み上がった黄金の山
@@ -3185,6 +3604,13 @@ class SquidGameWatch {
       c.fill();
     }, (c) => {
       this._drawRealisticBoatBagUnloading(c, x, y, unloadProg);
+    }, 0.42, {
+      isDiver: true,
+      pivotX: x + 28,
+      pivotY: y - 8,
+      isUnderwater: false,
+      footOffsetY: 20,
+      drawGroundShadow: false
     });
   }
 
@@ -3670,17 +4096,33 @@ class SquidGameWatch {
       c.closePath();
     };
 
+    // 光源（太陽・満月・朝焼け・夕焼け・雨天）に合わせた布袋のライティング＆逆向きに揺らぐ影
+    const lt = this._getDiverLighting(nx, ny);
+    for (let sLayer = 0; sLayer < 3; sLayer++) {
+      const f = (sLayer + 1) / 3;
+      const dist = (3.5 + f * 6.5) * lt.shadowStretch;
+      const wave = Math.sin(this.bioTime * 5.8 - f * 2.4 + x * 0.04) * 2.2 * f;
+      const sx = lt.nx * dist + (-lt.ny) * wave;
+      const sy = lt.ny * dist + lt.nx * wave * 0.45;
+      c.save();
+      c.translate(sx, sy);
+      c.fillStyle = `rgba(${lt.shadowRgb[0]}, ${lt.shadowRgb[1]}, ${lt.shadowRgb[2]}, ${(lt.shadowAlpha * 0.28 * (1.15 - f * 0.45)).toFixed(3)})`;
+      traceSackBody();
+      c.fill();
+      c.restore();
+    }
+
     // 1. 袋の口元の布ヒダ（巾着の絞り耳フリル／宝箱前ではガバッと開いた布袋の口）
     const mouthOpen = isAtChest || isFillingNow;
     const mouthW = mouthOpen ? (8.2 + fillRatio * 2.4) : (6.6 + fillRatio * 1.2);
     const mouthTopY = mouthOpen ? -10.5 : -9.2;
 
-    const ruffleGrad = c.createLinearGradient(-mouthW, mouthTopY, mouthW, 0);
-    ruffleGrad.addColorStop(0, '#faf3e0');
-    ruffleGrad.addColorStop(0.5, '#e2cfa6');
-    ruffleGrad.addColorStop(1, '#b0915e');
+    const ruffleGrad = c.createLinearGradient(-lt.nx * mouthW, mouthTopY, lt.nx * mouthW, 0);
+    ruffleGrad.addColorStop(0, lt.sackLit);
+    ruffleGrad.addColorStop(0.55, lt.sackMid);
+    ruffleGrad.addColorStop(1, lt.sackDark);
     c.fillStyle = ruffleGrad;
-    c.strokeStyle = '#6e5229';
+    c.strokeStyle = lt.sackDark;
     c.lineWidth = 1.15;
 
     // 波打つ3枚の柔らかい布ヒダ（陶器のリムではなく巾着袋の絞り布耳）
@@ -3696,7 +4138,7 @@ class SquidGameWatch {
     c.stroke();
 
     // 布耳の縦シワ
-    c.strokeStyle = 'rgba(110, 82, 41, 0.48)';
+    c.strokeStyle = 'rgba(70, 50, 24, 0.45)';
     c.lineWidth = 0.9;
     c.beginPath();
     c.moveTo(-mouthW * 0.32, mouthTopY * 0.75); c.lineTo(-neckW * 0.45, -0.5);
@@ -3707,7 +4149,7 @@ class SquidGameWatch {
     // 宝箱前では大きく開いた布袋の口の内側（暗い布地穴）を描画し、そこに金貨が吸い込まれるように見せる
     if (mouthOpen) {
       c.fillStyle = '#3b2510';
-      c.strokeStyle = '#6e5229';
+      c.strokeStyle = lt.sackDark;
       c.lineWidth = 0.9;
       c.beginPath();
       c.ellipse(0, mouthTopY * 0.72, mouthW * 0.76, 2.9, 0, 0, Math.PI * 2);
@@ -3737,12 +4179,13 @@ class SquidGameWatch {
       }
     }
 
-    // 2. 布袋本体（明るい生成り麻布・帆布のマットな質感グラデーション）
-    const sackGrad = c.createRadialGradient(-bellyW * 0.28, bagH * 0.35, 1.5, 0, bagH * 0.55, Math.max(bellyW, bagH) * 0.95);
-    sackGrad.addColorStop(0, '#fbf5e6');   // 明るい生成り麻ハイライト
-    sackGrad.addColorStop(0.45, '#e6d3ad'); // ナチュラル麻布・帆布ベージュ
-    sackGrad.addColorStop(0.82, '#c2a36e'); // 布地の柔らかい陰影
-    sackGrad.addColorStop(1, '#8a6b3b');    // 輪郭の織り影
+    // 2. 布袋本体（光源方向が明るく照らされる生成り麻布・帆布のマットな質感グラデーション）
+    const sackLightX = -lt.nx * bellyW * 0.42;
+    const sackLightY = bagH * 0.42 - lt.ny * bagH * 0.22;
+    const sackGrad = c.createRadialGradient(sackLightX, sackLightY, 1.5, 0, bagH * 0.55, Math.max(bellyW, bagH) * 0.98);
+    sackGrad.addColorStop(0, lt.sackLit);    // 光源に照らされた麻布ハイライト
+    sackGrad.addColorStop(0.52, lt.sackMid); // 時間帯・天候に染まる麻布ベージュ
+    sackGrad.addColorStop(1, lt.sackDark);   // 反光源側の織り影
     c.fillStyle = sackGrad;
     traceSackBody();
     c.fill();
@@ -3902,11 +4345,26 @@ class SquidGameWatch {
 
     c.restore(); // end clip
 
-    // 4. 布袋本体の外周アウトライン（柔らかい麻布の輪郭）
-    c.strokeStyle = '#6e5229';
+    // 4. 布袋本体の外周アウトライン＋光源側のリムハイライト
+    c.strokeStyle = lt.sackDark;
     c.lineWidth = 1.25;
     traceSackBody();
     c.stroke();
+
+    c.save();
+    c.strokeStyle = lt.rimColor;
+    c.lineWidth = 1.45;
+    c.lineCap = 'round';
+    c.beginPath();
+    if (-lt.nx >= 0) {
+      c.moveTo(neckW * 0.85, 1.5);
+      c.quadraticCurveTo(bellyW * 0.98, bagH * 0.45, cornerW * 0.88, bagH * 0.85);
+    } else {
+      c.moveTo(-neckW * 0.85, 1.5);
+      c.quadraticCurveTo(-bellyW * 0.98, bagH * 0.45, -cornerW * 0.88, bagH * 0.85);
+    }
+    c.stroke();
+    c.restore();
 
     // 5. 首元をキュッと縛る二重巻きの麻紐（ドローストリング）と蝶結び・垂れ紐
     c.strokeStyle = '#fef08a';
@@ -3930,13 +4388,13 @@ class SquidGameWatch {
     c.quadraticCurveTo(-neckW - 2.5, 5.0 - cordSway * 0.4, -neckW - 2.8, 9.8 - cordSway * 0.6);
     c.stroke();
 
-    // 6. 布袋の首元を上からしっかり握っているダイバーの左手グローブ
-    const gloveGrad = c.createRadialGradient(neckW * 0.5, -1.5, 0.8, neckW * 0.6, 0, 4.6);
-    gloveGrad.addColorStop(0, '#d8cba8');
-    gloveGrad.addColorStop(0.6, '#8c7a56');
-    gloveGrad.addColorStop(1, '#3f3524');
+    // 6. 布袋の首元を上からしっかり握っているダイバーの左手グローブ（時間帯・天候ライティング連動）
+    const gloveGrad = c.createRadialGradient(neckW * 0.5 - lt.nx * 1.5, -1.5 - lt.ny * 1.2, 0.8, neckW * 0.6, 0, 4.6);
+    gloveGrad.addColorStop(0, lt.suitLit);
+    gloveGrad.addColorStop(0.58, lt.suitMid);
+    gloveGrad.addColorStop(1, lt.suitDeep);
     c.fillStyle = gloveGrad;
-    c.strokeStyle = '#292216';
+    c.strokeStyle = lt.suitDeep;
     c.lineWidth = 1.0;
     c.beginPath();
     c.arc(neckW * 0.55, -0.2, 4.0, 0, Math.PI * 2);
@@ -3979,50 +4437,65 @@ class SquidGameWatch {
       // 4. ポーズ別の手足
       this._drawDiverLimbsPath(c, x, y, pose);
     }, (c) => {
-      // GAME C: まったく同じ形・座標で、妙にリアルな潜水夫の色（銅ヘルメット・耐圧キャンバス服・気泡）
+      // GAME C: 太陽・満月・朝焼け・夕焼け・快晴・雨天と水深に応じたリアルな潜水夫の照り返し＆シェーディング
+      const lt = this._getDiverLighting(x, y);
       c.lineCap = 'round';
       c.lineJoin = 'round';
 
-      // 手足（耐圧ゴム引きキャンバス生地の立体シェーディング）
-      const limbGrad = c.createLinearGradient(x - 24, y + 10, x + 24, y + 65);
-      limbGrad.addColorStop(0, '#b5a482');
-      limbGrad.addColorStop(0.55, '#78684b');
-      limbGrad.addColorStop(1, '#332b1d');
+      // 手足（光源方向から反光源側へ陰影がつく耐圧ゴム引きキャンバス生地）
+      const limbGrad = c.createLinearGradient(
+        x - lt.nx * 24, y + 32 - lt.ny * 22,
+        x + lt.nx * 24, y + 32 + lt.ny * 26
+      );
+      limbGrad.addColorStop(0, lt.suitLit);
+      limbGrad.addColorStop(0.48, lt.suitMid);
+      limbGrad.addColorStop(0.82, lt.suitDark);
+      limbGrad.addColorStop(1, lt.suitDeep);
       c.strokeStyle = limbGrad;
       this._drawRealDiverLimbsPath(c, x, y, pose);
 
-      // 胴体（重厚なヴィンテージ潜水服＋胸部プロテクター陰影）
-      const suitGrad = c.createLinearGradient(x - 12, y + 13, x + 12, y + 43);
-      suitGrad.addColorStop(0, '#d8cba8');
-      suitGrad.addColorStop(0.35, '#9c8b67');
-      suitGrad.addColorStop(0.75, '#63553b');
-      suitGrad.addColorStop(1, '#362e1e');
+      // 胴体（光源方向から立体的に照らされる重厚なヴィンテージ潜水服）
+      const suitGrad = c.createLinearGradient(
+        x - lt.nx * 14, y + 28 - lt.ny * 15,
+        x + lt.nx * 14, y + 28 + lt.ny * 15
+      );
+      suitGrad.addColorStop(0, lt.suitLit);
+      suitGrad.addColorStop(0.36, lt.suitMid);
+      suitGrad.addColorStop(0.75, lt.suitDark);
+      suitGrad.addColorStop(1, lt.suitDeep);
       c.fillStyle = suitGrad;
       c.beginPath();
       c.roundRect(x - 12, y + 13, 24, 30, 7);
       c.fill();
 
-      // 潜水ヘルメット（磨かれた銅・真鍮のリアルな金属光沢）
-      const helmGrad = c.createRadialGradient(x - 5, y - 5, 2, x, y, 14);
-      helmGrad.addColorStop(0, '#fef9c3');
-      helmGrad.addColorStop(0.35, '#f59e0b');
-      helmGrad.addColorStop(0.72, '#b45309');
-      helmGrad.addColorStop(1, '#451a03');
+      // 潜水ヘルメット（太陽や満月の位置を映し込む磨かれた銅・真鍮の金属光沢）
+      const specX = x - lt.nx * 6.2;
+      const specY = y - lt.ny * 6.2;
+      const helmGrad = c.createRadialGradient(specX, specY, 1.8, x, y, 14.5);
+      helmGrad.addColorStop(0, lt.helmSpec);
+      helmGrad.addColorStop(0.34, lt.helmMid);
+      helmGrad.addColorStop(0.74, lt.helmDark);
+      helmGrad.addColorStop(1, lt.helmDeep);
       c.fillStyle = helmGrad;
       c.beginPath();
       c.arc(x, y, 14, 0, Math.PI * 2);
       c.fill();
 
-      // ヘルメット覗き窓（ガラスの反射＋中の潜水夫の肌色）
-      const visorGrad = c.createRadialGradient(x + 2, y - 3, 1, x + 4, y - 1, 6.5);
-      visorGrad.addColorStop(0, '#fde68a');
-      visorGrad.addColorStop(0.45, '#f5cba7');
-      visorGrad.addColorStop(0.78, '#0284c7');
-      visorGrad.addColorStop(1, '#082f49');
+      // ヘルメット覗き窓（空と光源の色を反射するガラス＋中の潜水夫）
+      const visorGrad = c.createRadialGradient(
+        x + 4 - lt.nx * 2.5, y - 1 - lt.ny * 2.5, 0.9,
+        x + 4, y - 1, 6.5
+      );
+      visorGrad.addColorStop(0, lt.visorSpec);
+      visorGrad.addColorStop(0.55, lt.visorMid);
+      visorGrad.addColorStop(1, lt.visorDeep);
       c.fillStyle = visorGrad;
       c.beginPath();
       c.arc(x + 4, y - 1, 6.5, 0, Math.PI * 2);
       c.fill();
+
+      // 光源側のエッジに輝くリムライト＆水中の揺らぐコースティクス（集光模様）
+      this._drawDiverDirectionalRimAndCaustics(c, x, y, 14, 24, 30, lt, true);
 
       // 呼吸気泡（ヘルメット排気口直上の2つの気泡もリアルな屈折・揺らぎ気泡として描画）
       this._drawSingleRefractiveBubble(c, x - 6, y - 20, 2.9, this.bioTime * 8.0);
@@ -4030,6 +4503,13 @@ class SquidGameWatch {
 
       // GAME C 専用：海中に潜る時〜金を拾う時のリアルな「麻の布袋（空のしぼんだ状態→金が底から溜まって膨らむ状態）」
       this._drawUnderwaterClothSack(c, x, y, pose, hasBagLit);
+    }, 0.46, {
+      isDiver: true,
+      pivotX: x,
+      pivotY: y,
+      isUnderwater: true,
+      footOffsetY: 62,
+      drawGroundShadow: pose !== 'rope'
     });
 
     // GAME A / B 用：腰にぶら下げる「宝袋（TREASURE BAG）」独立液晶セグメント（元の1981年モノクロ液晶セグメントそのまま）
@@ -4068,11 +4548,12 @@ class SquidGameWatch {
       c.arc(x + 82, y + 24, 7, 0, Math.PI * 2);
       c.fill();
     }, (c) => {
-      // GAME C 専用：耐圧キャンバス袖と重厚な潜水グローブ
-      const armGrad = c.createLinearGradient(x + 10, y + 18, x + 78, y + 28);
-      armGrad.addColorStop(0, '#b5a482');
-      armGrad.addColorStop(0.65, '#8c7a56');
-      armGrad.addColorStop(1, '#4a3f2a');
+      // GAME C 専用：時間帯・天候の光に照らされる耐圧キャンバス袖と重厚な潜水グローブ
+      const lt = this._getDiverLighting(x + 44, y + 24);
+      const armGrad = c.createLinearGradient(x + 10, y + 18 - lt.ny * 8, x + 78, y + 28 + lt.ny * 8);
+      armGrad.addColorStop(0, lt.suitLit);
+      armGrad.addColorStop(0.6, lt.suitMid);
+      armGrad.addColorStop(1, lt.suitDeep);
       c.strokeStyle = armGrad;
       c.lineWidth = 7.5;
       c.lineCap = 'round';
@@ -4105,6 +4586,13 @@ class SquidGameWatch {
         c.fill();
         c.stroke();
       }
+    }, 0.42, {
+      isDiver: true,
+      pivotX: x + 44,
+      pivotY: y + 24,
+      isUnderwater: true,
+      footOffsetY: 20,
+      drawGroundShadow: false
     });
 
     // 腕セグメント2：宝箱から引き上げ、左手で広げた布袋の口へ金貨を流し込む！
@@ -4120,7 +4608,11 @@ class SquidGameWatch {
       c.fill();
     }, (c) => {
       // GAME C 専用：1. 元のLCDセグメント位置の引き上げ腕（山盛りの金貨を抱えて運ぶ）
-      c.strokeStyle = '#9c8b67';
+      const lt = this._getDiverLighting(x + 24, y + 8);
+      const armGrad2 = c.createLinearGradient(x + 10, y + 18, x + 36, y - 2);
+      armGrad2.addColorStop(0, lt.suitMid);
+      armGrad2.addColorStop(1, lt.suitLit);
+      c.strokeStyle = armGrad2;
       c.lineWidth = 7.5;
       c.lineCap = 'round';
       c.beginPath();
@@ -4157,6 +4649,13 @@ class SquidGameWatch {
         c.stroke();
         c.restore();
       }
+    }, 0.42, {
+      isDiver: true,
+      pivotX: x + 24,
+      pivotY: y + 8,
+      isUnderwater: true,
+      footOffsetY: 20,
+      drawGroundShadow: false
     });
 
     // GAME C 専用：宝箱からダイバーの手を経て左手の布袋の口へ吸い込まれ、布袋の底に溜まっていく連続金貨・金塊・宝石パーティクル描画
@@ -4695,6 +5194,7 @@ class SquidGameWatch {
     const frameB = isCaught && (this.caughtFlailTicks % 2 === 0);
 
     const cx = 376, cy = 176;
+    const lt = this._isRealColor() ? this._getDiverLighting(cx, cy) : null;
 
     // 捕獲用の巻き付き触腕＋ダイバーの頭と胴体
     this._drawSegment(ctx, isCaught, (c) => {
@@ -4731,32 +5231,52 @@ class SquidGameWatch {
       c.quadraticCurveTo(435, 168, cx + 10, cy + 18);
       c.stroke();
 
-      // 胴体
-      const suitGrad = c.createLinearGradient(cx - 12, cy + 12, cx + 12, cy + 38);
-      suitGrad.addColorStop(0, '#d8cba8');
-      suitGrad.addColorStop(0.5, '#8c7a56');
-      suitGrad.addColorStop(1, '#3f3522');
+      // 胴体（時間帯・天候の光で照らされる潜水服）
+      const suitGrad = c.createLinearGradient(
+        cx - lt.nx * 12, cy + 25 - lt.ny * 13,
+        cx + lt.nx * 12, cy + 25 + lt.ny * 13
+      );
+      suitGrad.addColorStop(0, lt.suitLit);
+      suitGrad.addColorStop(0.5, lt.suitMid);
+      suitGrad.addColorStop(1, lt.suitDeep);
       c.fillStyle = suitGrad;
       c.beginPath();
       c.roundRect(cx - 12, cy + 12, 24, 26, 6);
       c.fill();
 
-      // 頭部ヘルメット
-      const helmGrad = c.createRadialGradient(cx - 4, cy - 4, 2, cx, cy, 13);
-      helmGrad.addColorStop(0, '#fef9c3');
-      helmGrad.addColorStop(0.4, '#f59e0b');
-      helmGrad.addColorStop(0.8, '#9a3412');
-      helmGrad.addColorStop(1, '#451a03');
+      // 頭部ヘルメット（光源方向にハイライトが映る銅ヘルメット）
+      const helmGrad = c.createRadialGradient(
+        cx - lt.nx * 5.2, cy - lt.ny * 5.2, 1.8,
+        cx, cy, 13
+      );
+      helmGrad.addColorStop(0, lt.helmSpec);
+      helmGrad.addColorStop(0.38, lt.helmMid);
+      helmGrad.addColorStop(0.78, lt.helmDark);
+      helmGrad.addColorStop(1, lt.helmDeep);
       c.fillStyle = helmGrad;
       c.beginPath();
       c.arc(cx, cy, 13, 0, Math.PI * 2);
       c.fill();
 
       // 覗き窓
-      c.fillStyle = '#38bdf8';
+      const visorGrad = c.createRadialGradient(cx - 2 - lt.nx * 2, cy - 1 - lt.ny * 2, 0.8, cx - 2, cy - 1, 5.5);
+      visorGrad.addColorStop(0, lt.visorSpec);
+      visorGrad.addColorStop(0.55, lt.visorMid);
+      visorGrad.addColorStop(1, lt.visorDeep);
+      c.fillStyle = visorGrad;
       c.beginPath();
       c.arc(cx - 2, cy - 1, 5.5, 0, Math.PI * 2);
       c.fill();
+
+      // 光源側のリムハイライト＆水中コースティクス
+      this._drawDiverDirectionalRimAndCaustics(c, cx, cy, 13, 24, 26, lt, true);
+    }, 0.45, {
+      isDiver: true,
+      pivotX: cx,
+      pivotY: cy,
+      isUnderwater: true,
+      footOffsetY: 52,
+      drawGroundShadow: false
     });
 
     const drawFlailLimbsA = (c) => {
@@ -4791,14 +5311,28 @@ class SquidGameWatch {
 
     // バタバタ手足フレームA（左腕上げ・右足上げ）
     this._drawSegment(ctx, frameA, drawFlailLimbsA, (c) => {
-      c.strokeStyle = '#9c8b67';
+      c.strokeStyle = lt ? lt.suitMid : '#9c8b67';
       drawFlailLimbsA(c);
+    }, 0.42, {
+      isDiver: true,
+      pivotX: cx,
+      pivotY: cy,
+      isUnderwater: true,
+      footOffsetY: 52,
+      drawGroundShadow: false
     });
 
     // バタバタ手足フレームB（右腕上げ・左足上げ）
     this._drawSegment(ctx, frameB, drawFlailLimbsB, (c) => {
-      c.strokeStyle = '#9c8b67';
+      c.strokeStyle = lt ? lt.suitMid : '#9c8b67';
       drawFlailLimbsB(c);
+    }, 0.42, {
+      isDiver: true,
+      pivotX: cx,
+      pivotY: cy,
+      isUnderwater: true,
+      footOffsetY: 52,
+      drawGroundShadow: false
     });
   }
 
@@ -4846,7 +5380,7 @@ class SquidGameWatch {
       c.arc(startX + spacing * 2 + 1, startY + 18, 3.2, 0, Math.PI * 2);
       c.arc(startX + spacing * 2 - 1, startY + 38, 3.2, 0, Math.PI * 2);
       c.fill();
-    });
+    }, null, 0.35, 'hud');
   }
 
   _drawLcdLabel(ctx, x, y, text, isLit, fontSize = 14) {
@@ -4859,7 +5393,7 @@ class SquidGameWatch {
       c.letterSpacing = '1px';
       c.fillStyle = '#fef08a';
       c.fillText(text, x, y);
-    });
+    }, 0.35, 'hud');
   }
 
   _drawSevenSegmentDigit(ctx, x, y, char) {
@@ -4907,7 +5441,7 @@ class SquidGameWatch {
         }
         c.closePath();
         c.fill();
-      });
+      }, null, 0.35, 'hud');
     }
   }
 
