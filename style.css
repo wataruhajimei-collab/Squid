@@ -1010,15 +1010,16 @@ html, body {
     margin: 0;
     padding:
       0
-      max(4px, env(safe-area-inset-right, 4px))
+      max(8px, env(safe-area-inset-right, 8px))
       0
-      max(4px, env(safe-area-inset-left, 4px));
+      max(8px, env(safe-area-inset-left, 8px));
     display: grid;
-    grid-template-columns: minmax(48px, 1fr) auto minmax(48px, 1fr);
+    /* 画面両脇にボタン用スペース（min 64px, 目安 11-13vw）を確保し、中央にゲーム画面を配置 */
+    grid-template-columns: minmax(68px, 1fr) auto minmax(68px, 1fr);
     grid-template-rows: auto 1fr auto;
     align-items: center;
     justify-items: stretch;
-    gap: 4px 6px;
+    gap: 6px 12px;
     background: #0c0e0b;
     border: none;
     border-radius: 0;
@@ -1039,11 +1040,14 @@ html, body {
     display: none !important;
   }
 
-  /* Center Column: Raw 3:2 Play Screen touching top and bottom edges (100dvh) */
+  /* Center Column: 3:2 Play Screen
+     スマホ(19.5:9〜16:9)では上下フル(100dvh)でぴったり左右ボタン配置。
+     iPad(4:3 / 10:7など)では左右が詰まらないよう上下に余白を空け、
+     画面幅の70%〜72%以内でスマホ同様のゆったりした左右ボタン余白を自動確保 */
   .metal-plate {
     grid-column: 2;
     grid-row: 1 / 4;
-    align-self: stretch;
+    align-self: center;
     justify-self: center;
     padding: 0;
     margin: 0;
@@ -1054,7 +1058,8 @@ html, body {
     display: flex;
     align-items: center;
     justify-content: center;
-    height: 100dvh;
+    height: auto;
+    max-height: 100dvh;
   }
 
   .lcd-bezel {
@@ -1064,7 +1069,8 @@ html, body {
     border: none;
     border-radius: 0;
     box-shadow: none;
-    height: 100dvh;
+    height: auto;
+    max-height: 100dvh;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1072,10 +1078,12 @@ html, body {
 
   .lcd-glass-frame {
     aspect-ratio: 3 / 2;
-    width: min(calc(100dvh * 1.5), calc(100dvw - 104px));
+    /* iPad等で左右が詰まらないよう、幅を最大 (100dvw - 160px) および 100dvw * 0.70 に制限。
+       これによりiPad横向きでは上下に自然な空きができ、スマホのような黄金比配置を保つ */
+    width: min(calc(100dvh * 1.5), calc(100dvw - 160px), 71dvw);
     height: auto;
     max-height: 100dvh;
-    border-radius: 0;
+    border-radius: 6px;
     border: none;
     margin: 0;
     padding: 0;
@@ -1123,7 +1131,8 @@ html, body {
     justify-self: stretch;
     margin-bottom: max(6px, env(safe-area-inset-bottom, 6px));
     width: 100%;
-    height: clamp(82px, 36dvh, 138px);
+    max-width: 160px;
+    height: clamp(82px, 32dvh, 140px);
   }
 
   /* Right Side (Outside Screen): Top Utility Buttons */
@@ -1191,7 +1200,8 @@ html, body {
     justify-self: stretch;
     margin-bottom: max(6px, env(safe-area-inset-bottom, 6px));
     width: 100%;
-    height: clamp(82px, 36dvh, 138px);
+    max-width: 160px;
+    height: clamp(82px, 32dvh, 140px);
   }
 
   .btn-arrow {
