@@ -3117,23 +3117,28 @@ class SquidGameWatch {
       nightWeight,
       directStrength,
       lenMul,
+      shadowStretch: lenMul,
       helmSpec: toCss(helmSpecArr),
       helmMid:  toCss(helmMidArr),
       helmDark: toCss(helmDarkArr),
       helmDeep: toCss(helmDeepArr),
       suitLit:    toCss(suitLitArr),
       suitMid:    toCss(suitMidArr),
+      suitDark:   toCss(suitShadowArr),
       suitShadow: toCss(suitShadowArr),
       suitDeep:   toCss(suitDeepArr),
       visorSpec: toCss(visorSpecArr),
       visorMid:  toCss(visorMidArr),
       visorDark: toCss(visorDarkArr),
+      visorDeep: toCss(visorDarkArr),
       sackLit:  toCss(sackLitArr),
       sackMid:  toCss(sackMidArr),
       sackDark: toCss(sackDarkArr),
       rimArr,
       rimColor: (a = 1) => toCss(rimArr, a),
       shadowArr,
+      shadowRgb: shadowArr,
+      shadowAlpha: 0.44 * (0.65 + directStrength * 0.45),
       shadowColor: (a = 1) => toCss(shadowArr, a)
     };
   }
@@ -4352,7 +4357,7 @@ class SquidGameWatch {
     c.stroke();
 
     c.save();
-    c.strokeStyle = lt.rimColor;
+    c.strokeStyle = lt.rimColor(0.85);
     c.lineWidth = 1.45;
     c.lineCap = 'round';
     c.beginPath();
