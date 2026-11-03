@@ -65,11 +65,11 @@
     - 右ボタン (`#btn-right`): `▶` / `RIGHT / 宝へ`
   - 中央エンブレム (`.center-grip-emblem`): `🦑` アイコンと `200 / 500 PTS` `LIFE BONUS` 表記（横画面用タイトルバッジ `.emblem-title-landscape` 内蔵）。
 - **スマホ横画面（ランドスケープ `@media (orientation: landscape)`）フルスクリーン対応**:
-  - **プレイ画面の縦横比（`3:2` = `720:480`）を一切変えずに画面縦幅いっぱいまで最大化**: `.lcd-glass-frame` と `#lcdCanvas` に `aspect-ratio: 3 / 2` を厳格固定し、横画面時は `.plate-header` / `.plate-footer` を非表示にして画面縦幅いっぱい（`calc(100dvh - 24px)` 基準）にプレイ画面を拡大表示する。
-  - **操作ボタンをプレイ画面の左右外側（サイドウイング）に配置**: `.console-shell` を3カラムGrid（`grid-template-columns: minmax(86px, 1fr) auto minmax(86px, 1fr)`）とし、`.top-bar`, `.handheld-unit`, `.control-deck` に `display: contents` を適用することで、本家ゲーム＆ウォッチ横型ワイドスクリーン筐体と同様にプレイ画面の外側左右へ各操作系を配置する：
-    - **左ウイング（画面左外）**: 上段にプロフィール＆地名ピル（`#profile-btn`）、中段に `SQUID` タイトルバッジ＆🦑エンブレム、下段（左親指位置）に大型赤ボタン `◀ LEFT / 船へ`（`#btn-left`）。
-    - **中央カラム**: 画面縦幅いっぱいの `3:2` 液晶プレイ画面（`.metal-plate` / `#lcdCanvas`）。
-    - **右ウイング（画面右外）**: 上段にサウンド・遊び方・ランキングボタン（`.top-actions`）、中段に2×2グリッド配置のシルバー楕円システムボタン（`GAME A / B / C / TIME`）、下段（右親指位置）に大型赤ボタン `▶ RIGHT / 宝へ`（`#btn-right`）。
+  - **筐体非表示＆プレイ画面を縦横比（`3:2` = `720:480`）維持のまま画面上下いっぱい（`100dvh`）に最大化**: 横画面時は筐体外装・金プレート・ベゼル枠・ヘッダー/フッター・中央エンブレムをすべて非表示（`background: none; border: none; padding: 0;`）とし、`.lcd-glass-frame` と `#lcdCanvas` を `aspect-ratio: 3 / 2` のまま画面上端から下端まで100%（`height: 100dvh; width: min(calc(100dvh * 1.5), calc(100dvw - 104px));`）拡大表示する。
+  - **操作ボタンをプレイ画面の左右外側（空きスペース）に配置**: `.console-shell` を3カラムGrid（`grid-template-columns: minmax(48px, 1fr) auto minmax(48px, 1fr)`）とし、`.top-bar`, `.handheld-unit`, `.control-deck` に `display: contents` を適用することで、中央の `3:2` プレイ画面の左右外側に操作系を配置する：
+    - **画面左外側**: 上段にプロフィール＆地名ピル（`#profile-btn`）、下段（左親指位置）に大型赤ボタン `◀ LEFT / 船へ`（`#btn-left`）。
+    - **中央カラム**: 画面上下いっぱい（`100dvh`）の `3:2` 液晶プレイ画面（`#lcdCanvas`）。
+    - **画面右外側**: 上段にサウンド・遊び方・ランキングボタン（`.top-actions`）、中段にシステムボタン（`GAME A / B / C / TIME`）、下段（右親指位置）に大型赤ボタン `▶ RIGHT / 宝へ`（`#btn-right`）。
 
 ## 2.2 操作方法（マルチ入力対応・二重発火防止）
 1. **下部大型赤ボタン**: `touchstart`（`passive: false`, `preventDefault`）と `mousedown`（タッチ後500ms以内は無視）で即座に反応。
