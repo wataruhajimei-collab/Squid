@@ -2106,12 +2106,37 @@ class SquidGameWatch {
     ctx.fill();
     ctx.restore();
 
+    // 海面に落ちる雲の影（光源の反対側へ斜めに落ちる）
+    if (this.skyClouds && clearSkyFactor > 0.05) {
+      const ltSky = this._getDiverLighting(360, 60);
+      const cloudShadowAlpha = Math.min(0.28, 0.22 * ltSky.shadowStrength * clearSkyFactor);
+      if (cloudShadowAlpha > 0.02) {
+        ctx.save();
+        ctx.fillStyle = ltSky.shadowColor(cloudShadowAlpha);
+        for (const cl of this.skyClouds) {
+          const csX = cl.x + ltSky.nx * 26 * ltSky.lenMul;
+          const csY = 106 + Math.max(3, ltSky.ny * 8);
+          ctx.beginPath();
+          ctx.ellipse(csX, csY, cl.rx * 0.95, 7.5, 0, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.restore();
+      }
+    }
+
     // 流れる立体積雲（時間帯と天候に応じて雲のハイライト・陰影色が変化）
     if (this.skyClouds) {
       const cTop = this._lerpRgba(pA.cloudTop, pB.cloudTop, t, 0.88 - rainDim * 0.15);
       const cBot = this._lerpRgba(pA.cloudBot, pB.cloudBot, t, 0.62 + rainDim * 0.25);
+      const ltCloud = this._getDiverLighting(360, 45);
       for (const cl of this.skyClouds) {
-        const cg = ctx.createLinearGradient(cl.x, cl.y - cl.ry * 1.3, cl.x, cl.y + cl.ry);
+        // 光源の反対側へ下部・側面の影がつくようにグラデーションを傾ける
+        const cg = ctx.createLinearGradient(
+          cl.x - ltCloud.nx * cl.rx * 0.45,
+          cl.y - cl.ry * 1.3,
+          cl.x + ltCloud.nx * cl.rx * 0.45,
+          cl.y + cl.ry
+        );
         cg.addColorStop(0, cTop);
         cg.addColorStop(1, cBot);
         ctx.fillStyle = cg;
@@ -4210,18 +4235,18 @@ class SquidGameWatch {
     // --- 左上のサルベージ船 ---
     const ltBoat = real ? this._getDiverLighting(128, 96) : null;
     if (real) {
-      // 1. 船底から水中へ滑らかに伸びる一体型の船影と、光の強さに連動する水鏡リフレクション
+      // 1. 船底から光源の反対側（水中）へ滑らかに伸びる一体型の船影と、光の強さに連動する水鏡リフレクション
       ctx.save();
       const bWave = Math.sin(this.bioTime * 2.8) * 4.5;
-      const bShiftX = ltBoat.nx * 36 * ltBoat.lenMul + bWave;
-      const bShiftY = Math.max(8, ltBoat.ny * 22 * ltBoat.lenMul);
-      const bShadowGrad = ctx.createRadialGradient(125 + bShiftX * 0.35, 114 + bShiftY * 0.3, 12, 125 + bShiftX, 118 + bShiftY, 108);
-      bShadowGrad.addColorStop(0, ltBoat.shadowColor(0.62 * ltBoat.shadowStrength));
-      bShadowGrad.addColorStop(0.55, ltBoat.shadowColor(0.32 * ltBoat.shadowStrength));
+      const bShiftX = ltBoat.nx * 42 * ltBoat.lenMul + bWave;
+      const bShiftY = Math.max(8, ltBoat.ny * 24 * ltBoat.lenMul);
+      const bShadowGrad = ctx.createRadialGradient(125 + bShiftX * 0.45, 114 + bShiftY * 0.4, 12, 125 + bShiftX, 118 + bShiftY, 115);
+      bShadowGrad.addColorStop(0, ltBoat.shadowColor(0.72 * ltBoat.shadowStrength));
+      bShadowGrad.addColorStop(0.55, ltBoat.shadowColor(0.38 * ltBoat.shadowStrength));
       bShadowGrad.addColorStop(1, ltBoat.shadowColor(0));
       ctx.fillStyle = bShadowGrad;
       ctx.beginPath();
-      ctx.ellipse(125 + bShiftX * 0.65, 116 + bShiftY * 0.6, 105, 18, 0.03 * ltBoat.nx, 0, Math.PI * 2);
+      ctx.ellipse(125 + bShiftX * 0.72, 116 + bShiftY * 0.68, 108, 20, 0.05 * ltBoat.nx, 0, Math.PI * 2);
       ctx.fill();
 
       // 船体の赤い塗装がすぐ下の水面に映り込む水鏡リフレクション（光の強さ rimPower に応じて強弱）
@@ -4360,13 +4385,13 @@ class SquidGameWatch {
     // --- 左側〜海底の岩礁と海藻プリント ---
     const ltReef = real ? this._getDiverLighting(220, 360) : null;
     if (real) {
-      // 岩礁斜面が光源と逆向きに落とす滑らかな海底シャドウ
+      // 岩礁斜面が光源の反対側へ落とす滑らかな海底シャドウ（nxの符号に応じて左右正しく伸びる）
       ctx.save();
-      const rShiftX = Math.max(8, ltReef.nx * 36 * ltReef.lenMul);
-      const rShiftY = Math.max(4, ltReef.ny * 14 * ltReef.lenMul);
-      const rCol = ltReef.shadowColor(0.50 * ltReef.shadowStrength);
+      const rShiftX = ltReef.nx * 42 * ltReef.lenMul;
+      const rShiftY = Math.max(6, ltReef.ny * 16 * ltReef.lenMul);
+      const rCol = ltReef.shadowColor(0.58 * ltReef.shadowStrength);
       ctx.shadowColor = rCol;
-      ctx.shadowBlur = 10;
+      ctx.shadowBlur = 12;
       ctx.fillStyle = rCol;
       ctx.beginPath();
       ctx.moveTo(0, 195);
@@ -4487,18 +4512,18 @@ class SquidGameWatch {
     const cx = 612, cy = 382;
     const ltChest = real ? this._getDiverLighting(cx + 42, cy + 32) : null;
     if (real && ltChest) {
-      // 1. 宝箱から光源と逆向きに滑らかに伸びる一体型キャストシャドウ
+      // 1. 宝箱から光源の反対側へ滑らかに伸びる一体型キャストシャドウ
       ctx.save();
       const cSway = Math.sin(this.bioTime * 2.8) * 3.2;
-      const cOffX = ltChest.nx * 32 * ltChest.lenMul + cSway;
-      const cOffY = Math.max(4, ltChest.ny * 10 * ltChest.lenMul);
-      const cShadowGrad = ctx.createRadialGradient(cx + 42, cy + 60, 8, cx + 42 + cOffX, cy + 62 + cOffY, 64);
-      cShadowGrad.addColorStop(0, ltChest.shadowColor(0.66 * ltChest.shadowStrength));
-      cShadowGrad.addColorStop(0.55, ltChest.shadowColor(0.34 * ltChest.shadowStrength));
+      const cOffX = ltChest.nx * 38 * ltChest.lenMul + cSway;
+      const cOffY = Math.max(6, ltChest.ny * 14 * ltChest.lenMul);
+      const cShadowGrad = ctx.createRadialGradient(cx + 42, cy + 60, 8, cx + 42 + cOffX, cy + 62 + cOffY, 70);
+      cShadowGrad.addColorStop(0, ltChest.shadowColor(0.72 * ltChest.shadowStrength));
+      cShadowGrad.addColorStop(0.55, ltChest.shadowColor(0.38 * ltChest.shadowStrength));
       cShadowGrad.addColorStop(1, ltChest.shadowColor(0));
       ctx.fillStyle = cShadowGrad;
       ctx.beginPath();
-      ctx.ellipse(cx + 42 + cOffX * 0.65, cy + 62 + cOffY * 0.65, 58, 11, 0, 0, Math.PI * 2);
+      ctx.ellipse(cx + 42 + cOffX * 0.72, cy + 62 + cOffY * 0.72, 62, 13, 0, 0, Math.PI * 2);
       ctx.fill();
 
       // 2. 開いた宝箱から水中へ立ち昇る黄金のオーラ（光の強さに応じて強弱）
@@ -4640,13 +4665,17 @@ class SquidGameWatch {
     let sailStroke = 'rgba(42, 78, 88, 0.40)';
 
     if (real && ltShip) {
-      // GAME C: 沈没ガレオン船が光源と逆向きに落とす重厚な海底・水中シャドウ
+      // GAME C: 沈没ガレオン船が光源の反対側（海底・水中）へ落とす重厚なアンビエント＆キャストシャドウ
       ctx.save();
-      const sOffX = ltShip.nx * 28 * ltShip.lenMul + Math.sin(this.bioTime * 3.1) * 4;
-      const sOffY = Math.max(4, ltShip.ny * 14 * ltShip.lenMul);
-      ctx.fillStyle = ltShip.shadowColor(0.38);
+      const sOffX = ltShip.nx * 38 * ltShip.lenMul + Math.sin(this.bioTime * 3.1) * 4;
+      const sOffY = Math.max(6, ltShip.ny * 16 * ltShip.lenMul);
+      const shipShadowGrad = ctx.createRadialGradient(535 + sOffX * 0.4, 438 + sOffY * 0.4, 25, 535 + sOffX, 438 + sOffY, 210);
+      shipShadowGrad.addColorStop(0, ltShip.shadowColor(0.55 * ltShip.shadowStrength));
+      shipShadowGrad.addColorStop(0.65, ltShip.shadowColor(0.28 * ltShip.shadowStrength));
+      shipShadowGrad.addColorStop(1, ltShip.shadowColor(0));
+      ctx.fillStyle = shipShadowGrad;
       ctx.beginPath();
-      ctx.ellipse(535 + sOffX, 438 + sOffY * 0.5, 195, 16, 0, 0, Math.PI * 2);
+      ctx.ellipse(535 + sOffX, 438 + sOffY * 0.6, 205, 20, 0, 0, Math.PI * 2);
       ctx.fill();
       ctx.restore();
 
@@ -5023,12 +5052,12 @@ class SquidGameWatch {
     const isUnderwater = y > 108;
     const waveRefractX = isUnderwater ? Math.sin(this.bioTime * 2.9 + x * 0.045) * 16 : 0;
 
-    // 光源(lightX, lightY)からダイバー(x, y)へ向かうベクトル＝「光源と逆向き（影が伸びる方向）」
-    const rawDx = (x - lightX) * 1.35 + waveRefractX;
-    const rawDy = Math.max(34, (y - lightY) * 0.68);
+    // 光源(lightX, lightY)から対象(x, y)へ向かうベクトル＝「光源の反対側（影が落ちる向き）」
+    const rawDx = (x - lightX) * 1.45 + waveRefractX;
+    const rawDy = Math.max(22, (y - lightY) * 0.75);
     const dist = Math.hypot(rawDx, rawDy) || 1;
-    const nx = rawDx / dist; // 影のX方向（光源は -nx 側）
-    const ny = rawDy / dist; // 影のY方向（光源は -ny 側）
+    const nx = rawDx / dist; // 影が伸びるX方向（光源の反対側。光源が左にあれば nx>0、右にあれば nx<0）
+    const ny = Math.max(0.28, rawDy / dist); // 影が落ちるY方向（光源が上にあるため常に下方へ落ちる）
 
     // 4つの時間帯別ダイバー照光パレット (0:朝焼け, 1:快晴真昼, 2:夕焼け, 3:満月の夜)
     const palettes = [
@@ -5234,44 +5263,44 @@ class SquidGameWatch {
     if (baseAlpha <= 0.02) return;
 
     // 影が伸びる距離（光源の高さと向きに応じ、滑らかなグラデーションコーンとして伸ばす）
-    const reach = (isUnderwater ? 30.0 : 19.0) * (0.9 + Math.abs(lt.nx) * 0.65) * lt.lenMul;
+    const reach = (isUnderwater ? 34.0 : 22.0) * (0.9 + Math.abs(lt.nx) * 0.75) * lt.lenMul;
     const phase = this.bioTime * (isUnderwater ? 3.0 : 1.9) + pivotX * 0.02 + pivotY * 0.015;
     const smoothWave = Math.sin(phase) * 0.7 + Math.cos(phase * 1.5 + 0.5) * 0.3;
 
     ctx.save();
 
-    // 1. 足元の甲板・海底から光源の逆向きへ滑らかに伸びる「連続テーパード・グラデーション影」
+    // 1. 足元の甲板・海底から光源の反対側へ滑らかに伸びる「連続テーパード・グラデーション影」
     if (opts.drawGroundShadow) {
       const footX = pivotX;
       const footY = pivotY + footOffsetY - 2;
       const swayPerpX = -lt.ny * smoothWave * (isUnderwater ? 4.5 : 1.6);
       const swayPerpY = lt.nx * smoothWave * (isUnderwater ? 1.8 : 0.7);
-      const tipX = footX + lt.nx * reach * 1.85 + swayPerpX;
-      const tipY = footY + Math.max(3.5, lt.ny * reach * 0.36) + swayPerpY;
+      const tipX = footX + lt.nx * reach * 2.1 + swayPerpX;
+      const tipY = footY + Math.max(4.0, lt.ny * reach * 0.44) + swayPerpY;
       const midX = (footX + tipX) * 0.5 - lt.ny * Math.cos(phase * 1.3) * (isUnderwater ? 3.5 : 1.2);
       const midY = (footY + tipY) * 0.5 + lt.nx * Math.cos(phase * 1.3) * 1.2;
 
-      // (A) 足元直下の柔らかい接地アンビエントオクルージョン楕円
-      const aoGrad = ctx.createRadialGradient(footX, footY, 2, footX + lt.nx * 5, footY + 1, isUnderwater ? 18 : 13);
-      aoGrad.addColorStop(0, lt.shadowColor(Math.min(0.9, baseAlpha * 0.95)));
-      aoGrad.addColorStop(0.55, lt.shadowColor(baseAlpha * 0.48));
+      // (A) 足元直下の柔らかい接地アンビエントオクルージョン楕円（光源の反対側へオフセット）
+      const aoGrad = ctx.createRadialGradient(footX, footY, 2, footX + lt.nx * 7, footY + 1.5, isUnderwater ? 20 : 14);
+      aoGrad.addColorStop(0, lt.shadowColor(Math.min(0.92, baseAlpha * 0.98)));
+      aoGrad.addColorStop(0.55, lt.shadowColor(baseAlpha * 0.52));
       aoGrad.addColorStop(1, lt.shadowColor(0));
       ctx.fillStyle = aoGrad;
       ctx.beginPath();
-      ctx.ellipse(footX + lt.nx * 4, footY + 1, isUnderwater ? 17 : 12, isUnderwater ? 6.5 : 4.5, 0, 0, Math.PI * 2);
+      ctx.ellipse(footX + lt.nx * 6, footY + 1.5, isUnderwater ? 19 : 13, isUnderwater ? 7.2 : 5.0, 0, 0, Math.PI * 2);
       ctx.fill();
 
-      // (B) 足元から先端へ境目なく溶ける滑らかな1本の影リボン（分身シルエットを一切作らない）
+      // (B) 足元から先端へ境目なく溶ける滑らかな1本の影リボン（光源の反対側へしっかり伸びる）
       const gGrad = ctx.createLinearGradient(footX, footY, tipX, tipY);
-      gGrad.addColorStop(0, lt.shadowColor(baseAlpha * 0.82));
-      gGrad.addColorStop(0.45, lt.shadowColor(baseAlpha * 0.52));
-      gGrad.addColorStop(0.82, lt.shadowColor(baseAlpha * 0.20));
+      gGrad.addColorStop(0, lt.shadowColor(baseAlpha * 0.88));
+      gGrad.addColorStop(0.40, lt.shadowColor(baseAlpha * 0.58));
+      gGrad.addColorStop(0.78, lt.shadowColor(baseAlpha * 0.24));
       gGrad.addColorStop(1, lt.shadowColor(0));
 
       ctx.save();
       ctx.strokeStyle = gGrad;
       ctx.lineCap = 'round';
-      ctx.lineWidth = isUnderwater ? 22 : 15;
+      ctx.lineWidth = isUnderwater ? 24 : 16;
       ctx.beginPath();
       ctx.moveTo(footX, footY);
       ctx.quadraticCurveTo(midX, midY, tipX, tipY);
@@ -5279,16 +5308,16 @@ class SquidGameWatch {
       ctx.restore();
     }
 
-    // 2. 水中・空間のダイバー背後に落ちる「分身にならない滑らかなソフト・ボリューメトリック影」
+    // 2. 水中・空間のダイバー背後（光源の反対側）に落ちる「分身にならない滑らかなソフト・ボリューメトリック影」
     // ※ pathFn(ctx) のような頭・目穴・泡・棒手足の切り抜きシルエットは描かず、境界が自然に溶ける楕円グラデーションで表現
     const bodyCenterY = pivotY + footOffsetY * 0.36;
-    const shiftX = lt.nx * reach * 0.52 + (-lt.ny) * smoothWave * (isUnderwater ? 3.2 : 1.2);
-    const shiftY = lt.ny * reach * 0.30 + lt.nx * smoothWave * 1.2;
+    const shiftX = lt.nx * reach * 0.68 + (-lt.ny) * smoothWave * (isUnderwater ? 3.2 : 1.2);
+    const shiftY = lt.ny * reach * 0.40 + lt.nx * smoothWave * 1.2;
     const shX = pivotX + shiftX;
     const shY = bodyCenterY + shiftY;
-    const rx = isUnderwater ? 21 : 15;
-    const ry = footOffsetY * 0.58;
-    const tilt = Math.atan2(shiftY, shiftX) * 0.18 + lt.nx * 0.22 + smoothWave * 0.05;
+    const rx = isUnderwater ? 23 : 16;
+    const ry = footOffsetY * 0.62;
+    const tilt = Math.atan2(shiftY, shiftX) * 0.22 + lt.nx * 0.26 + smoothWave * 0.05;
 
     ctx.save();
     ctx.translate(shX, shY);
@@ -5472,14 +5501,16 @@ class SquidGameWatch {
           ctx.strokeStyle = `rgba(4, 12, 26, ${shadowAlpha.toFixed(3)})`;
           pathFn(ctx);
         } else {
+          // イカや触腕等のドロップシャドウ：光源の反対側へしっかり落とす
           const lt = this._getDiverLighting(540, 220);
-          const swX = Math.sin(this.bioTime * 2.4) * 1.2;
-          const swY = Math.cos(this.bioTime * 2.0) * 1.0;
-          const effAlpha = shadowAlpha * lt.shadowStrength * 0.42;
+          const swX = Math.sin(this.bioTime * 2.4) * 1.5;
+          const swY = Math.cos(this.bioTime * 2.0) * 1.2;
+          const effAlpha = Math.min(0.78, shadowAlpha * lt.shadowStrength * 0.95);
           const col = lt.shadowColor(effAlpha);
           ctx.shadowColor = col;
-          ctx.shadowBlur = 12;
-          ctx.translate(lt.nx * 4.2 + swX, lt.ny * 3.2 + swY);
+          ctx.shadowBlur = 14;
+          // 光源の反対側へ明確にシフト
+          ctx.translate(lt.nx * 10.5 * lt.lenMul + swX, Math.max(4.0, lt.ny * 8.5 * lt.lenMul) + swY);
           ctx.fillStyle = col;
           ctx.strokeStyle = col;
           pathFn(ctx);
