@@ -337,7 +337,15 @@ export default {
       return handleApiRequest(request, env);
     }
 
-    // 静的ファイル配信（Cloudflare Workers with Static Assets 構成）
-    return env.ASSETS.fetch(request);
+    // 静的ファイル配信（Cloudflare Workers with Static Assets 構成：キャッシュ無効化ヘッダを付与）
+    const assetRes = await env.ASSETS.fetch(request);
+    const headers = new Headers(assetRes.headers);
+    headers.set("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0");
+    headers.set("Pragma", "no-cache");
+    return new Response(assetRes.body, {
+      status: assetRes.status,
+      statusText: assetRes.statusText,
+      headers
+    });
   }
 };
