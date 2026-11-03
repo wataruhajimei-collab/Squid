@@ -314,12 +314,23 @@ class SquidGameWatch {
       { x: 660, y: 38, rx: 58, ry: 14, speed: 7.8,  layer: 0, puffs: [[-22, 3, 0.74], [2, -2, 0.98], [26, 4, 0.76]] }
     ];
 
+    // 空を飛ぶ多彩なキャラクター群（12種類：カモメ、ペリカン、アホウドリ、アオサギ、渡り鳥V字編隊、カワセミ、ツバメ、赤トンボ、アゲハ蝶、夜行性フクロウ、コウモリ、レトロ複葉機＆飛行船）
     this.skyBirds = [
-      { x: 180, y: 34, vx: 22,   vy: 0.4, wingSpeed: 7.5, phase: 0.0, scale: 0.95 },
-      { x: 162, y: 41, vx: 21.5, vy: 0.3, wingSpeed: 7.8, phase: 1.2, scale: 0.82 },
-      { x: 148, y: 30, vx: 22.3, vy: 0.5, wingSpeed: 7.2, phase: 2.4, scale: 0.76 },
-      { x: 540, y: 24, vx: -18,  vy: 0.2, wingSpeed: 6.8, phase: 3.1, scale: 0.70 },
-      { x: 558, y: 29, vx: -18.4, vy: 0.3, wingSpeed: 7.1, phase: 4.5, scale: 0.62 }
+      { kind: 'seagull',     x: 180, y: 34, vx: 22,    vy: 0.4, wingSpeed: 7.5, phase: 0.0, scale: 0.95, activeTime: 'day' },
+      { kind: 'seagull',     x: 162, y: 42, vx: 21.5,  vy: 0.3, wingSpeed: 7.8, phase: 1.2, scale: 0.80, activeTime: 'day' },
+      { kind: 'pelican',     x: 420, y: 48, vx: -17.5, vy: 0.25, wingSpeed: 5.2, phase: 0.8, scale: 1.05, activeTime: 'day' },
+      { kind: 'albatross',   x: 590, y: 22, vx: -25.0, vy: 0.18, wingSpeed: 3.1, phase: 2.1, scale: 1.15, activeTime: 'all' },
+      { kind: 'heron',       x: 95,  y: 56, vx: 19.0,  vy: 0.22, wingSpeed: 4.8, phase: 3.4, scale: 1.00, activeTime: 'day' },
+      { kind: 'goose_flock', x: 640, y: 26, vx: -21.0, vy: 0.15, wingSpeed: 6.4, phase: 1.5, scale: 0.78, activeTime: 'twilight' },
+      { kind: 'kingfisher',  x: 280, y: 78, vx: 42.0,  vy: 0.6, wingSpeed: 14.5, phase: 0.5, scale: 0.78, activeTime: 'day' },
+      { kind: 'swallow',     x: 490, y: 64, vx: -36.0, vy: 0.8, wingSpeed: 12.8, phase: 2.7, scale: 0.82, activeTime: 'day' },
+      { kind: 'dragonfly',   x: 245, y: 72, vx: 16.5,  vy: 0.5, wingSpeed: 24.0, phase: 1.1, scale: 0.85, activeTime: 'clear' },
+      { kind: 'butterfly',   x: 350, y: 68, vx: -13.0, vy: 0.9, wingSpeed: 9.5,  phase: 4.0, scale: 0.85, activeTime: 'clear' },
+      { kind: 'owl',         x: 520, y: 38, vx: -19.5, vy: 0.3, wingSpeed: 5.6, phase: 0.9, scale: 0.98, activeTime: 'night' },
+      { kind: 'bat',         x: 210, y: 46, vx: 28.0,  vy: 0.9, wingSpeed: 13.5, phase: 2.2, scale: 0.84, activeTime: 'night' },
+      { kind: 'bat',         x: 232, y: 36, vx: 27.2,  vy: 0.85, wingSpeed: 14.1, phase: 3.8, scale: 0.72, activeTime: 'night' },
+      { kind: 'biplane',     x: 790, y: 20, vx: -15.5, vy: 0.08, wingSpeed: 28.0, phase: 0.0, scale: 0.76, activeTime: 'clear' },
+      { kind: 'blimp',       x: -110, y: 18, vx: 7.5,  vy: 0.04, wingSpeed: 2.0,  phase: 1.7, scale: 0.82, activeTime: 'day' }
     ];
 
     this.skyStars = [];
@@ -350,13 +361,25 @@ class SquidGameWatch {
       });
     }
 
-    // 海中を回遊する小魚の群れ＆マリンスノー
+    // 海中を回遊する多彩な海洋生物（16種類：イワシ銀鱗群・カクレクマノミ・ツノダシ・チョウチョウウオ・ウミガメ・マンタ・ミズクラゲ・タツノオトシゴ・ハリセンボン・イルカ・リーフシャーク・マンボウ・チョウチンアンコウ・オウムガイ・トビウオ・カニ＆ヒトデ）
     this.underwaterFish = [
-      { x: 240, y: 175, vx: 19,  scale: 0.85, phase: 0.0, hue: 198 },
-      { x: 226, y: 183, vx: 19,  scale: 0.72, phase: 0.9, hue: 202 },
-      { x: 252, y: 187, vx: 19,  scale: 0.68, phase: 1.8, hue: 195 },
-      { x: 460, y: 248, vx: -15, scale: 0.78, phase: 2.5, hue: 188 },
-      { x: 476, y: 255, vx: -15, scale: 0.66, phase: 3.4, hue: 192 }
+      { kind: 'sardine_school', x: 240, y: 168, vx: 22.0,  scale: 0.85, phase: 0.0, hue: 198 },
+      { kind: 'clownfish',      x: 135, y: 318, vx: 14.5,  scale: 0.88, phase: 0.6, hue: 22 },
+      { kind: 'clownfish',      x: 118, y: 328, vx: 14.5,  scale: 0.72, phase: 1.9, hue: 24 },
+      { kind: 'angelfish',      x: 345, y: 274, vx: -16.0, scale: 0.92, phase: 1.2, hue: 48 },
+      { kind: 'butterflyfish',  x: 485, y: 312, vx: -15.0, scale: 0.86, phase: 2.4, hue: 52 },
+      { kind: 'sea_turtle',     x: 560, y: 215, vx: -13.5, scale: 1.05, phase: 0.4, hue: 142 },
+      { kind: 'manta_ray',      x: 110, y: 238, vx: 16.5,  scale: 1.12, phase: 2.1, hue: 215 },
+      { kind: 'jellyfish',      x: 295, y: 225, vx: 4.5,   scale: 0.92, phase: 0.8, hue: 192 },
+      { kind: 'jellyfish',      x: 445, y: 268, vx: -3.8,  scale: 0.78, phase: 3.1, hue: 285 },
+      { kind: 'seahorse',       x: 84,  y: 348, vx: 3.2,   scale: 0.88, phase: 1.5, hue: 38 },
+      { kind: 'pufferfish',     x: 392, y: 332, vx: 11.0,  scale: 0.90, phase: 2.8, hue: 44 },
+      { kind: 'dolphin',        x: 680, y: 142, vx: -34.0, scale: 1.08, phase: 0.3, hue: 205 },
+      { kind: 'shark',          x: 620, y: 286, vx: -21.0, scale: 1.06, phase: 1.7, hue: 210 },
+      { kind: 'sunfish',        x: 45,  y: 262, vx: 8.5,   scale: 1.08, phase: 3.6, hue: 196 },
+      { kind: 'anglerfish',     x: 525, y: 356, vx: -9.5,  scale: 0.88, phase: 4.2, hue: 265 },
+      { kind: 'nautilus',       x: 225, y: 352, vx: -8.0,  scale: 0.86, phase: 5.0, hue: 18 },
+      { kind: 'flying_fish',    x: 30,  y: 124, vx: 44.0,  scale: 0.86, phase: 0.9, hue: 195 }
     ];
 
     this.marineSnow = [];
@@ -1522,8 +1545,8 @@ class SquidGameWatch {
       for (const bd of this.skyBirds) {
         bd.x += bd.vx * dt;
         bd.y += Math.sin(this.bioTime * 2.2 + bd.phase) * bd.vy * dt * 12;
-        if (bd.vx > 0 && bd.x > 760) bd.x = -40;
-        if (bd.vx < 0 && bd.x < -40) bd.x = 760;
+        if (bd.vx > 0 && bd.x > 820) bd.x = -95;
+        if (bd.vx < 0 && bd.x < -95) bd.x = 820;
       }
     }
 
@@ -1561,8 +1584,8 @@ class SquidGameWatch {
     if (this.underwaterFish) {
       for (const f of this.underwaterFish) {
         f.x += f.vx * dt;
-        if (f.vx > 0 && f.x > 750) f.x = -30;
-        if (f.vx < 0 && f.x < -30) f.x = 750;
+        if (f.vx > 0 && f.x > 790) f.x = -65;
+        if (f.vx < 0 && f.x < -65) f.x = 790;
       }
     }
 
@@ -2067,21 +2090,14 @@ class SquidGameWatch {
       }
     }
 
-    // 羽ばたきながら空を横切る海鳥（カモメ）の群れ
+    // 空を飛ぶ多彩なキャラクター群（時間帯・天候に応じてカモメ、ペリカン、アホウドリ、アオサギ、渡り鳥V字編隊、カワセミ、ツバメ、赤トンボ、蝶、夜行性フクロウ、コウモリ、複葉機、飛行船が登場）
     if (this.skyBirds) {
       ctx.save();
-      ctx.strokeStyle = nightWeight > 0.55 ? 'rgba(226, 232, 240, 0.75)' : 'rgba(30, 41, 59, 0.78)';
-      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.rect(0, 0, W, 106);
+      ctx.clip();
       for (const bd of this.skyBirds) {
-        const flap = Math.sin(this.bioTime * bd.wingSpeed + bd.phase);
-        const s = bd.scale * 7.5;
-        const wingY = flap * s * 0.68;
-        ctx.lineWidth = Math.max(1.2, bd.scale * 1.8);
-        ctx.beginPath();
-        ctx.moveTo(bd.x - s, bd.y - wingY);
-        ctx.quadraticCurveTo(bd.x - s * 0.4, bd.y - wingY * 0.4 - 2, bd.x, bd.y);
-        ctx.quadraticCurveTo(bd.x + s * 0.4, bd.y - wingY * 0.4 - 2, bd.x + s, bd.y - wingY);
-        ctx.stroke();
+        this._drawSkyFlyerItem(ctx, bd, env, nightWeight);
       }
       ctx.restore();
     }
@@ -2248,6 +2264,931 @@ class SquidGameWatch {
       ctx.stroke();
     }
 
+    // 3. 海底の岩肌や砂地に棲むヒトデ＆横歩きするカニ
+    this._drawSeabedCritters(ctx);
+
+    ctx.restore();
+  }
+
+  // 海底の岩礁・砂地を横歩きするカニと五芒星のヒトデ
+  _drawSeabedCritters(ctx) {
+    // (A) 岩礁と砂地の五芒星ヒトデ（2匹：オレンジ＆紅紫）
+    const starfishes = [
+      { x: 64,  y: 356, r: 7.5, rot: 0.4,  col: '#f97316', dot: '#fef08a' },
+      { x: 332, y: 436, r: 6.8, rot: -0.2, col: '#ec4899', dot: '#fbcfe8' }
+    ];
+    for (const sf of starfishes) {
+      ctx.save();
+      ctx.translate(sf.x, sf.y);
+      ctx.rotate(sf.rot + Math.sin(this.bioTime * 0.8 + sf.x) * 0.04);
+      ctx.scale(1.0, 0.62);
+      ctx.fillStyle = sf.col;
+      ctx.strokeStyle = 'rgba(67, 20, 7, 0.65)';
+      ctx.lineWidth = 0.9;
+      ctx.beginPath();
+      for (let i = 0; i < 10; i++) {
+        const a = (i * Math.PI) / 5 - Math.PI * 0.5;
+        const rad = (i % 2 === 0) ? sf.r : sf.r * 0.42;
+        const px = Math.cos(a) * rad;
+        const py = Math.sin(a) * rad;
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      }
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = sf.dot;
+      ctx.beginPath();
+      ctx.arc(0, 0, 1.3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    // (B) 海底をハサミを振りながらチョコチョコ横歩きする赤いカニ（2匹）
+    const crabs = [
+      { baseX: 215, baseY: 424, range: 26, speed: 1.35, phase: 0.0, scale: 0.88 },
+      { baseX: 448, baseY: 438, range: 22, speed: 1.65, phase: 2.4, scale: 0.78 }
+    ];
+    for (const cb of crabs) {
+      const cx = cb.baseX + Math.sin(this.bioTime * cb.speed + cb.phase) * cb.range;
+      const legWave = Math.sin(this.bioTime * 11.0 + cb.phase);
+      const clawSnap = Math.abs(Math.sin(this.bioTime * 3.8 + cb.phase)) * 0.35;
+      ctx.save();
+      ctx.translate(cx, cb.baseY);
+      ctx.scale(cb.scale, cb.scale);
+
+      // 左右の歩脚（4対）
+      ctx.strokeStyle = '#b91c1c';
+      ctx.lineWidth = 1.4;
+      for (let l = -1; l <= 1; l += 2) {
+        for (let k = 0; k < 3; k++) {
+          const lift = (k % 2 === 0 ? legWave : -legWave) * 1.6;
+          ctx.beginPath();
+          ctx.moveTo(l * 4, k * 1.4 - 1);
+          ctx.lineTo(l * (8 + k * 1.5), k * 1.5 - 2 + lift);
+          ctx.lineTo(l * (10 + k * 1.5), k * 2.2 + 2.5 + lift);
+          ctx.stroke();
+        }
+      }
+
+      // 振り上げた大きなハサミ（鉗脚）
+      for (let side = -1; side <= 1; side += 2) {
+        ctx.save();
+        ctx.translate(side * 5.5, -2.5);
+        ctx.rotate(side * (-0.35 + clawSnap * 0.4));
+        ctx.strokeStyle = '#dc2626';
+        ctx.lineWidth = 1.8;
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(side * 3.5, -4.5);
+        ctx.stroke();
+        ctx.fillStyle = '#ef4444';
+        ctx.beginPath();
+        ctx.arc(side * 4.2, -6.2, 2.8, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+
+      // 甲羅と飛び出た2つの目
+      ctx.fillStyle = '#dc2626';
+      ctx.strokeStyle = '#7f1d1d';
+      ctx.lineWidth = 1.0;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 6.2, 4.0, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = '#111827';
+      ctx.beginPath();
+      ctx.arc(-2.2, -4.5, 1.1, 0, Math.PI * 2);
+      ctx.arc(2.2, -4.5, 1.1, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+
+  // 空を飛ぶ12種類のキャラクターの個別描画
+  _drawSkyFlyerItem(ctx, bd, env, nightWeight) {
+    // 時間帯・天候に応じた出現フィルタ（夜行性は夜〜薄明、蝶・トンボ・複葉機は晴天の昼など）
+    let visAlpha = 1.0;
+    if (bd.activeTime === 'night') {
+      visAlpha = Math.max(0, Math.min(1, (nightWeight - 0.18) * 1.8));
+    } else if (bd.activeTime === 'day') {
+      visAlpha = Math.max(0, Math.min(1, 1.0 - nightWeight * 1.25));
+    } else if (bd.activeTime === 'twilight') {
+      const isTw = (env.todIdx === 0 || env.todIdx === 2);
+      visAlpha = isTw ? 0.95 : Math.max(0.25, 1.0 - nightWeight);
+    } else if (bd.activeTime === 'clear') {
+      visAlpha = Math.max(0, Math.min(1, (1.0 - nightWeight * 1.3) * (1.0 - env.rainIntensity * 1.6)));
+    }
+    if (visAlpha <= 0.04) return;
+
+    const dir = bd.vx >= 0 ? 1 : -1;
+    const flap = Math.sin(this.bioTime * bd.wingSpeed + bd.phase);
+    const kind = bd.kind || 'seagull';
+
+    ctx.save();
+    ctx.globalAlpha = visAlpha;
+    ctx.translate(bd.x, bd.y);
+    ctx.scale(dir * bd.scale, bd.scale);
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    if (kind === 'seagull') {
+      // 1. カモメ（白い翼・黒い翼端・黄色いくちばし）
+      const wy = flap * 5.2;
+      ctx.fillStyle = '#f8fafc';
+      ctx.strokeStyle = '#334155';
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 5.2, 2.1, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#f8fafc';
+      ctx.lineWidth = 2.1;
+      ctx.beginPath();
+      ctx.moveTo(-1, -0.5);
+      ctx.quadraticCurveTo(-5, -wy * 0.5 - 2.5, -9.5, -wy);
+      ctx.moveTo(1, -0.5);
+      ctx.quadraticCurveTo(5, -wy * 0.5 - 2.5, 9.5, -wy);
+      ctx.stroke();
+      // 黒い翼端と黄色いくちばし
+      ctx.strokeStyle = '#1e293b';
+      ctx.lineWidth = 2.0;
+      ctx.beginPath();
+      ctx.moveTo(-8.0, -wy * 0.85); ctx.lineTo(-10.2, -wy);
+      ctx.moveTo(8.0, -wy * 0.85);  ctx.lineTo(10.2, -wy);
+      ctx.stroke();
+      ctx.strokeStyle = '#facc15';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(5.0, 0); ctx.lineTo(7.5, 0.5);
+      ctx.stroke();
+    } else if (kind === 'pelican') {
+      // 2. ペリカン（大きな黄色い喉袋とゆったり羽ばたく広い翼）
+      const wy = flap * 5.8;
+      ctx.fillStyle = '#f1f5f9';
+      ctx.strokeStyle = '#475569';
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.ellipse(-1, 0.5, 7.0, 3.0, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      // 頭と大きなオレンジ黄色の喉袋（ポーチ）
+      ctx.fillStyle = '#f8fafc';
+      ctx.beginPath();
+      ctx.arc(5.5, -1.8, 2.3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#f59e0b';
+      ctx.beginPath();
+      ctx.moveTo(6.8, -2.2);
+      ctx.lineTo(13.2, -1.5);
+      ctx.quadraticCurveTo(10.5, 3.2, 6.2, 0.4);
+      ctx.closePath();
+      ctx.fill();
+      // 広い翼
+      ctx.strokeStyle = '#e2e8f0';
+      ctx.lineWidth = 2.6;
+      ctx.beginPath();
+      ctx.moveTo(-1, -0.5);
+      ctx.quadraticCurveTo(1, -wy - 3.5, -7, -wy - 1.5);
+      ctx.stroke();
+    } else if (kind === 'albatross') {
+      // 3. アホウドリ（長大なグライダー翼で風を切る大型海鳥）
+      const wy = flap * 3.2;
+      ctx.strokeStyle = nightWeight > 0.5 ? '#e2e8f0' : '#1e293b';
+      ctx.lineWidth = 2.0;
+      ctx.beginPath();
+      ctx.moveTo(-14, -wy - 1);
+      ctx.quadraticCurveTo(-6, -wy * 0.4 - 3.5, 0, 0);
+      ctx.quadraticCurveTo(6, -wy * 0.4 - 3.5, 14, -wy - 1);
+      ctx.stroke();
+      ctx.fillStyle = '#f8fafc';
+      ctx.beginPath();
+      ctx.ellipse(0, 0.5, 5.5, 1.8, 0, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (kind === 'heron') {
+      // 4. アオサギ（長い脚を後ろに伸ばし、青灰色の翼で優雅に飛ぶ）
+      const wy = flap * 6.0;
+      ctx.strokeStyle = '#f59e0b';
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.moveTo(-5, 0.8); ctx.lineTo(-13.5, 2.2);
+      ctx.moveTo(6.5, -1.2); ctx.lineTo(10.8, -1.0);
+      ctx.stroke();
+      ctx.fillStyle = '#94a3b8';
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 6.0, 2.2, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#64748b';
+      ctx.lineWidth = 2.3;
+      ctx.beginPath();
+      ctx.moveTo(-1, 0);
+      ctx.quadraticCurveTo(0, -wy - 3, -6, -wy);
+      ctx.stroke();
+    } else if (kind === 'goose_flock') {
+      // 5. 渡り鳥の5羽V字フォーメーション編隊
+      const offsets = [[0, 0, 1.0], [-7, -4.5, 0.88], [-7, 4.5, 0.88], [-14, -9, 0.78], [-14, 9, 0.78]];
+      ctx.strokeStyle = nightWeight > 0.45 ? 'rgba(241, 245, 249, 0.85)' : 'rgba(30, 41, 59, 0.82)';
+      for (let i = 0; i < offsets.length; i++) {
+        const [ox, oy, os] = offsets[i];
+        const fLocal = Math.sin(this.bioTime * bd.wingSpeed + bd.phase - i * 0.55) * 3.8 * os;
+        ctx.lineWidth = 1.5 * os;
+        ctx.beginPath();
+        ctx.moveTo(ox - 4.5 * os, oy - fLocal);
+        ctx.quadraticCurveTo(ox - 1.8 * os, oy - fLocal * 0.4 - 1.2, ox, oy);
+        ctx.quadraticCurveTo(ox + 1.8 * os, oy - fLocal * 0.4 - 1.2, ox + 4.5 * os, oy - fLocal);
+        ctx.stroke();
+      }
+    } else if (kind === 'kingfisher') {
+      // 6. カワセミ（鮮やかなコバルトブルーの背とオレンジの胸・高速羽ばたき）
+      const wy = flap * 4.5;
+      ctx.fillStyle = '#ea580c';
+      ctx.beginPath();
+      ctx.ellipse(0, 0.8, 3.8, 1.8, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#0284c7';
+      ctx.beginPath();
+      ctx.ellipse(0.5, -0.5, 4.2, 1.7, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#38bdf8';
+      ctx.lineWidth = 1.8;
+      ctx.beginPath();
+      ctx.moveTo(0, -0.5); ctx.lineTo(-2.5, -wy - 1.5);
+      ctx.stroke();
+      ctx.strokeStyle = '#1e293b';
+      ctx.lineWidth = 1.3;
+      ctx.beginPath();
+      ctx.moveTo(4.2, -0.4); ctx.lineTo(7.5, -0.4);
+      ctx.stroke();
+    } else if (kind === 'swallow') {
+      // 7. ツバメ（紺色の流線型ボディと二股に分かれた燕尾）
+      const wy = flap * 4.8;
+      ctx.strokeStyle = '#0f172a';
+      ctx.lineWidth = 1.6;
+      ctx.beginPath();
+      // 二股の燕尾
+      ctx.moveTo(-2, 0); ctx.lineTo(-8.5, -2.5);
+      ctx.moveTo(-2, 0); ctx.lineTo(-8.5, 2.5);
+      // 鋭い後退翼
+      ctx.moveTo(1, 0); ctx.lineTo(-2.5, -wy - 2.2);
+      ctx.moveTo(1, 0); ctx.lineTo(-2.5, wy + 2.2);
+      ctx.stroke();
+      ctx.fillStyle = '#1e293b';
+      ctx.beginPath();
+      ctx.ellipse(0.8, 0, 3.8, 1.4, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#dc2626';
+      ctx.beginPath();
+      ctx.arc(3.6, 0.2, 1.1, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (kind === 'dragonfly') {
+      // 8. 赤トンボ（細い赤い腹とキラキラ光る4枚の透明翅）
+      const wy = flap * 3.5;
+      ctx.strokeStyle = '#dc2626';
+      ctx.lineWidth = 1.6;
+      ctx.beginPath();
+      ctx.moveTo(-7.5, 0); ctx.lineTo(3.5, 0);
+      ctx.stroke();
+      ctx.fillStyle = '#b91c1c';
+      ctx.beginPath();
+      ctx.arc(4.0, 0, 1.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = 'rgba(224, 242, 254, 0.72)';
+      ctx.strokeStyle = 'rgba(148, 163, 184, 0.8)';
+      ctx.lineWidth = 0.6;
+      ctx.beginPath();
+      ctx.ellipse(1.2, -2.2 - wy * 0.4, 1.6, 4.6, 0.25, 0, Math.PI * 2);
+      ctx.ellipse(-0.8, -2.0 + wy * 0.4, 1.4, 4.2, -0.2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+    } else if (kind === 'butterfly') {
+      // 9. アゲハチョウ（ひらひら舞う黄色と黒縁の華やかな翅）
+      const wingScale = 0.25 + 0.75 * Math.abs(flap);
+      ctx.save();
+      ctx.scale(1.0, wingScale);
+      ctx.fillStyle = '#facc15';
+      ctx.strokeStyle = '#1e293b';
+      ctx.lineWidth = 0.9;
+      ctx.beginPath();
+      ctx.ellipse(1.2, -3.2, 3.6, 4.2, 0.3, 0, Math.PI * 2);
+      ctx.ellipse(-2.0, -2.6, 2.8, 3.4, -0.35, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = '#38bdf8';
+      ctx.beginPath();
+      ctx.arc(-2.2, -2.8, 1.0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    } else if (kind === 'owl') {
+      // 10. 夜行性フクロウ（丸い頭・金色に光る両目・音もなく羽ばたく広い茶色の翼）
+      const wy = flap * 5.2;
+      ctx.fillStyle = '#78350f';
+      ctx.strokeStyle = '#451a03';
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.moveTo(-8, -wy);
+      ctx.quadraticCurveTo(-3, -wy * 0.5 - 3, 0, 0);
+      ctx.quadraticCurveTo(3, -wy * 0.5 - 3, 8, -wy);
+      ctx.quadraticCurveTo(3, 2.5, 0, 2.5);
+      ctx.quadraticCurveTo(-3, 2.5, -8, -wy);
+      ctx.fill();
+      ctx.stroke();
+      // 丸い顔と光る金色の目
+      ctx.fillStyle = '#92400e';
+      ctx.beginPath();
+      ctx.arc(2.2, -0.5, 2.8, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#fde047';
+      ctx.beginPath();
+      ctx.arc(1.5, -0.8, 0.9, 0, Math.PI * 2);
+      ctx.arc(3.2, -0.8, 0.9, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (kind === 'bat') {
+      // 11. 夜行性コウモリ（ピンと立った耳とギザギザの黒い翼膜）
+      const wy = flap * 4.8;
+      ctx.fillStyle = '#1e1b4b';
+      ctx.strokeStyle = '#312e81';
+      ctx.lineWidth = 1.0;
+      ctx.beginPath();
+      ctx.moveTo(0, -1.5);
+      ctx.lineTo(-7.5, -wy - 2);
+      ctx.quadraticCurveTo(-5.0, 2.0, -2.5, 1.2);
+      ctx.quadraticCurveTo(0, 2.5, 2.5, 1.2);
+      ctx.quadraticCurveTo(5.0, 2.0, 7.5, -wy - 2);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      // 耳
+      ctx.beginPath();
+      ctx.moveTo(-1.2, -1.2); ctx.lineTo(-1.8, -3.4); ctx.lineTo(-0.3, -1.5);
+      ctx.moveTo(1.2, -1.2);  ctx.lineTo(1.8, -3.4);  ctx.lineTo(0.3, -1.5);
+      ctx.fill();
+    } else if (kind === 'biplane') {
+      // 12A. レトロな赤複葉機（プロペラ回転＆上下2枚翼）
+      ctx.fillStyle = '#dc2626';
+      ctx.strokeStyle = '#7f1d1d';
+      ctx.lineWidth = 1.0;
+      // 胴体と垂直尾翼
+      ctx.beginPath();
+      ctx.moveTo(-9, -0.5);
+      ctx.lineTo(7, -1.2);
+      ctx.lineTo(7, 1.8);
+      ctx.lineTo(-9, 1.2);
+      ctx.closePath();
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(-9, -0.5); ctx.lineTo(-11.5, -4.2); ctx.lineTo(-7.0, -0.5);
+      ctx.closePath();
+      ctx.fill();
+      // 上下2枚の翼と支柱
+      ctx.strokeStyle = '#fef08a';
+      ctx.lineWidth = 1.8;
+      ctx.beginPath();
+      ctx.moveTo(-2, -3.8); ctx.lineTo(5, -3.8);
+      ctx.moveTo(-2, 2.2);  ctx.lineTo(5, 2.2);
+      ctx.stroke();
+      ctx.strokeStyle = '#475569';
+      ctx.lineWidth = 0.9;
+      ctx.beginPath();
+      ctx.moveTo(0, -3.8); ctx.lineTo(0, 2.2);
+      ctx.moveTo(3.5, -3.8); ctx.lineTo(3.5, 2.2);
+      ctx.stroke();
+      // 高速回転するプロペラ
+      const propH = 1.2 + Math.abs(flap) * 3.4;
+      ctx.strokeStyle = 'rgba(226, 232, 240, 0.85)';
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.moveTo(8.0, -propH); ctx.lineTo(8.0, propH);
+      ctx.stroke();
+    } else if (kind === 'blimp') {
+      // 12B. 水平線の上空をゆったり進むレトロ飛行船
+      const bg = ctx.createLinearGradient(0, -5, 0, 5);
+      bg.addColorStop(0, '#f8fafc');
+      bg.addColorStop(0.55, '#cbd5e1');
+      bg.addColorStop(1, '#64748b');
+      ctx.fillStyle = bg;
+      ctx.strokeStyle = '#475569';
+      ctx.lineWidth = 1.0;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 13.5, 5.2, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      // 赤いラインと尾翼・ゴンドラ
+      ctx.strokeStyle = '#ef4444';
+      ctx.lineWidth = 1.3;
+      ctx.beginPath();
+      ctx.moveTo(-11, 0); ctx.lineTo(11, 0);
+      ctx.stroke();
+      ctx.fillStyle = '#dc2626';
+      ctx.beginPath();
+      ctx.moveTo(-10, -2); ctx.lineTo(-14.5, -5.5); ctx.lineTo(-12.5, 0);
+      ctx.moveTo(-10, 2);  ctx.lineTo(-14.5, 5.5);  ctx.lineTo(-12.5, 0);
+      ctx.fill();
+      ctx.fillStyle = '#334155';
+      ctx.fillRect(-3.5, 5.0, 7.0, 2.2);
+    }
+
+    ctx.restore();
+  }
+
+  // 海中を泳ぐ15種類の海洋生物の個別描画（＋海底のカニ＆ヒトデで計16種類以上）
+  _drawSeaCreatureItem(ctx, f, env) {
+    const dir = f.vx >= 0 ? 1 : -1;
+    const wag = Math.sin(this.bioTime * 8.5 + f.phase);
+    const fy = f.y + Math.sin(this.bioTime * 1.8 + f.phase) * 4.8;
+    const kind = f.kind || 'sardine_school';
+
+    ctx.save();
+    ctx.translate(f.x, fy);
+    ctx.scale(dir * f.scale, f.scale);
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    if (kind === 'sardine_school') {
+      // 1. イワシ・キビナゴの銀鱗大群（7匹が隊列を組んでキラキラ銀色に光りながら泳ぐ）
+      const schoolOffsets = [
+        [0, 0, 1.0], [-11, -5, 0.88], [-9, 5, 0.85], [-21, -2, 0.82],
+        [-20, 8, 0.78], [10, 3, 0.90], [-30, 3, 0.74]
+      ];
+      for (let i = 0; i < schoolOffsets.length; i++) {
+        const [ox, oy, os] = schoolOffsets[i];
+        const wLocal = Math.sin(this.bioTime * 10.5 + f.phase - i * 0.6) * 2.0;
+        const oyWave = oy + Math.cos(this.bioTime * 3.5 + i) * 1.4;
+        ctx.save();
+        ctx.translate(ox, oyWave);
+        ctx.scale(os, os);
+        ctx.fillStyle = 'rgba(125, 211, 252, 0.65)';
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 7.5, 2.5, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(-6.5, 0);
+        ctx.lineTo(-11.0, -2.8 + wLocal);
+        ctx.lineTo(-9.5, 0);
+        ctx.lineTo(-11.0, 2.8 + wLocal);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.82)';
+        ctx.beginPath();
+        ctx.ellipse(1.5, -0.5, 4.2, 0.8, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+    } else if (kind === 'clownfish') {
+      // 2. カクレクマノミ（鮮やかなオレンジ色に白い縦バンドと黒縁）
+      const tailW = wag * 2.2;
+      ctx.fillStyle = '#f97316';
+      ctx.strokeStyle = '#1e293b';
+      ctx.lineWidth = 0.9;
+      // 尾ビレ
+      ctx.beginPath();
+      ctx.moveTo(-6.5, 0);
+      ctx.quadraticCurveTo(-11, -3.8 + tailW, -11, tailW);
+      ctx.quadraticCurveTo(-11, 3.8 + tailW, -6.5, 0);
+      ctx.fill();
+      ctx.stroke();
+      // 胴体
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 7.8, 4.4, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      // クマノミ特有の白い2本の太帯
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 2.1;
+      ctx.beginPath();
+      ctx.moveTo(2.8, -3.8); ctx.quadraticCurveTo(1.8, 0, 2.8, 3.8);
+      ctx.moveTo(-2.5, -3.9); ctx.quadraticCurveTo(-3.4, 0, -2.5, 3.9);
+      ctx.stroke();
+      // 目
+      ctx.fillStyle = '#0f172a';
+      ctx.beginPath();
+      ctx.arc(5.0, -1.0, 1.1, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (kind === 'angelfish') {
+      // 3. ツノダシ / エンゼルフィッシュ（白・黒・黄色の縞模様と長くたなびく背ビレ）
+      const finSway = wag * 3.5;
+      ctx.fillStyle = '#fef08a';
+      ctx.strokeStyle = '#0f172a';
+      ctx.lineWidth = 1.0;
+      ctx.beginPath();
+      ctx.moveTo(9.5, 0.5);
+      ctx.quadraticCurveTo(3, -8.5, -6, -15.5 + finSway);
+      ctx.quadraticCurveTo(-4, -5.5, -7.5, 0);
+      ctx.quadraticCurveTo(-4, 6.5, -2, 9.5);
+      ctx.quadraticCurveTo(4, 5.5, 9.5, 0.5);
+      ctx.fill();
+      ctx.stroke();
+      // 黒い太縞バンド
+      ctx.strokeStyle = '#0f172a';
+      ctx.lineWidth = 2.6;
+      ctx.beginPath();
+      ctx.moveTo(3.5, -5.2); ctx.lineTo(3.5, 5.2);
+      ctx.moveTo(-2.5, -6.8); ctx.lineTo(-2.5, 6.8);
+      ctx.stroke();
+    } else if (kind === 'butterflyfish') {
+      // 4. チョウチョウウオ（レモンイエローの丸平たい体と尾元の黒いアイスポット）
+      ctx.fillStyle = '#facc15';
+      ctx.strokeStyle = '#854d0e';
+      ctx.lineWidth = 1.0;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 8.2, 5.8, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      // 目の黒帯と尾元の偽目玉（アイスポット）
+      ctx.strokeStyle = '#1e293b';
+      ctx.lineWidth = 1.8;
+      ctx.beginPath();
+      ctx.moveTo(4.8, -4.5); ctx.lineTo(4.8, 4.5);
+      ctx.stroke();
+      ctx.fillStyle = '#0f172a';
+      ctx.beginPath();
+      ctx.arc(-4.2, -1.8, 1.8, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 0.7;
+      ctx.stroke();
+    } else if (kind === 'sea_turtle') {
+      // 5. アオウミガメ（六角模様のドーム甲羅と大きく上下に羽ばたく前ヒレ）
+      const flipperY = Math.sin(this.bioTime * 3.8 + f.phase) * 7.5;
+      // 奥の前ヒレと後ろ足
+      ctx.fillStyle = '#15803d';
+      ctx.beginPath();
+      ctx.ellipse(-9.5, 3.2, 4.2, 1.8, 0.35, 0, Math.PI * 2);
+      ctx.fill();
+      // 頭
+      ctx.fillStyle = '#16a34a';
+      ctx.beginPath();
+      ctx.ellipse(12.5, -1.0, 4.2, 2.8, -0.1, 0, Math.PI * 2);
+      ctx.fill();
+      // ドーム状の甲羅
+      const shellGrad = ctx.createRadialGradient(-1, -3, 1.5, 0, 0, 11);
+      shellGrad.addColorStop(0, '#a16207');
+      shellGrad.addColorStop(0.6, '#713f12');
+      shellGrad.addColorStop(1, '#3f2209');
+      ctx.fillStyle = shellGrad;
+      ctx.strokeStyle = '#fef08a';
+      ctx.lineWidth = 0.9;
+      ctx.beginPath();
+      ctx.ellipse(0, -0.5, 10.5, 6.8, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      // 甲羅の六角模様ライン
+      ctx.strokeStyle = 'rgba(254, 240, 138, 0.45)';
+      ctx.beginPath();
+      ctx.moveTo(-6, -0.5); ctx.lineTo(6, -0.5);
+      ctx.moveTo(-2, -6.5); ctx.lineTo(-2, 5.5);
+      ctx.moveTo(3, -6.5);  ctx.lineTo(3, 5.5);
+      ctx.stroke();
+      // 手前の大きな前ヒレ（優雅に上下ストローク）
+      ctx.fillStyle = '#22c55e';
+      ctx.strokeStyle = '#14532d';
+      ctx.lineWidth = 0.9;
+      ctx.beginPath();
+      ctx.moveTo(4.5, 1.5);
+      ctx.quadraticCurveTo(8.5, 4.5 + flipperY * 0.6, 2.0, 9.5 + flipperY);
+      ctx.quadraticCurveTo(-1.0, 5.5 + flipperY * 0.4, 2.2, 1.5);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+    } else if (kind === 'manta_ray') {
+      // 6. マンタ / オニイトマキエイ（大きな翼のような胸ビレを波打たせて優雅に滑空）
+      const wingY = Math.sin(this.bioTime * 3.4 + f.phase) * 8.5;
+      // 長い鞭状の尾
+      ctx.strokeStyle = '#1e293b';
+      ctx.lineWidth = 1.3;
+      ctx.beginPath();
+      ctx.moveTo(-8, 0);
+      ctx.quadraticCurveTo(-16, wag * 2.5, -24, -wag * 2.0);
+      ctx.stroke();
+      // 菱形〜翼型の体と頭鰭（とうき）
+      const mGrad = ctx.createLinearGradient(0, -10, 0, 10);
+      mGrad.addColorStop(0, '#1e3a8a');
+      mGrad.addColorStop(0.6, '#0f172a');
+      mGrad.addColorStop(1, '#e2e8f0');
+      ctx.fillStyle = mGrad;
+      ctx.beginPath();
+      ctx.moveTo(11, -1.5);
+      ctx.lineTo(14.5, -3.2);
+      ctx.lineTo(10, -3.8);
+      ctx.quadraticCurveTo(2, -12.5 - wingY, -2.5, -14.5 - wingY);
+      ctx.quadraticCurveTo(-5.5, -5.0, -9.5, 0);
+      ctx.quadraticCurveTo(-5.5, 5.0, -2.5, 11.5 + wingY * 0.85);
+      ctx.quadraticCurveTo(3, 8.5 + wingY * 0.5, 10, 2.8);
+      ctx.lineTo(14.5, 2.2);
+      ctx.lineTo(11, 0.8);
+      ctx.closePath();
+      ctx.fill();
+      // 背中の白い斑紋ハイライト
+      ctx.strokeStyle = 'rgba(224, 242, 254, 0.55)';
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.arc(4, -2, 3.2, -1.2, 0.5);
+      ctx.stroke();
+    } else if (kind === 'jellyfish') {
+      // 7. ミズクラゲ・発光クラゲ（半透明の傘をぷかぷか拍動させ、触手を揺らす）
+      const pulse = Math.sin(this.bioTime * 3.6 + f.phase);
+      const bellW = 7.8 + pulse * 1.8;
+      const bellH = 6.5 - pulse * 1.3;
+      ctx.rotate(0.18 * dir);
+      // 揺れる複数本の触手
+      ctx.strokeStyle = `hsla(${f.hue}, 85%, 78%, 0.52)`;
+      ctx.lineWidth = 1.0;
+      for (let t = -3; t <= 3; t++) {
+        const tx = t * 1.7;
+        const tSway = Math.sin(this.bioTime * 4.2 + t + f.phase) * 3.2;
+        ctx.beginPath();
+        ctx.moveTo(tx, 1);
+        ctx.quadraticCurveTo(tx + tSway * 0.5, 7, tx + tSway, 13.5 + (t % 2) * 2.5);
+        ctx.stroke();
+      }
+      // 半透明ドーム状の傘と四つ葉模様の生殖腺
+      const jGrad = ctx.createRadialGradient(0, -bellH * 0.4, 1, 0, 0, bellW);
+      jGrad.addColorStop(0, `hsla(${f.hue}, 95%, 92%, 0.82)`);
+      jGrad.addColorStop(0.6, `hsla(${f.hue}, 88%, 72%, 0.52)`);
+      jGrad.addColorStop(1, `hsla(${f.hue}, 82%, 58%, 0.18)`);
+      ctx.fillStyle = jGrad;
+      ctx.strokeStyle = `hsla(${f.hue}, 92%, 85%, 0.78)`;
+      ctx.lineWidth = 1.1;
+      ctx.beginPath();
+      ctx.arc(0, 1, bellW, Math.PI * 1.02, Math.PI * 1.98);
+      ctx.quadraticCurveTo(0, 2.8 - pulse * 0.8, -bellW, 1);
+      ctx.fill();
+      ctx.stroke();
+    } else if (kind === 'seahorse') {
+      // 8. タツノオトシゴ（王冠のような頭・S字の胸・くるんと巻いた尾で縦姿勢のまま漂う）
+      ctx.strokeStyle = '#f59e0b';
+      ctx.fillStyle = '#fbbf24';
+      ctx.lineWidth = 2.6;
+      ctx.beginPath();
+      // 頭〜首〜お腹〜くるんと巻いた尻尾
+      ctx.moveTo(3.8, -7.2);
+      ctx.lineTo(1.0, -7.5);
+      ctx.quadraticCurveTo(-1.8, -4.5, 1.5, -0.5);
+      ctx.quadraticCurveTo(3.2, 3.0, -0.5, 6.8);
+      ctx.arc(-1.8, 6.8, 1.8, 0, Math.PI * 1.35);
+      ctx.stroke();
+      // お腹のぷっくり膨らみと背中のパタパタ小ヒレ
+      ctx.beginPath();
+      ctx.ellipse(0.8, 0.2, 2.6, 3.8, 0.15, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = 'rgba(254, 240, 138, 0.78)';
+      ctx.beginPath();
+      ctx.ellipse(-2.4, 0.2, 2.2, 1.2 + Math.abs(wag) * 0.8, -0.2, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (kind === 'pufferfish') {
+      // 9. ハリセンボン / フグ（周期的にぷっくり丸く膨らむトゲ付きボディ）
+      const puff = 0.5 + 0.5 * Math.sin(this.bioTime * 1.8 + f.phase);
+      const rx = 6.8 + puff * 2.8;
+      const ry = 5.4 + puff * 3.2;
+      // 尾ビレ
+      ctx.fillStyle = '#fde047';
+      ctx.beginPath();
+      ctx.moveTo(-rx + 1, 0);
+      ctx.lineTo(-rx - 4.2, -2.5 + wag * 1.5);
+      ctx.lineTo(-rx - 4.2, 2.5 + wag * 1.5);
+      ctx.closePath();
+      ctx.fill();
+      // 丸い体（上半分は黄褐色、お腹はクリーム白）
+      ctx.fillStyle = '#fef9c3';
+      ctx.strokeStyle = '#854d0e';
+      ctx.lineWidth = 1.0;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, rx, ry, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = '#ca8a04';
+      ctx.beginPath();
+      ctx.ellipse(0, -ry * 0.22, rx * 0.94, ry * 0.65, 0, Math.PI, Math.PI * 2);
+      ctx.fill();
+      // 膨らんだ時に立つ周囲の小さなトゲ
+      if (puff > 0.35) {
+        ctx.strokeStyle = '#713f12';
+        ctx.lineWidth = 0.9;
+        for (let a = 0; a < Math.PI * 2; a += Math.PI / 5) {
+          const sx = Math.cos(a) * rx;
+          const sy = Math.sin(a) * ry;
+          ctx.beginPath();
+          ctx.moveTo(sx, sy);
+          ctx.lineTo(sx + Math.cos(a) * 2.2 * puff, sy + Math.sin(a) * 2.2 * puff);
+          ctx.stroke();
+        }
+      }
+      // 大きな丸い目
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(rx * 0.48, -1.2, 1.8, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#0f172a';
+      ctx.beginPath();
+      ctx.arc(rx * 0.52, -1.2, 0.95, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (kind === 'dolphin') {
+      // 10. イルカ（流線型の青灰色ボディ・背ビレ・上下に振る水平尾ビレで弓なりに泳ぐ）
+      const leapPitch = Math.cos(this.bioTime * 1.8 + f.phase) * 0.18;
+      ctx.rotate(leapPitch);
+      const tailY = Math.sin(this.bioTime * 7.2 + f.phase) * 3.5;
+      const dGrad = ctx.createLinearGradient(0, -6, 0, 6);
+      dGrad.addColorStop(0, '#0284c7');
+      dGrad.addColorStop(0.55, '#38bdf8');
+      dGrad.addColorStop(1, '#e0f2fe');
+      ctx.fillStyle = dGrad;
+      ctx.strokeStyle = '#0369a1';
+      ctx.lineWidth = 1.0;
+      ctx.beginPath();
+      // 吻（くちばし）〜額（メロン）〜背ビレ〜尾ビレ
+      ctx.moveTo(16.5, 0.8);
+      ctx.quadraticCurveTo(13.5, 0.2, 11.5, -1.8);
+      ctx.quadraticCurveTo(5.0, -5.5, -1.0, -4.5);
+      // 背ビレ
+      ctx.lineTo(-3.8, -9.2);
+      ctx.quadraticCurveTo(-5.2, -5.2, -6.5, -3.5);
+      ctx.quadraticCurveTo(-12.5, -1.5, -16.5, tailY);
+      ctx.lineTo(-20.5, tailY - 3.8);
+      ctx.lineTo(-18.5, tailY);
+      ctx.lineTo(-20.5, tailY + 3.8);
+      ctx.quadraticCurveTo(-11.5, 2.8, -2.0, 4.2);
+      ctx.quadraticCurveTo(6.5, 4.5, 16.5, 0.8);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      // 胸ビレと目
+      ctx.fillStyle = '#0284c7';
+      ctx.beginPath();
+      ctx.moveTo(4.0, 2.5); ctx.lineTo(0.5, 7.2); ctx.lineTo(1.8, 2.2);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = '#0f172a';
+      ctx.beginPath();
+      ctx.arc(10.2, -0.4, 1.0, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (kind === 'shark') {
+      // 11. リーフシャーク（精悍な流線型・三角形の背ビレ・三日月尾ビレ・エラ裂孔）
+      const tailX = wag * 2.8;
+      const sGrad = ctx.createLinearGradient(0, -6, 0, 6);
+      sGrad.addColorStop(0, '#334155');
+      sGrad.addColorStop(0.58, '#64748b');
+      sGrad.addColorStop(1, '#f1f5f9');
+      ctx.fillStyle = sGrad;
+      ctx.strokeStyle = '#1e293b';
+      ctx.lineWidth = 1.0;
+      ctx.beginPath();
+      ctx.moveTo(16.0, 0);
+      ctx.quadraticCurveTo(7.0, -5.2, 0, -4.5);
+      // 三角背ビレ
+      ctx.lineTo(-2.5, -10.2);
+      ctx.lineTo(-5.5, -4.0);
+      ctx.lineTo(-14.5, -1.5);
+      // 上下に長い三日月尾ビレ
+      ctx.lineTo(-20.5, -7.2 + tailX * 0.3);
+      ctx.lineTo(-17.2, 0);
+      ctx.lineTo(-19.5, 5.2 + tailX * 0.3);
+      ctx.lineTo(-14.0, 1.8);
+      ctx.quadraticCurveTo(-2.0, 4.8, 16.0, 0);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      // 3本のエラ裂孔と鋭い目
+      ctx.strokeStyle = '#0f172a';
+      ctx.lineWidth = 0.85;
+      ctx.beginPath();
+      for (let g = 0; g < 3; g++) {
+        ctx.moveTo(4.5 - g * 1.6, -1.8);
+        ctx.lineTo(4.2 - g * 1.6, 1.8);
+      }
+      ctx.stroke();
+      ctx.fillStyle = '#0f172a';
+      ctx.beginPath();
+      ctx.arc(10.8, -0.8, 1.0, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (kind === 'sunfish') {
+      // 12. マンボウ（巨大で丸平たい独特のシルエットと上下に長い背ビレ・臀ビレ）
+      const finFlap = Math.sin(this.bioTime * 3.8 + f.phase) * 2.8;
+      ctx.fillStyle = '#94a3b8';
+      ctx.strokeStyle = '#475569';
+      ctx.lineWidth = 1.1;
+      // 上下の長いヒレ
+      ctx.beginPath();
+      ctx.moveTo(-2, -7);
+      ctx.quadraticCurveTo(-5 + finFlap, -16, -6.5 + finFlap, -18.5);
+      ctx.quadraticCurveTo(-7.5, -11, -6.5, -6);
+      ctx.moveTo(-2, 7);
+      ctx.quadraticCurveTo(-5 - finFlap, 16, -6.5 - finFlap, 18.5);
+      ctx.quadraticCurveTo(-7.5, 11, -6.5, 6);
+      ctx.fill();
+      ctx.stroke();
+      // 丸い胴体と波打つ舵ビレ
+      const sfGrad = ctx.createRadialGradient(2, -1, 1.5, 0, 0, 11);
+      sfGrad.addColorStop(0, '#e2e8f0');
+      sfGrad.addColorStop(0.65, '#94a3b8');
+      sfGrad.addColorStop(1, '#475569');
+      ctx.fillStyle = sfGrad;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 9.5, 8.2, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      // おちょぼ口と丸い目
+      ctx.fillStyle = '#0f172a';
+      ctx.beginPath();
+      ctx.arc(5.2, -1.8, 1.3, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (kind === 'anglerfish') {
+      // 13. チョウチンアンコウ（頭の上から伸びる発光エスカ提灯で深場を照らす）
+      ctx.fillStyle = '#3b0764';
+      ctx.strokeStyle = '#1e1b4b';
+      ctx.lineWidth = 1.1;
+      ctx.beginPath();
+      ctx.ellipse(0, 1, 8.2, 6.2, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      // 尾ビレ
+      ctx.beginPath();
+      ctx.moveTo(-7.5, 1);
+      ctx.lineTo(-12.5, -2.5 + wag * 1.5);
+      ctx.lineTo(-12.5, 4.5 + wag * 1.5);
+      ctx.closePath();
+      ctx.fill();
+      // 頭から前に垂れる誘引突起（イリシウム）と発光提灯（エスカ）
+      ctx.strokeStyle = '#a855f7';
+      ctx.lineWidth = 1.1;
+      ctx.beginPath();
+      ctx.moveTo(2.5, -4.5);
+      ctx.quadraticCurveTo(8.5, -10.5, 11.5, -3.5 + wag * 0.8);
+      ctx.stroke();
+      const lX = 11.5, lY = -3.5 + wag * 0.8;
+      const lGlow = ctx.createRadialGradient(lX, lY, 0.5, lX, lY, 8.5);
+      lGlow.addColorStop(0, 'rgba(254, 249, 195, 0.98)');
+      lGlow.addColorStop(0.4, 'rgba(74, 222, 128, 0.65)');
+      lGlow.addColorStop(1, 'rgba(74, 222, 128, 0)');
+      ctx.fillStyle = lGlow;
+      ctx.beginPath();
+      ctx.arc(lX, lY, 8.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#fef9c3';
+      ctx.beginPath();
+      ctx.arc(lX, lY, 1.9, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (kind === 'nautilus') {
+      // 14. オウムガイ（赤白の縞模様が入った美しい対数螺旋殻と小さな触手）
+      // 触手
+      ctx.strokeStyle = '#fda4af';
+      ctx.lineWidth = 1.0;
+      for (let t = -2; t <= 2; t++) {
+        ctx.beginPath();
+        ctx.moveTo(3, t * 1.1 + 1);
+        ctx.lineTo(8.5, t * 1.5 + 1.5 + wag * 0.6);
+        ctx.stroke();
+      }
+      // 巻貝の殻
+      ctx.fillStyle = '#fef3c7';
+      ctx.strokeStyle = '#9a3412';
+      ctx.lineWidth = 1.1;
+      ctx.beginPath();
+      ctx.arc(0, 0, 6.8, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      // 赤褐色の虎縞模様と中心の渦
+      ctx.strokeStyle = '#c2410c';
+      ctx.lineWidth = 1.4;
+      for (let a = 0.4; a < Math.PI * 1.7; a += 0.52) {
+        ctx.beginPath();
+        ctx.moveTo(Math.cos(a) * 1.8, Math.sin(a) * 1.8);
+        ctx.lineTo(Math.cos(a) * 6.5, Math.sin(a) * 6.5);
+        ctx.stroke();
+      }
+      ctx.fillStyle = '#431407';
+      ctx.beginPath();
+      ctx.arc(-0.5, 0.5, 1.8, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (kind === 'flying_fish') {
+      // 15. トビウオ（水色の流線型ボディと、大きく広げた半透明のグライダー胸ビレ）
+      const wingFlutter = Math.sin(this.bioTime * 15.0 + f.phase) * 2.2;
+      ctx.fillStyle = '#0284c7';
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 8.8, 2.4, 0, 0, Math.PI * 2);
+      ctx.fill();
+      // 下葉が長い独特の尾ビレ
+      ctx.beginPath();
+      ctx.moveTo(-7.8, 0);
+      ctx.lineTo(-12.5, -3.2);
+      ctx.moveTo(-7.8, 0);
+      ctx.lineTo(-14.2, 4.5);
+      ctx.strokeStyle = '#0284c7';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      // 大きく広げた透き通る胸ビレ翼
+      ctx.fillStyle = 'rgba(186, 230, 253, 0.78)';
+      ctx.strokeStyle = '#38bdf8';
+      ctx.lineWidth = 0.9;
+      ctx.beginPath();
+      ctx.moveTo(3.5, -1.0);
+      ctx.lineTo(-4.5, -9.5 - wingFlutter);
+      ctx.lineTo(-6.5, -5.0 - wingFlutter * 0.5);
+      ctx.lineTo(0.5, -0.5);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+    }
+
     ctx.restore();
   }
 
@@ -2359,33 +3300,10 @@ class SquidGameWatch {
         }
       }
 
-      // 背景の海中を泳ぐ小魚の群れ
+      // 背景の海中を泳ぐ多彩な海洋生物（16種類：イワシ銀鱗群、クマノミ、ツノダシ、チョウチョウウオ、ウミガメ、マンタ、クラゲ、タツノオトシゴ、ハリセンボン、イルカ、サメ、マンボウ、チョウチンアンコウ、オウムガイ、トビウオ）
       if (this.underwaterFish) {
         for (const f of this.underwaterFish) {
-          const dir = f.vx >= 0 ? 1 : -1;
-          const wag = Math.sin(this.bioTime * 9.5 + f.phase) * 2.2;
-          const fy = f.y + Math.sin(this.bioTime * 1.8 + f.phase) * 4.5;
-          ctx.save();
-          ctx.translate(f.x, fy);
-          ctx.scale(dir * f.scale, f.scale);
-          ctx.fillStyle = `hsla(${f.hue}, 78%, 72%, 0.52)`;
-          ctx.beginPath();
-          ctx.ellipse(0, 0, 8.5, 3.2, 0, 0, Math.PI * 2);
-          ctx.fill();
-          // 尾ビレ
-          ctx.beginPath();
-          ctx.moveTo(-7.5, 0);
-          ctx.lineTo(-13, -3.5 + wag);
-          ctx.lineTo(-11.5, 0);
-          ctx.lineTo(-13, 3.5 + wag);
-          ctx.closePath();
-          ctx.fill();
-          // 銀色の側線ハイライト
-          ctx.fillStyle = 'rgba(255, 255, 255, 0.65)';
-          ctx.beginPath();
-          ctx.ellipse(2, -0.8, 4.5, 0.9, 0, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.restore();
+          this._drawSeaCreatureItem(ctx, f, env);
         }
       }
       ctx.restore();
@@ -2417,29 +3335,33 @@ class SquidGameWatch {
     // --- 左上のサルベージ船 ---
     const ltBoat = real ? this._getDiverLighting(128, 96) : null;
     if (real) {
-      // 1. 船底から水中へ伸びる「光源と逆向きの揺らぐ船影」と赤い船体の水面照り返し
+      // 1. 船底から水中へ滑らかに伸びる一体型の船影と、光の強さに連動する水鏡リフレクション
       ctx.save();
-      for (let bs = 0; bs < 4; bs++) {
-        const bu = (bs + 1) / 4;
-        const bWave = Math.sin(this.bioTime * 3.8 - bu * 2.1) * 6.5 * bu;
-        const bShiftX = ltBoat.nx * (18 + bu * 34) * ltBoat.lenMul + bWave;
-        const bShiftY = Math.max(4, ltBoat.ny * (10 + bu * 22) * ltBoat.lenMul);
-        ctx.fillStyle = ltBoat.shadowColor((0.34 - bu * 0.065) * (0.65 + ltBoat.directStrength * 0.4));
-        ctx.beginPath();
-        ctx.ellipse(125 + bShiftX, 114 + bShiftY, 92 - bu * 12, 7.5 + bu * 4.5, 0.04 * ltBoat.nx, 0, Math.PI * 2);
-        ctx.fill();
-      }
-      // 船体の赤い塗装がすぐ下の水面にゆらゆら映り込む水鏡リフレクション
-      for (let wr = 0; wr < 4; wr++) {
-        const wy = 117 + wr * 5.2;
-        const wSway = Math.sin(this.bioTime * 4.6 + wr * 1.5) * (4.5 + wr * 2.0);
-        const wLen = 78 - wr * 14;
-        ctx.strokeStyle = `rgba(185, 28, 28, ${(0.28 - wr * 0.055).toFixed(3)})`;
-        ctx.lineWidth = 2.6 - wr * 0.35;
-        ctx.beginPath();
-        ctx.moveTo(125 - wLen + wSway + ltBoat.nx * wr * 5, wy);
-        ctx.lineTo(125 + wLen + wSway + ltBoat.nx * wr * 5, wy);
-        ctx.stroke();
+      const bWave = Math.sin(this.bioTime * 2.8) * 4.5;
+      const bShiftX = ltBoat.nx * 36 * ltBoat.lenMul + bWave;
+      const bShiftY = Math.max(8, ltBoat.ny * 22 * ltBoat.lenMul);
+      const bShadowGrad = ctx.createRadialGradient(125 + bShiftX * 0.35, 114 + bShiftY * 0.3, 12, 125 + bShiftX, 118 + bShiftY, 108);
+      bShadowGrad.addColorStop(0, ltBoat.shadowColor(0.46 * ltBoat.shadowStrength));
+      bShadowGrad.addColorStop(0.55, ltBoat.shadowColor(0.22 * ltBoat.shadowStrength));
+      bShadowGrad.addColorStop(1, ltBoat.shadowColor(0));
+      ctx.fillStyle = bShadowGrad;
+      ctx.beginPath();
+      ctx.ellipse(125 + bShiftX * 0.65, 116 + bShiftY * 0.6, 105, 18, 0.03 * ltBoat.nx, 0, Math.PI * 2);
+      ctx.fill();
+
+      // 船体の赤い塗装がすぐ下の水面に映り込む水鏡リフレクション（光の強さ rimPower に応じて強弱）
+      if (ltBoat.rimPower > 0.12) {
+        for (let wr = 0; wr < 3; wr++) {
+          const wy = 118 + wr * 5.5;
+          const wSway = Math.sin(this.bioTime * 3.8 + wr * 1.4) * (3.5 + wr * 1.6);
+          const wLen = 74 - wr * 16;
+          ctx.strokeStyle = `rgba(185, 28, 28, ${((0.24 - wr * 0.06) * ltBoat.rimPower).toFixed(3)})`;
+          ctx.lineWidth = 2.4 - wr * 0.4;
+          ctx.beginPath();
+          ctx.moveTo(125 - wLen + wSway + ltBoat.nx * wr * 4, wy);
+          ctx.lineTo(125 + wLen + wSway + ltBoat.nx * wr * 4, wy);
+          ctx.stroke();
+        }
       }
       ctx.restore();
 
@@ -2473,69 +3395,73 @@ class SquidGameWatch {
     ctx.fill();
     ctx.stroke();
 
-    // GAME C: 船体の光源側エッジ（ガンネル上縁＆光源側の船首/船尾）に輝くリムハイライトと水面からの照り返しコースティクス
+    // GAME C: 船体の光源側エッジに輝くリムハイライトと水面からの照り返し（光が弱い時は控えめに減光・消滅）
     if (real && ltBoat) {
       ctx.save();
-      ctx.strokeStyle = ltBoat.rimColor(0.88);
-      ctx.lineWidth = 2.6;
-      ctx.lineCap = 'round';
-      ctx.beginPath();
-      ctx.moveTo(23, 82.8);
-      ctx.lineTo(231, 82.8);
-      if (-ltBoat.nx >= 0) {
-        ctx.moveTo(231, 82.8);
-        ctx.lineTo(208, 115);
-      } else {
-        ctx.moveTo(23, 82.8);
-        ctx.lineTo(42, 115);
-      }
-      ctx.stroke();
-
-      // 水面から船腹へ跳ね返る波紋状の反射光
-      ctx.strokeStyle = ltBoat.rimColor(0.32 * ltBoat.directStrength);
-      ctx.lineWidth = 1.6;
-      for (let wc = 0; wc < 3; wc++) {
-        const cx = 62 + wc * 56 + Math.sin(this.bioTime * 3.2 + wc) * 8;
-        const cy = 104 + Math.cos(this.bioTime * 4.1 + wc) * 2.5;
+      if (ltBoat.rimPower > 0.08) {
+        ctx.strokeStyle = ltBoat.rimColor(0.82 * ltBoat.rimPower);
+        ctx.lineWidth = 1.6 + ltBoat.rimPower * 1.0;
+        ctx.lineCap = 'round';
         ctx.beginPath();
-        ctx.moveTo(cx - 18, cy);
-        ctx.quadraticCurveTo(cx, cy - 3.5, cx + 18, cy);
+        ctx.moveTo(23, 82.8);
+        ctx.lineTo(231, 82.8);
+        if (-ltBoat.nx >= 0) {
+          ctx.moveTo(231, 82.8);
+          ctx.lineTo(208, 115);
+        } else {
+          ctx.moveTo(23, 82.8);
+          ctx.lineTo(42, 115);
+        }
         ctx.stroke();
+      }
+
+      // 水面から船腹へ跳ね返る波紋状の反射光（強い日差しがある時のみ）
+      if (ltBoat.specPower > 0.08) {
+        ctx.strokeStyle = ltBoat.rimColor(0.34 * ltBoat.specPower);
+        ctx.lineWidth = 1.5;
+        for (let wc = 0; wc < 3; wc++) {
+          const cx = 62 + wc * 56 + Math.sin(this.bioTime * 3.2 + wc) * 8;
+          const cy = 104 + Math.cos(this.bioTime * 4.1 + wc) * 2.5;
+          ctx.beginPath();
+          ctx.moveTo(cx - 18, cy);
+          ctx.quadraticCurveTo(cx, cy - 3.5, cx + 18, cy);
+          ctx.stroke();
+        }
       }
       ctx.restore();
     }
 
     // 船の白いラインと操舵室フレーム
-    ctx.strokeStyle = real ? ltBoat.rimColor(0.94) : 'rgba(235, 225, 195, 0.65)';
+    ctx.strokeStyle = real ? ltBoat.rimColor(0.45 + 0.50 * ltBoat.rimPower) : 'rgba(235, 225, 195, 0.65)';
     ctx.lineWidth = 2.5;
     ctx.beginPath();
     ctx.moveTo(32, 92);
     ctx.lineTo(220, 92);
     ctx.stroke();
 
-    // 船から海中へ垂れるロープ梯子（pos=1用：GAME Cでは光源と逆向きに揺らぐ影＋光源側リム光付き）
+    // 船から海中へ垂れるロープ梯子（pos=1用：GAME Cでは単一ソフトブラーの滑らかな影付き）
     if (real && ltBoat) {
       ctx.save();
-      for (let ls = 1; ls <= 2; ls++) {
-        const lu = ls / 2;
-        const lWave = Math.sin(this.bioTime * 4.5 - lu * 2.0) * 3.8 * lu;
-        const lxOff = ltBoat.nx * 14 * lu * ltBoat.lenMul + lWave;
-        const lyOff = ltBoat.ny * 8 * lu * ltBoat.lenMul;
-        ctx.strokeStyle = ltBoat.shadowColor(0.24 * (1.2 - lu * 0.4));
-        ctx.lineWidth = 3.2;
-        ctx.beginPath();
-        ctx.moveTo(182 + lxOff * 0.4, 116);
-        ctx.lineTo(155 + lxOff, 228 + lyOff);
-        ctx.moveTo(198 + lxOff * 0.4, 116);
-        ctx.lineTo(171 + lxOff, 228 + lyOff);
-        for (let r = 0; r < 5; r++) {
-          const ry = 132 + r * 20 + lyOff * (r / 5);
-          const rx = 180 - r * 5 + lxOff * (0.4 + 0.6 * (r / 5));
-          ctx.moveTo(rx, ry);
-          ctx.lineTo(rx + 16, ry);
-        }
-        ctx.stroke();
+      const lWave = Math.sin(this.bioTime * 2.8) * 2.8;
+      const lxOff = ltBoat.nx * 14 * ltBoat.lenMul + lWave;
+      const lyOff = ltBoat.ny * 7 * ltBoat.lenMul;
+      const lCol = ltBoat.shadowColor(0.32 * ltBoat.shadowStrength);
+      ctx.shadowColor = lCol;
+      ctx.shadowBlur = 6;
+      ctx.strokeStyle = lCol;
+      ctx.lineWidth = 3.0;
+      ctx.beginPath();
+      ctx.moveTo(182 + lxOff * 0.35, 116);
+      ctx.lineTo(155 + lxOff, 228 + lyOff);
+      ctx.moveTo(198 + lxOff * 0.35, 116);
+      ctx.lineTo(171 + lxOff, 228 + lyOff);
+      for (let r = 0; r < 5; r++) {
+        const ry = 132 + r * 20 + lyOff * (r / 5);
+        const rx = 180 - r * 5 + lxOff * (0.35 + 0.65 * (r / 5));
+        ctx.moveTo(rx, ry);
+        ctx.lineTo(rx + 16, ry);
       }
+      ctx.stroke();
       ctx.restore();
     }
     ctx.strokeStyle = real ? ltBoat.sackLit : 'rgba(92, 58, 30, 0.55)';
@@ -2559,11 +3485,14 @@ class SquidGameWatch {
     // --- 左側〜海底の岩礁と海藻プリント ---
     const ltReef = real ? this._getDiverLighting(220, 360) : null;
     if (real) {
-      // 岩礁斜面が光源と逆向きに落とす深い海底シャドウ
+      // 岩礁斜面が光源と逆向きに落とす滑らかな海底シャドウ
       ctx.save();
       const rShiftX = Math.max(8, ltReef.nx * 36 * ltReef.lenMul);
       const rShiftY = Math.max(4, ltReef.ny * 14 * ltReef.lenMul);
-      ctx.fillStyle = ltReef.shadowColor(0.36);
+      const rCol = ltReef.shadowColor(0.38 * ltReef.shadowStrength);
+      ctx.shadowColor = rCol;
+      ctx.shadowBlur = 10;
+      ctx.fillStyle = rCol;
       ctx.beginPath();
       ctx.moveTo(0, 195);
       ctx.quadraticCurveTo(68 + rShiftX * 0.6, 205 + rShiftY * 0.5, 86 + rShiftX, 260 + rShiftY);
@@ -2606,14 +3535,14 @@ class SquidGameWatch {
     ctx.stroke();
 
     if (real && ltReef) {
-      // 海底の砂地・岩肌のリアルな陰影ハイライトと、揺らめく海底コースティクス（集光模様）
+      // 海底の砂地・岩肌のリアルな陰影ハイライトと、光の強さに連動する海底コースティクス
       const sandGrad = ctx.createLinearGradient(
         380 - ltReef.nx * 220,
         385,
         380 + ltReef.nx * 220,
         480
       );
-      sandGrad.addColorStop(0, ltReef.rimColor(0.32 * ltReef.directStrength));
+      sandGrad.addColorStop(0, ltReef.rimColor(0.32 * ltReef.rimPower));
       sandGrad.addColorStop(0.45, 'rgba(136, 118, 90, 0.34)');
       sandGrad.addColorStop(1, 'rgba(15, 23, 42, 0.45)');
       ctx.fillStyle = sandGrad;
@@ -2629,27 +3558,31 @@ class SquidGameWatch {
 
       // 岩礁の稜線と海底の砂地に差す光源方向のリムハイライト＆波紋コースティクス
       ctx.save();
-      ctx.strokeStyle = ltReef.rimColor(0.42 * ltReef.directStrength);
-      ctx.lineWidth = 2.2;
-      ctx.beginPath();
-      ctx.moveTo(0, 195);
-      ctx.quadraticCurveTo(68, 205, 86, 260);
-      ctx.quadraticCurveTo(118, 330, 150, 382);
-      ctx.lineTo(265, 420);
-      ctx.lineTo(465, 434);
-      ctx.lineTo(610, 437);
-      ctx.stroke();
-
-      // 海底の上をゆらゆら流れる光の網目リボン
-      ctx.strokeStyle = ltReef.rimColor(0.22 * ltReef.directStrength);
-      ctx.lineWidth = 1.8;
-      for (let ci = 0; ci < 6; ci++) {
-        const cxBase = 175 + ci * 78 + Math.sin(this.bioTime * 2.2 + ci * 1.3) * 14;
-        const cyBase = 426 + (ci % 2) * 14 + Math.cos(this.bioTime * 2.8 + ci) * 3.5;
+      if (ltReef.rimPower > 0.08) {
+        ctx.strokeStyle = ltReef.rimColor(0.40 * ltReef.rimPower);
+        ctx.lineWidth = 2.0;
         ctx.beginPath();
-        ctx.moveTo(cxBase - 24, cyBase);
-        ctx.quadraticCurveTo(cxBase, cyBase - 5 * Math.sin(this.bioTime * 3.5 + ci), cxBase + 24, cyBase + 2);
+        ctx.moveTo(0, 195);
+        ctx.quadraticCurveTo(68, 205, 86, 260);
+        ctx.quadraticCurveTo(118, 330, 150, 382);
+        ctx.lineTo(265, 420);
+        ctx.lineTo(465, 434);
+        ctx.lineTo(610, 437);
         ctx.stroke();
+      }
+
+      // 海底の上をゆらゆら流れる光の網目リボン（直射光がある時のみ出現）
+      if (ltReef.specPower > 0.06) {
+        ctx.strokeStyle = ltReef.rimColor(0.24 * ltReef.specPower);
+        ctx.lineWidth = 1.8;
+        for (let ci = 0; ci < 6; ci++) {
+          const cxBase = 175 + ci * 78 + Math.sin(this.bioTime * 2.2 + ci * 1.3) * 14;
+          const cyBase = 426 + (ci % 2) * 14 + Math.cos(this.bioTime * 2.8 + ci) * 3.5;
+          ctx.beginPath();
+          ctx.moveTo(cxBase - 24, cyBase);
+          ctx.quadraticCurveTo(cxBase, cyBase - 5 * Math.sin(this.bioTime * 3.5 + ci), cxBase + 24, cyBase + 2);
+          ctx.stroke();
+        }
       }
       ctx.restore();
     }
@@ -2674,24 +3607,25 @@ class SquidGameWatch {
     const cx = 612, cy = 382;
     const ltChest = real ? this._getDiverLighting(cx + 42, cy + 32) : null;
     if (real && ltChest) {
-      // 1. 宝箱から光源と逆向きに伸びる揺らぎキャストシャドウ
+      // 1. 宝箱から光源と逆向きに滑らかに伸びる一体型キャストシャドウ
       ctx.save();
-      for (let cs = 0; cs < 3; cs++) {
-        const cu = (cs + 1) / 3;
-        const cSway = Math.sin(this.bioTime * 4.2 - cu * 1.8) * 4.5 * cu;
-        const cOffX = ltChest.nx * (16 + cu * 28) * ltChest.lenMul + cSway;
-        const cOffY = Math.max(2, ltChest.ny * (5 + cu * 10) * ltChest.lenMul);
-        ctx.fillStyle = ltChest.shadowColor(0.36 * (1.15 - cu * 0.32));
-        ctx.beginPath();
-        ctx.ellipse(cx + 42 + cOffX, cy + 62 + cOffY, 46 + cu * 8, 7.5 + cu * 2.5, 0, 0, Math.PI * 2);
-        ctx.fill();
-      }
+      const cSway = Math.sin(this.bioTime * 2.8) * 3.2;
+      const cOffX = ltChest.nx * 32 * ltChest.lenMul + cSway;
+      const cOffY = Math.max(4, ltChest.ny * 10 * ltChest.lenMul);
+      const cShadowGrad = ctx.createRadialGradient(cx + 42, cy + 60, 8, cx + 42 + cOffX, cy + 62 + cOffY, 64);
+      cShadowGrad.addColorStop(0, ltChest.shadowColor(0.48 * ltChest.shadowStrength));
+      cShadowGrad.addColorStop(0.55, ltChest.shadowColor(0.24 * ltChest.shadowStrength));
+      cShadowGrad.addColorStop(1, ltChest.shadowColor(0));
+      ctx.fillStyle = cShadowGrad;
+      ctx.beginPath();
+      ctx.ellipse(cx + 42 + cOffX * 0.65, cy + 62 + cOffY * 0.65, 58, 11, 0, 0, Math.PI * 2);
+      ctx.fill();
 
-      // 2. 開いた宝箱から水中へ立ち昇る黄金のゴッドレイ（財宝の照り返しオーラ）
-      const auraPulse = 0.78 + 0.22 * Math.sin(this.bioTime * 3.8);
+      // 2. 開いた宝箱から水中へ立ち昇る黄金のオーラ（光の強さに応じて強弱）
+      const auraPulse = (0.78 + 0.22 * Math.sin(this.bioTime * 3.8)) * (0.45 + 0.55 * ltChest.rimPower);
       const auraGrad = ctx.createRadialGradient(cx + 44, cy + 16, 6, cx + 44 - ltChest.nx * 14, cy - 12, 68);
-      auraGrad.addColorStop(0, `rgba(254, 240, 138, ${(0.42 * auraPulse).toFixed(3)})`);
-      auraGrad.addColorStop(0.45, `rgba(250, 204, 21, ${(0.18 * auraPulse).toFixed(3)})`);
+      auraGrad.addColorStop(0, `rgba(254, 240, 138, ${(0.40 * auraPulse).toFixed(3)})`);
+      auraGrad.addColorStop(0.45, `rgba(250, 204, 21, ${(0.16 * auraPulse).toFixed(3)})`);
       auraGrad.addColorStop(1, 'rgba(234, 179, 8, 0)');
       ctx.fillStyle = auraGrad;
       ctx.beginPath();
@@ -3346,8 +4280,28 @@ class SquidGameWatch {
     const rimArr    = mixRgbArr(pA.rimRgb,    pB.rimRgb,    [186, 206, 226]);
     const shadowArr = mixRgbArr(pA.shadowRgb, pB.shadowRgb, [10, 18, 30]);
 
-    const lenMul = (pA.lenMul + (pB.lenMul - pA.lenMul) * t) * (1 - env.rainIntensity * 0.15);
-    const directStrength = Math.max(0.28, (1.0 - env.rainIntensity * 0.58) * (1.0 - depthRatio * 0.22));
+    const lenMul = (pA.lenMul + (pB.lenMul - pA.lenMul) * t) * (1 - env.rainIntensity * 0.22);
+
+    // 太陽高度 (0.0: 地平線/夜 〜 1.0: 真昼の天頂) と雲・雨・夜間・水深による物理的な光強度の減衰計算
+    const sunAltitude = Math.max(0, Math.sin(sunProg * Math.PI)) * Math.max(0, 1.0 - nightWeight * 1.25);
+    const clearSkyFactor = Math.pow(Math.max(0, 1.0 - env.rainIntensity * 1.45), 1.6); // 雨天時(rainIntensity>=0.68)は0になる
+    const depthAtten = isUnderwater ? Math.max(0.22, 1.0 - depthRatio * 0.58) : 1.0;
+
+    // 時間帯ごとの基本直射光パワー（快晴真昼:1.0、朝夕:0.25〜0.65、満月夜:0.06、雨天時:0〜極小）
+    const sunDirect = (0.18 + 0.82 * sunAltitude) * Math.max(0, 1.0 - nightWeight * 1.2) * clearSkyFactor;
+    const moonDirect = nightWeight * 0.08 * Math.max(0, 1.0 - env.rainIntensity * 1.3);
+    const rawDirect = (sunDirect + moonDirect) * depthAtten;
+
+    // 1. 反射光コーン・水面反射の強さ (specPower: 0.0〜1.0 — 夜間や雨天・曇天ではほぼ0〜完全に消える)
+    const specPower = Math.max(0, Math.min(1, (rawDirect - 0.08) * 1.15));
+    // 2. キラリと光る十字スターグレアの強さ (glintPower: 0.0〜1.0 — 晴れた日中の強い太陽光がある時だけ出現し、光が弱い時・夜・雨天は完全に0になる)
+    const glintPower = Math.max(0, Math.min(1, (sunDirect * depthAtten - 0.34) * 1.55));
+    // 3. 輪郭リムハイライトの強さ (rimPower: 0.08〜1.0 — 光が弱い時は控えめに減光)
+    const rimPower = Math.max(0.08, Math.min(1.0, rawDirect * 1.05 + (1 - env.rainIntensity) * 0.12));
+    // 4. 影の濃さ係数 (shadowStrength: 0.16〜1.0 — 雨天や夜間は影が薄く柔らかくなる)
+    const shadowStrength = Math.max(0.16, Math.min(1.0, 0.22 + rawDirect * 0.78));
+
+    const directStrength = specPower;
 
     return {
       nx,
@@ -3358,6 +4312,10 @@ class SquidGameWatch {
       rainIntensity: env.rainIntensity,
       nightWeight,
       directStrength,
+      specPower,
+      glintPower,
+      rimPower,
+      shadowStrength,
       lenMul,
       shadowStretch: lenMul,
       helmSpec: toCss(helmSpecArr),
@@ -3380,92 +4338,93 @@ class SquidGameWatch {
       rimColor: (a = 1) => toCss(rimArr, a),
       shadowArr,
       shadowRgb: shadowArr,
-      shadowAlpha: 0.44 * (0.65 + directStrength * 0.45),
+      shadowAlpha: 0.42 * shadowStrength,
       shadowColor: (a = 1) => toCss(shadowArr, a)
     };
   }
 
-  // 光源（太陽・夕日・朝日・満月）と逆向きに長く伸び、水流や波の屈折でリアルに揺らぐダイバーの影を描画
+  // 光源と逆向きに伸びる「分身にならない一体型の滑らかな揺らぎ影」を描画
   _drawWaveringDiverShadow(ctx, pivotX, pivotY, pathFn, opts = {}) {
     const lt = this._getDiverLighting(pivotX, pivotY);
     const isUnderwater = opts.isUnderwater !== false;
     const footOffsetY = opts.footOffsetY || 58;
-    const baseAlpha = (opts.shadowAlpha || 0.48) * (0.68 + lt.directStrength * 0.45);
+    const baseAlpha = (opts.shadowAlpha || 0.42) * lt.shadowStrength;
+    if (baseAlpha <= 0.02) return;
 
-    // 影が伸びる距離（以前よりもしっかり長く伸ばし、朝焼け・夕焼けなど光源が低い時ほどさらに長く伸びる）
-    const reach = (isUnderwater ? 36.0 : 24.0) * (1.0 + Math.abs(lt.nx) * 0.78) * lt.lenMul;
-    // 光線と直交する法線ベクトル（この方向に進行波で影がゆらゆら揺らぐ）
-    const perpX = -lt.ny;
-    const perpY = lt.nx;
+    // 影が伸びる距離（光源の高さと向きに応じ、一体型のまま滑らかに伸ばす）
+    const reach = (isUnderwater ? 28.0 : 18.0) * (0.9 + Math.abs(lt.nx) * 0.65) * lt.lenMul;
+    const phase = this.bioTime * (isUnderwater ? 3.2 : 2.0) + pivotX * 0.02 + pivotY * 0.015;
+    const smoothWave = Math.sin(phase) * 0.7 + Math.cos(phase * 1.6 + 0.5) * 0.3;
 
     ctx.save();
 
-    // 1. 足元の海底・甲板に落ちて光源と逆向きに長く波打ちながら伸びる接地キャストシャドウ（5連リップル）
+    // 1. 足元の甲板・海底から光源の逆向きへ「1つの滑らかな連続グラデーション帯」として伸びる接地キャストシャドウ
     if (opts.drawGroundShadow) {
       const footX = pivotX;
       const footY = pivotY + footOffsetY;
-      const groundReachX = lt.nx * reach * 1.85;
-      const groundReachY = Math.max(4.5, lt.ny * reach * 0.44);
+      const swayPerpX = -lt.ny * smoothWave * (isUnderwater ? 4.2 : 1.6);
+      const swayPerpY = lt.nx * smoothWave * (isUnderwater ? 1.8 : 0.7);
+      const tipX = footX + lt.nx * reach * 1.75 + swayPerpX;
+      const tipY = footY + Math.max(3.5, lt.ny * reach * 0.38) + swayPerpY;
+      const midX = (footX + tipX) * 0.5 - lt.ny * Math.cos(phase * 1.3) * (isUnderwater ? 3.2 : 1.2);
+      const midY = (footY + tipY) * 0.5 + lt.nx * Math.cos(phase * 1.3) * 1.2;
 
-      for (let g = 0; g < 5; g++) {
-        const gu = (g + 0.45) / 5;
-        const gPhase = this.bioTime * (isUnderwater ? 4.8 : 2.6) - gu * 3.1 + pivotX * 0.03;
-        const gWave = Math.sin(gPhase) + 0.45 * Math.cos(gPhase * 1.9);
-        const gSway = gWave * (isUnderwater ? 5.6 : 2.2) * gu;
-
-        const gx = footX + groundReachX * gu + perpX * gSway;
-        const gy = footY + groundReachY * gu + perpY * gSway * 0.45;
-        const rx = (14.5 + gu * 13.5) * (1 + Math.sin(gPhase * 1.3) * 0.14);
-        const ry = (4.5 + gu * 3.2) * (1 + Math.cos(gPhase * 1.5) * 0.14);
-        const gAlpha = baseAlpha * (0.46 - gu * 0.28);
-
-        ctx.fillStyle = lt.shadowColor(gAlpha);
-        ctx.beginPath();
-        ctx.ellipse(gx, gy, rx, ry, Math.atan2(groundReachY, groundReachX) * 0.4, 0, Math.PI * 2);
-        ctx.fill();
-      }
-    }
-
-    // 2. ダイバー自身のシルエットが光源と逆向き(lt.nx, lt.ny)へ長く伸び、先端に向かって進行波でリアルに揺らぐ6層シャドウ
-    const centerY = pivotY + footOffsetY * 0.45;
-    const layers = 6;
-    for (let i = layers - 1; i >= 0; i--) {
-      const u = (i + 1) / layers; // 0.16(根元・濃) 〜 1.00(先端・淡く大きく揺らぐ)
-      const phase = this.bioTime * (isUnderwater ? 4.8 : 2.8) - u * 3.2 + pivotX * 0.025 + pivotY * 0.015;
-      const wave1 = Math.sin(phase);
-      const wave2 = Math.cos(phase * 1.45 + 0.7);
-      const wave3 = Math.sin(phase * 2.2 - 0.5);
-
-      const swayAmp = (isUnderwater ? 7.2 : 2.8) * u * (1.0 + lt.rainIntensity * 0.3);
-      const swayPerp = (wave1 * 0.72 + wave3 * 0.28) * swayAmp;
-      const swayAlong = wave2 * swayAmp * 0.38;
-
-      const offX = lt.nx * reach * u + perpX * swayPerp + lt.nx * swayAlong;
-      const offY = lt.ny * reach * u * 0.88 + perpY * swayPerp * 0.65 + lt.ny * swayAlong * 0.5;
-
-      // 水流と水面屈折によるシルエットのせん断（シアー）変形と長尺ストレッチ揺らぎ
-      const skewX = lt.nx * 0.26 * u + (wave1 * 0.12 + wave3 * 0.05) * u * (isUnderwater ? 1.0 : 0.4);
-      const skewY = (wave2 * 0.075) * u * (isUnderwater ? 1.0 : 0.4);
-      const scaleX = 1.0 + 0.09 * u + wave2 * 0.055 * u;
-      const scaleY = 1.0 + 0.14 * u + wave1 * 0.055 * u;
-
-      const layerAlpha = baseAlpha * (0.38 - u * 0.23);
-      const col = lt.shadowColor(layerAlpha);
+      const gGrad = ctx.createLinearGradient(footX, footY, tipX, tipY);
+      gGrad.addColorStop(0, lt.shadowColor(baseAlpha * 0.62));
+      gGrad.addColorStop(0.55, lt.shadowColor(baseAlpha * 0.32));
+      gGrad.addColorStop(1, lt.shadowColor(0));
 
       ctx.save();
-      ctx.translate(pivotX + offX, centerY + offY);
-      ctx.transform(scaleX, skewY, skewX, scaleY, 0, 0);
-      ctx.translate(-pivotX, -centerY);
-      ctx.fillStyle = col;
-      ctx.strokeStyle = col;
-      pathFn(ctx);
+      ctx.shadowColor = lt.shadowColor(baseAlpha * 0.45);
+      ctx.shadowBlur = isUnderwater ? 8 : 5;
+      ctx.strokeStyle = gGrad;
+      ctx.lineCap = 'round';
+      ctx.lineWidth = isUnderwater ? 22 : 16;
+      ctx.beginPath();
+      ctx.moveTo(footX, footY);
+      ctx.quadraticCurveTo(midX, midY, tipX, tipY);
+      ctx.stroke();
       ctx.restore();
     }
+
+    // 2. 分身にならない「単一・一体型の滑らかなシルエット影」（足元/下部を基点に連続シアー変形＋ソフトブラー＋先端フェード）
+    const anchorX = pivotX;
+    const anchorY = pivotY + footOffsetY * 0.82;
+    const headExtendX = lt.nx * reach * 0.72 + (-lt.ny) * smoothWave * (isUnderwater ? 3.6 : 1.4);
+    const headExtendY = lt.ny * reach * 0.42;
+
+    // 足元（濃くくっきり）から頭部先端（柔らかく透明へフェード）への滑らかなグラデーション
+    const silGrad = ctx.createLinearGradient(
+      anchorX,
+      anchorY,
+      anchorX + headExtendX,
+      pivotY - 18 + headExtendY
+    );
+    const rootAlpha = baseAlpha * (opts.drawGroundShadow ? 0.50 : 0.42);
+    silGrad.addColorStop(0, lt.shadowColor(rootAlpha));
+    silGrad.addColorStop(0.62, lt.shadowColor(rootAlpha * 0.58));
+    silGrad.addColorStop(1, lt.shadowColor(rootAlpha * 0.14));
+
+    const skewX = (lt.nx * 0.34 * lt.lenMul) + smoothWave * (isUnderwater ? 0.085 : 0.035);
+    const skewY = smoothWave * (isUnderwater ? 0.035 : 0.015);
+    const scaleX = 1.04 + Math.cos(phase * 1.3) * 0.025;
+    const scaleY = 1.06 + Math.sin(phase) * 0.03;
+
+    ctx.save();
+    ctx.shadowColor = lt.shadowColor(rootAlpha * 0.75);
+    ctx.shadowBlur = isUnderwater ? 9 : 6;
+    ctx.translate(anchorX + lt.nx * 5.0, anchorY + lt.ny * 3.2);
+    ctx.transform(scaleX, skewY, skewX, scaleY, 0, 0);
+    ctx.translate(-anchorX, -anchorY);
+    ctx.fillStyle = silGrad;
+    ctx.strokeStyle = silGrad;
+    pathFn(ctx);
+    ctx.restore();
 
     ctx.restore();
   }
 
-  // ダイバーの光源側リムライト・水中コースティクス・および「銅ヘルメットからのリアルな反射光（グレア＆光条）」を描画
+  // ダイバーの光源側リムライト・水中コースティクス・および「時間帯と光の強さに連動する銅ヘルメット反射光」を描画
   _drawDiverDirectionalRimAndCaustics(c, hx, hy, helmR, bodyW, bodyH, lt, isUnderwater = true) {
     c.save();
     // 光源が存在する方向ベクトル (-lt.nx, -lt.ny) と角度
@@ -3477,114 +4436,122 @@ class SquidGameWatch {
     const specX = hx + lightDirX * (helmR * 0.52);
     const specY = hy + lightDirY * (helmR * 0.52);
 
-    // 1. ヘルメットの磨かれた銅ドームから周囲の水中・空間へ放たれる「反射光ビーム＆ハロー（照り返し）」
-    const pulse = 0.82 + 0.18 * Math.sin(this.bioTime * 5.6 + hx * 0.07 + hy * 0.04);
-    const reflStrength = lt.directStrength * pulse;
-    const beamLen = helmR * (isUnderwater ? 2.9 : 2.3) * (0.85 + lt.directStrength * 0.35);
-    const beamTargetX = specX + lightDirX * beamLen;
-    const beamTargetY = specY + lightDirY * beamLen * 0.82;
+    const pulse = 0.85 + 0.15 * Math.sin(this.bioTime * 4.8 + hx * 0.07 + hy * 0.04);
+    const specStr = lt.specPower * pulse;   // 反射コーン・鏡面ハイライト強度 (0.0〜1.0)
+    const glintStr = lt.glintPower * pulse; // 十字スターグレア強度 (強い日差し時のみ > 0、夜間・雨天・薄明時は 0)
+    const rimStr = lt.rimPower;             // エッジリムライト強度 (0.08〜1.0)
 
-    // (A) 光源方向へ跳ね返る扇状の反射光コーン（水中の微粒子や霧を照らす）
-    const coneGrad = c.createRadialGradient(specX, specY, 1.0, beamTargetX * 0.45 + specX * 0.55, beamTargetY * 0.45 + specY * 0.55, beamLen);
-    coneGrad.addColorStop(0, `rgba(255, 255, 255, ${(0.52 * reflStrength).toFixed(3)})`);
-    coneGrad.addColorStop(0.28, lt.rimColor(0.34 * reflStrength));
-    coneGrad.addColorStop(0.65, lt.rimColor(0.12 * reflStrength));
-    coneGrad.addColorStop(1, lt.rimColor(0));
-    c.fillStyle = coneGrad;
-    c.beginPath();
-    c.moveTo(specX - lightDirY * (helmR * 0.32), specY + lightDirX * (helmR * 0.32));
-    c.lineTo(beamTargetX - lightDirY * (helmR * 1.45), beamTargetY + lightDirX * (helmR * 1.45));
-    c.quadraticCurveTo(
-      beamTargetX + lightDirX * (helmR * 0.45),
-      beamTargetY + lightDirY * (helmR * 0.45),
-      beamTargetX + lightDirY * (helmR * 1.45),
-      beamTargetY - lightDirX * (helmR * 1.45)
-    );
-    c.lineTo(specX + lightDirY * (helmR * 0.32), specY - lightDirX * (helmR * 0.32));
-    c.closePath();
-    c.fill();
+    // 1. ヘルメットの銅ドームから周囲へ広がる「反射光ビーム＆ハロー」（光が強い時ほど輝き、夜間や雨天時は消える）
+    if (specStr > 0.04) {
+      const beamLen = helmR * (isUnderwater ? 2.6 : 2.1) * (0.65 + specStr * 0.55);
+      const beamTargetX = specX + lightDirX * beamLen;
+      const beamTargetY = specY + lightDirY * beamLen * 0.82;
 
-    // (B) ヘルメット下部の真鍮・銅からダイバー自身の肩・胸元へ落ちる温かい金属バウンス反射光
-    const bounceGrad = c.createRadialGradient(hx + lightDirX * 4, hy + helmR * 0.85, 1.5, hx, hy + helmR + 8, helmR * 1.6);
-    bounceGrad.addColorStop(0, lt.rimColor(0.42 * reflStrength));
-    bounceGrad.addColorStop(0.55, `rgba(245, 158, 11, ${(0.18 * reflStrength).toFixed(3)})`);
-    bounceGrad.addColorStop(1, lt.rimColor(0));
-    c.fillStyle = bounceGrad;
-    c.beginPath();
-    c.arc(hx, hy + helmR + 4, helmR * 1.5, 0, Math.PI * 2);
-    c.fill();
+      // (A) 光源方向へ跳ね返る扇状の反射光コーン
+      const coneGrad = c.createRadialGradient(specX, specY, 1.0, beamTargetX * 0.45 + specX * 0.55, beamTargetY * 0.45 + specY * 0.55, beamLen);
+      coneGrad.addColorStop(0, `rgba(255, 255, 255, ${(0.42 * specStr).toFixed(3)})`);
+      coneGrad.addColorStop(0.30, lt.rimColor(0.28 * specStr));
+      coneGrad.addColorStop(0.68, lt.rimColor(0.09 * specStr));
+      coneGrad.addColorStop(1, lt.rimColor(0));
+      c.fillStyle = coneGrad;
+      c.beginPath();
+      c.moveTo(specX - lightDirY * (helmR * 0.28), specY + lightDirX * (helmR * 0.28));
+      c.lineTo(beamTargetX - lightDirY * (helmR * 1.25), beamTargetY + lightDirX * (helmR * 1.25));
+      c.quadraticCurveTo(
+        beamTargetX + lightDirX * (helmR * 0.4),
+        beamTargetY + lightDirY * (helmR * 0.4),
+        beamTargetX + lightDirY * (helmR * 1.25),
+        beamTargetY - lightDirX * (helmR * 1.25)
+      );
+      c.lineTo(specX + lightDirY * (helmR * 0.28), specY - lightDirX * (helmR * 0.28));
+      c.closePath();
+      c.fill();
 
-    // 2. ヘルメットの光源側エッジに走る鮮やかなリムライト（夕焼けなら茜色、満月なら青銀色、快晴なら黄金色）
-    const rimAlpha = Math.min(0.98, 0.52 + lt.directStrength * 0.46);
-    c.strokeStyle = lt.rimColor(rimAlpha);
-    c.lineWidth = 2.25;
-    c.lineCap = 'round';
-    c.beginPath();
-    c.arc(hx, hy, helmR - 0.7, lightAngle - 1.12, lightAngle + 1.12);
-    c.stroke();
+      // (B) ヘルメット下部の真鍮・銅からダイバー自身の肩・胸元へ落ちる金属バウンス反射光
+      const bounceGrad = c.createRadialGradient(hx + lightDirX * 4, hy + helmR * 0.85, 1.5, hx, hy + helmR + 8, helmR * 1.5);
+      bounceGrad.addColorStop(0, lt.rimColor(0.34 * specStr));
+      bounceGrad.addColorStop(0.55, `rgba(245, 158, 11, ${(0.14 * specStr).toFixed(3)})`);
+      bounceGrad.addColorStop(1, lt.rimColor(0));
+      c.fillStyle = bounceGrad;
+      c.beginPath();
+      c.arc(hx, hy + helmR + 4, helmR * 1.4, 0, Math.PI * 2);
+      c.fill();
+    }
 
-    // 球面鏡のような三日月型ハイライト＆反対側のフレネル二次反射アーク
-    c.fillStyle = `rgba(255, 255, 255, ${(0.78 * reflStrength).toFixed(3)})`;
-    c.beginPath();
-    c.ellipse(specX, specY, helmR * 0.26, helmR * 0.13, lightAngle + Math.PI * 0.5, 0, Math.PI * 2);
-    c.fill();
+    // 2. ヘルメットの光源側エッジに走るリムライト（光の強さ rimStr に比例して強弱がつく）
+    const rimAlpha = Math.min(0.92, rimStr * 0.82);
+    if (rimAlpha > 0.05) {
+      c.strokeStyle = lt.rimColor(rimAlpha);
+      c.lineWidth = 1.4 + rimStr * 0.85;
+      c.lineCap = 'round';
+      c.beginPath();
+      c.arc(hx, hy, helmR - 0.7, lightAngle - (0.75 + rimStr * 0.35), lightAngle + (0.75 + rimStr * 0.35));
+      c.stroke();
+    }
 
-    c.strokeStyle = lt.rimColor(0.32 * reflStrength);
-    c.lineWidth = 1.2;
-    c.beginPath();
-    c.arc(hx, hy, helmR * 0.82, lightAngle + Math.PI - 0.65, lightAngle + Math.PI + 0.65);
-    c.stroke();
+    // 球面鏡のような三日月型ハイライト（光が弱い時は小さく控えめに、雨天・暗闇では消える）
+    if (specStr > 0.03) {
+      c.fillStyle = `rgba(255, 255, 255, ${(0.72 * specStr).toFixed(3)})`;
+      c.beginPath();
+      c.ellipse(specX, specY, helmR * (0.16 + 0.10 * specStr), helmR * (0.08 + 0.05 * specStr), lightAngle + Math.PI * 0.5, 0, Math.PI * 2);
+      c.fill();
+    }
 
-    // 3. ヘルメット表面でキラリと輝く十字スターグレア（4方向＋斜めマイクロ光条）
-    const glintLen = (helmR * 0.78 + Math.sin(this.bioTime * 7.2 + hx * 0.1) * 2.6) * (0.75 + lt.directStrength * 0.35);
-    const glintRot = Math.sin(this.bioTime * 2.1 + hx * 0.05) * 0.22;
-    c.save();
-    c.translate(specX, specY);
-    c.rotate(glintRot);
-    c.strokeStyle = `rgba(255, 255, 255, ${(0.88 * reflStrength).toFixed(3)})`;
-    c.lineWidth = 1.35;
-    c.beginPath();
-    c.moveTo(-glintLen, 0); c.lineTo(glintLen, 0);
-    c.moveTo(0, -glintLen); c.lineTo(0, glintLen);
-    c.stroke();
+    // 3. ヘルメット表面でキラリと輝く十字スターグレア（強い太陽光がある時だけ輝き、夕暮れ・夜・雨天時は完全に消滅）
+    if (glintStr > 0.04) {
+      const glintLen = (helmR * 0.45 + helmR * 0.45 * glintStr + Math.sin(this.bioTime * 7.2 + hx * 0.1) * 2.0 * glintStr);
+      const glintRot = Math.sin(this.bioTime * 2.1 + hx * 0.05) * 0.22;
+      c.save();
+      c.translate(specX, specY);
+      c.rotate(glintRot);
+      c.strokeStyle = `rgba(255, 255, 255, ${(0.88 * glintStr).toFixed(3)})`;
+      c.lineWidth = 1.0 + 0.4 * glintStr;
+      c.beginPath();
+      c.moveTo(-glintLen, 0); c.lineTo(glintLen, 0);
+      c.moveTo(0, -glintLen); c.lineTo(0, glintLen);
+      c.stroke();
 
-    c.strokeStyle = lt.rimColor(0.72 * reflStrength);
-    c.lineWidth = 0.95;
-    const diagLen = glintLen * 0.52;
-    c.beginPath();
-    c.moveTo(-diagLen, -diagLen); c.lineTo(diagLen, diagLen);
-    c.moveTo(-diagLen, diagLen);  c.lineTo(diagLen, -diagLen);
-    c.stroke();
-    c.restore();
+      c.strokeStyle = lt.rimColor(0.70 * glintStr);
+      c.lineWidth = 0.85;
+      const diagLen = glintLen * 0.50;
+      c.beginPath();
+      c.moveTo(-diagLen, -diagLen); c.lineTo(diagLen, diagLen);
+      c.moveTo(-diagLen, diagLen);  c.lineTo(diagLen, -diagLen);
+      c.stroke();
+      c.restore();
+    }
 
     // 4. 潜水服の肩〜胴体の光源側エッジに当たるリムハイライト
-    const shoulderX = hx - lt.nx * (bodyW * 0.46);
-    const bodyTopY = hy + helmR - 1;
-    const rimGrad = c.createLinearGradient(
-      shoulderX,
-      bodyTopY,
-      hx + lt.nx * (bodyW * 0.45),
-      bodyTopY + bodyH
-    );
-    rimGrad.addColorStop(0, lt.rimColor(rimAlpha * 0.76));
-    rimGrad.addColorStop(0.45, lt.rimColor(rimAlpha * 0.24));
-    rimGrad.addColorStop(1, lt.rimColor(0));
-    c.fillStyle = rimGrad;
-    c.beginPath();
-    c.roundRect(hx - bodyW * 0.5, bodyTopY, bodyW, bodyH, 6);
-    c.fill();
+    if (rimAlpha > 0.06) {
+      const shoulderX = hx - lt.nx * (bodyW * 0.46);
+      const bodyTopY = hy + helmR - 1;
+      const rimGrad = c.createLinearGradient(
+        shoulderX,
+        bodyTopY,
+        hx + lt.nx * (bodyW * 0.45),
+        bodyTopY + bodyH
+      );
+      rimGrad.addColorStop(0, lt.rimColor(rimAlpha * 0.65));
+      rimGrad.addColorStop(0.45, lt.rimColor(rimAlpha * 0.18));
+      rimGrad.addColorStop(1, lt.rimColor(0));
+      c.fillStyle = rimGrad;
+      c.beginPath();
+      c.roundRect(hx - bodyW * 0.5, bodyTopY, bodyW, bodyH, 6);
+      c.fill();
+    }
 
-    // 5. 海中ダイバーの表面をゆらゆら揺れ動く水面屈折光（コースティクス波紋）
-    if (isUnderwater) {
+    // 5. 海中ダイバーの表面をゆらゆら揺れ動く水面屈折光（コースティクス波紋：太陽光が強い時のみ現れる）
+    if (isUnderwater && specStr > 0.08) {
+      const bodyTopY = hy + helmR - 1;
       c.save();
       c.beginPath();
       c.arc(hx, hy, helmR, 0, Math.PI * 2);
       c.roundRect(hx - bodyW * 0.5, bodyTopY, bodyW, bodyH, 6);
       c.clip();
 
-      const causticAlpha = (0.18 + lt.directStrength * 0.26) * (1 - lt.rainIntensity * 0.45);
+      const causticAlpha = 0.34 * specStr;
       c.strokeStyle = lt.rimColor(causticAlpha);
-      c.lineWidth = 1.85;
+      c.lineWidth = 1.75;
       for (let k = -1; k <= 1; k++) {
         const waveShift = ((this.bioTime * 16 + k * 14 + hx * 0.2) % 38) - 14;
         const cy = hy - 8 + waveShift;
@@ -3600,41 +4567,39 @@ class SquidGameWatch {
     c.restore();
   }
 
-  // 液晶セグメント描画ヘルパー（GAME A/B: 1981年モノクロ液晶 / GAME C: 同じ形で妙にリアルな彩色＆光源連動の揺らぎ影）
+  // 液晶セグメント描画ヘルパー（GAME A/B: 1981年モノクロ液晶 / GAME C: 同じ形で妙にリアルな彩色＆光源連動の滑らかな一体型揺らぎ影）
   _drawSegment(ctx, isLit, pathFn, realDrawFn = null, shadowAlpha = 0.38, shadowOpts = null) {
     if (this._isRealColor()) {
       if (!isLit) return;
       ctx.save();
       if (shadowOpts && shadowOpts.isDiver) {
-        // ダイバー専用：光源と逆向きに長く伸び、水流と波でリアルに揺らぐ多層シャドウ
+        // ダイバー専用：分身にならない一体型の滑らかな揺らぎシャドウ
         this._drawWaveringDiverShadow(ctx, shadowOpts.pivotX, shadowOpts.pivotY, pathFn, {
           ...shadowOpts,
           shadowAlpha
         });
       } else if (shadowAlpha > 0.01) {
-        // イカやHUD等のドロップシャドウ（HUD以外は光源と逆向きに長く揺らぐ3層水中シャドウを投影）
+        // イカやHUD等のドロップシャドウ（分身にならない単一ソフトブラーシャドウ）
+        ctx.save();
         if (shadowOpts === 'hud') {
-          ctx.save();
           ctx.translate(2.4, 3.0);
           ctx.fillStyle = `rgba(4, 12, 26, ${shadowAlpha.toFixed(3)})`;
           ctx.strokeStyle = `rgba(4, 12, 26, ${shadowAlpha.toFixed(3)})`;
           pathFn(ctx);
-          ctx.restore();
         } else {
           const lt = this._getDiverLighting(540, 220);
-          for (let s = 3; s >= 1; s--) {
-            const su = s / 3;
-            const swX = Math.sin(this.bioTime * 4.2 - su * 2.2) * 3.8 * su;
-            const swY = Math.cos(this.bioTime * 3.6 - su * 2.0) * 2.6 * su;
-            const col = lt.shadowColor(shadowAlpha * (0.48 - su * 0.24));
-            ctx.save();
-            ctx.translate(lt.nx * 24.0 * su * lt.lenMul + swX, lt.ny * 16.5 * su * lt.lenMul + swY);
-            ctx.fillStyle = col;
-            ctx.strokeStyle = col;
-            pathFn(ctx);
-            ctx.restore();
-          }
+          const swX = Math.sin(this.bioTime * 2.8) * 2.2;
+          const swY = Math.cos(this.bioTime * 2.4) * 1.6;
+          const effAlpha = shadowAlpha * lt.shadowStrength * 0.72;
+          const col = lt.shadowColor(effAlpha);
+          ctx.shadowColor = col;
+          ctx.shadowBlur = 10;
+          ctx.translate(lt.nx * 12.0 * lt.lenMul + swX, lt.ny * 8.5 * lt.lenMul + swY);
+          ctx.fillStyle = col;
+          ctx.strokeStyle = col;
+          pathFn(ctx);
         }
+        ctx.restore();
       }
 
       if (realDrawFn) {
@@ -4426,17 +5391,18 @@ class SquidGameWatch {
       c.closePath();
     };
 
-    // 光源（太陽・満月・朝焼け・夕焼け・雨天）に合わせた布袋のライティング＆逆向きに長く揺らぐ影
+    // 光源（太陽・満月・朝焼け・夕焼け・雨天）に合わせた布袋のライティング＆分身にならない一体型の滑らかな影
     const lt = this._getDiverLighting(nx, ny);
-    for (let sLayer = 3; sLayer >= 0; sLayer--) {
-      const f = (sLayer + 1) / 4;
-      const dist = (5.5 + f * 16.5) * lt.shadowStretch;
-      const wave = Math.sin(this.bioTime * 5.8 - f * 2.8 + x * 0.04) * 3.8 * f;
-      const sx = lt.nx * dist + (-lt.ny) * wave;
-      const sy = lt.ny * dist * 0.85 + lt.nx * wave * 0.45;
+    if (lt.shadowAlpha > 0.02) {
+      const wave = Math.sin(this.bioTime * 3.2 + x * 0.03) * 2.4;
+      const sx = lt.nx * 11.5 * lt.shadowStretch + (-lt.ny) * wave;
+      const sy = lt.ny * 8.5 * lt.shadowStretch + lt.nx * wave * 0.4;
+      const sCol = lt.shadowColor(lt.shadowAlpha * 0.65);
       c.save();
+      c.shadowColor = sCol;
+      c.shadowBlur = 7;
       c.translate(sx, sy);
-      c.fillStyle = `rgba(${lt.shadowRgb[0]}, ${lt.shadowRgb[1]}, ${lt.shadowRgb[2]}, ${(lt.shadowAlpha * 0.32 * (1.15 - f * 0.55)).toFixed(3)})`;
+      c.fillStyle = sCol;
       traceSackBody();
       c.fill();
       c.restore();
