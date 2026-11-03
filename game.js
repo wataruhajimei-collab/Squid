@@ -393,6 +393,8 @@ class SquidGameWatch {
       { kind: 'moray_eel',      x: 188, y: 374, vx: 13.0,  scale: 0.96, phase: 4.4, hue: 135, fg: true }
     ];
 
+    this._resetCreatureDiscovery();
+
     this.marineSnow = [];
     for (let i = 0; i < 36; i++) {
       this.marineSnow.push({
@@ -1130,6 +1132,9 @@ class SquidGameWatch {
     this._setStatusText(`GAME ${this.gameMode} START! 宝箱へ進んで財宝を持ち帰ろう！`);
     this.sound.gameStart();
 
+    // GAME C: 空と海の仲間たちは最初は少数から始まり、プレイ時間の経過とともに1種類ずつ新しく登場する
+    this._resetCreatureDiscovery();
+
     // 画面タップガイドを短時間表示
     const hintOverlay = document.getElementById('touch-hint-overlay');
     if (hintOverlay) {
@@ -1552,8 +1557,12 @@ class SquidGameWatch {
       }
     }
 
+    // 空と海の仲間たちの「時間経過による段階的な登場」タイマー
+    this._updateCreatureDiscovery(dt);
+
     if (this.skyBirds) {
       for (const bd of this.skyBirds) {
+        if (!bd.revealed) continue;
         bd.x += bd.vx * dt;
         bd.y += Math.sin(this.bioTime * 2.2 + bd.phase) * bd.vy * dt * 12;
         if (bd.vx > 0 && bd.x > 820) bd.x = -95;
@@ -1594,6 +1603,7 @@ class SquidGameWatch {
 
     if (this.underwaterFish) {
       for (const f of this.underwaterFish) {
+        if (!f.revealed) continue;
         f.x += f.vx * dt;
         if (f.vx > 0 && f.x > 790) f.x = -65;
         if (f.vx < 0 && f.x < -65) f.x = 790;
@@ -2377,7 +2387,8 @@ class SquidGameWatch {
       ctx.restore();
     }
 
-    // (C) 海底の砂地からひょっこり顔を出して潮に揺れるチンアナゴ＆ニシキアナゴの群れ（5匹）
+    // (C) 海底の砂地からひょっこり顔を出して潮に揺れるチンアナゴ＆ニシキアナゴの群れ（5匹：プレイ途中から砂の中から順に顔を出す）
+    const eelReveal = this._seabedRevealAlpha('garden_eel');
     const eels = [
       { x: 162, y: 392, h: 20, kind: 'spotted', phase: 0.3 },
       { x: 171, y: 396, h: 17, kind: 'banded',  phase: 1.5 },
@@ -2386,9 +2397,13 @@ class SquidGameWatch {
       { x: 358, y: 434, h: 18, kind: 'spotted', phase: 2.1 }
     ];
     for (const el of eels) {
+      if (eelReveal <= 0) break;
       const sway = Math.sin(this.bioTime * 2.6 + el.phase) * 4.2;
+      const emerge = Math.min(1, eelReveal * 1.15);
       ctx.save();
+      ctx.globalAlpha = Math.min(1, eelReveal * 1.6);
       ctx.translate(el.x, el.y);
+      ctx.scale(1, emerge);
       ctx.lineCap = 'round';
       ctx.strokeStyle = el.kind === 'banded' ? '#f97316' : '#f1f5f9';
       ctx.lineWidth = 3.0;
@@ -2420,9 +2435,12 @@ class SquidGameWatch {
       ctx.restore();
     }
 
-    // (D) 螺旋の巻貝を背負って歩くヤドカリ
+    // (D) 螺旋の巻貝を背負って歩くヤドカリ（プレイ後半に登場）
+    const hermitReveal = this._seabedRevealAlpha('hermit_crab');
+    if (hermitReveal <= 0) return;
     const hx = 292 + Math.sin(this.bioTime * 0.95 + 1.1) * 16;
     ctx.save();
+    ctx.globalAlpha = hermitReveal;
     ctx.translate(hx, 428);
     ctx.fillStyle = '#d97706';
     ctx.strokeStyle = '#78350f';
@@ -2442,13 +2460,113 @@ class SquidGameWatch {
     ctx.restore();
   }
 
+  /* --------------------------------------------------------------------------
+     空と海の仲間たちの「段階的な登場（ディスカバリー）」演出
+     ・ゲーム開始時は空2体・海3体だけ。プレイ時間が進むたびに1種類ずつ新しい仲間が画面外から登場する
+     ・登場時は画面の端から泳ぎ／飛び込んできて、ふわっとフェードイン＋ステータス欄で「NEW!」を告知
+     -------------------------------------------------------------------------- */
+  _getCreatureJpName(kind) {
+    const names = {
+      seagull: 'カモメ', pelican: 'ペリカン', albatross: 'アホウドリ', heron: 'アオサギ',
+      goose_flock: '渡り鳥の群れ', kingfisher: 'カワセミ', swallow: 'ツバメ', dragonfly: '赤トンボ',
+      butterfly: 'アゲハチョウ', owl: 'フクロウ', bat: 'コウモリ', biplane: '複葉機', blimp: '飛行船',
+      hot_air_balloon: '熱気球', flamingo: 'フラミンゴ', eagle: 'ハクトウワシ', macaw: 'コンゴウインコ', ufo: 'UFO',
+      sardine_school: 'イワシの群れ', clownfish: 'カクレクマノミ', angelfish: 'キンチャクダイ',
+      butterflyfish: 'チョウチョウウオ', sea_turtle: 'ウミガメ', manta_ray: 'マンタ', jellyfish: 'クラゲ',
+      seahorse: 'タツノオトシゴ', pufferfish: 'ハリセンボン', dolphin: 'イルカ', shark: 'サメ',
+      sunfish: 'マンボウ', anglerfish: 'チョウチンアンコウ', nautilus: 'オウムガイ', flying_fish: 'トビウオ',
+      whale: 'ザトウクジラ', orca: 'シャチ', swordfish: 'メカジキ', eagle_ray: 'マダラトビエイ',
+      boxfish: 'ハコフグ', mini_octopus: 'メンダコ', moray_eel: 'ウツボ',
+      garden_eel: 'チンアナゴ', hermit_crab: 'ヤドカリ'
+    };
+    return names[kind] || kind;
+  }
+
+  _resetCreatureDiscovery() {
+    this.discoveryTime = 0;
+    this.discoveryAnnounced = {};
+    // 空：最初はカモメ2羽だけ。以降 約14秒ごとに新しい飛行キャラが1種類ずつ登場
+    if (this.skyBirds) {
+      let skyStep = 0;
+      let prevKind = null;
+      this.skyBirds.forEach((bd, i) => {
+        if (i >= 2 && bd.kind !== prevKind) skyStep++;
+        bd.unlockAt = i < 2 ? 0 : 8 + skyStep * 14;
+        prevKind = bd.kind;
+        bd.revealed = bd.unlockAt <= 0;
+        bd.revealT = bd.revealed ? 1 : 0;
+      });
+    }
+    // 海：最初はイワシの群れ＋クマノミのペアだけ。以降 約11秒ごとに新しい海洋生物が1種類ずつ登場（同種のペアは同時に登場）
+    if (this.underwaterFish) {
+      let seaStep = 0;
+      let prevKind = null;
+      this.underwaterFish.forEach((f, i) => {
+        if (i >= 3 && f.kind !== prevKind) seaStep++;
+        f.unlockAt = i < 3 ? 0 : 3 + seaStep * 11;
+        prevKind = f.kind;
+        f.revealed = f.unlockAt <= 0;
+        f.revealT = f.revealed ? 1 : 0;
+      });
+    }
+    // 海底の隠れキャラ：チンアナゴ（中盤）・ヤドカリ（終盤）
+    this.seabedUnlocks = { garden_eel: 120, hermit_crab: 215 };
+  }
+
+  _updateCreatureDiscovery(dt) {
+    if (typeof this.discoveryTime !== 'number') this._resetCreatureDiscovery();
+    // ゲームオーバー中は時計を止め、プレイ中・デモ中は進める
+    if (this.state !== 'GAMEOVER') this.discoveryTime += dt;
+    const tNow = this.discoveryTime;
+    const announce = (kind) => {
+      if (this.discoveryAnnounced[kind]) return;
+      this.discoveryAnnounced[kind] = true;
+      if (this._isRealColor() && this.state === 'PLAYING') {
+        this._setStatusText(`✨ NEW! ${this._getCreatureJpName(kind)} が現れた！`);
+      }
+    };
+
+    const revealList = (list, leftX, rightX) => {
+      if (!list) return;
+      for (const it of list) {
+        if (!it.revealed && tNow >= it.unlockAt) {
+          it.revealed = true;
+          it.revealT = 0;
+          // 画面の外側から飛び込んで／泳いで登場する
+          it.x = it.vx >= 0 ? leftX : rightX;
+          announce(it.kind);
+        }
+        if (it.revealed && it.revealT < 1) {
+          it.revealT = Math.min(1, it.revealT + dt / 2.2);
+        }
+      }
+    };
+    revealList(this.skyBirds, -40, 760);
+    revealList(this.underwaterFish, -45, 765);
+
+    if (this.seabedUnlocks) {
+      for (const k of Object.keys(this.seabedUnlocks)) {
+        if (tNow >= this.seabedUnlocks[k]) announce(k);
+      }
+    }
+  }
+
+  _seabedRevealAlpha(kind) {
+    if (!this.seabedUnlocks || typeof this.discoveryTime !== 'number') return 1;
+    const at = this.seabedUnlocks[kind] || 0;
+    return Math.max(0, Math.min(1, (this.discoveryTime - at) / 2.5));
+  }
+
   // 空を飛ぶ18種類のキャラクターの個別描画
   _drawSkyFlyerItem(ctx, bd, env, nightWeight) {
+    if (bd.revealed === false) return;
     // どの時間帯・天候でもバラエティ豊かなキャラが画面に賑やかに見えるよう高い視認性を保つ
     let visAlpha = 0.96;
     if (bd.activeTime === 'night') {
       visAlpha = 0.78 + nightWeight * 0.22;
     }
+    visAlpha *= (typeof bd.revealT === 'number' ? bd.revealT : 1);
+    if (visAlpha <= 0.01) return;
     const dir = bd.vx >= 0 ? 1 : -1;
     const flap = Math.sin(this.bioTime * bd.wingSpeed + bd.phase);
     const kind = bd.kind || 'seagull';
@@ -2905,12 +3023,16 @@ class SquidGameWatch {
 
   // 海中を泳ぐ15種類の海洋生物の個別描画（＋海底のカニ＆ヒトデで計16種類以上）
   _drawSeaCreatureItem(ctx, f, env) {
+    if (f.revealed === false) return;
+    const revealA = typeof f.revealT === 'number' ? f.revealT : 1;
+    if (revealA <= 0.01) return;
     const dir = f.vx >= 0 ? 1 : -1;
     const wag = Math.sin(this.bioTime * 8.5 + f.phase);
     const fy = f.y + Math.sin(this.bioTime * 1.8 + f.phase) * 4.8;
     const kind = f.kind || 'sardine_school';
 
     ctx.save();
+    ctx.globalAlpha *= revealA;
     ctx.translate(f.x, fy);
     ctx.scale(dir * f.scale, f.scale);
     ctx.lineCap = 'round';
@@ -3751,8 +3873,8 @@ class SquidGameWatch {
       const bShiftX = ltBoat.nx * 36 * ltBoat.lenMul + bWave;
       const bShiftY = Math.max(8, ltBoat.ny * 22 * ltBoat.lenMul);
       const bShadowGrad = ctx.createRadialGradient(125 + bShiftX * 0.35, 114 + bShiftY * 0.3, 12, 125 + bShiftX, 118 + bShiftY, 108);
-      bShadowGrad.addColorStop(0, ltBoat.shadowColor(0.46 * ltBoat.shadowStrength));
-      bShadowGrad.addColorStop(0.55, ltBoat.shadowColor(0.22 * ltBoat.shadowStrength));
+      bShadowGrad.addColorStop(0, ltBoat.shadowColor(0.62 * ltBoat.shadowStrength));
+      bShadowGrad.addColorStop(0.55, ltBoat.shadowColor(0.32 * ltBoat.shadowStrength));
       bShadowGrad.addColorStop(1, ltBoat.shadowColor(0));
       ctx.fillStyle = bShadowGrad;
       ctx.beginPath();
@@ -3899,7 +4021,7 @@ class SquidGameWatch {
       ctx.save();
       const rShiftX = Math.max(8, ltReef.nx * 36 * ltReef.lenMul);
       const rShiftY = Math.max(4, ltReef.ny * 14 * ltReef.lenMul);
-      const rCol = ltReef.shadowColor(0.38 * ltReef.shadowStrength);
+      const rCol = ltReef.shadowColor(0.50 * ltReef.shadowStrength);
       ctx.shadowColor = rCol;
       ctx.shadowBlur = 10;
       ctx.fillStyle = rCol;
@@ -4028,8 +4150,8 @@ class SquidGameWatch {
       const cOffX = ltChest.nx * 32 * ltChest.lenMul + cSway;
       const cOffY = Math.max(4, ltChest.ny * 10 * ltChest.lenMul);
       const cShadowGrad = ctx.createRadialGradient(cx + 42, cy + 60, 8, cx + 42 + cOffX, cy + 62 + cOffY, 64);
-      cShadowGrad.addColorStop(0, ltChest.shadowColor(0.48 * ltChest.shadowStrength));
-      cShadowGrad.addColorStop(0.55, ltChest.shadowColor(0.24 * ltChest.shadowStrength));
+      cShadowGrad.addColorStop(0, ltChest.shadowColor(0.66 * ltChest.shadowStrength));
+      cShadowGrad.addColorStop(0.55, ltChest.shadowColor(0.34 * ltChest.shadowStrength));
       cShadowGrad.addColorStop(1, ltChest.shadowColor(0));
       ctx.fillStyle = cShadowGrad;
       ctx.beginPath();
@@ -4713,8 +4835,8 @@ class SquidGameWatch {
     const glintPower = Math.max(0, Math.min(1, (sunDirect * depthAtten - 0.34) * 1.55));
     // 3. 輪郭リムハイライトの強さ (rimPower: 0.08〜1.0 — 光が弱い時は控えめに減光)
     const rimPower = Math.max(0.08, Math.min(1.0, rawDirect * 1.05 + (1 - env.rainIntensity) * 0.12));
-    // 4. 影の濃さ係数 (shadowStrength: 0.16〜1.0 — 雨天や夜間は影が薄く柔らかくなる)
-    const shadowStrength = Math.max(0.16, Math.min(1.0, 0.22 + rawDirect * 0.78));
+    // 4. 影の濃さ係数 (shadowStrength: 0.30〜1.0 — 明るい日中ほどくっきり濃く、雨天や夜間は柔らかく薄くなる)
+    const shadowStrength = Math.max(0.30, Math.min(1.0, 0.30 + rawDirect * 0.95));
 
     const directStrength = specPower;
 
@@ -4753,7 +4875,7 @@ class SquidGameWatch {
       rimColor: (a = 1) => toCss(rimArr, a),
       shadowArr,
       shadowRgb: shadowArr,
-      shadowAlpha: 0.42 * shadowStrength,
+      shadowAlpha: 0.58 * shadowStrength,
       shadowColor: (a = 1) => toCss(shadowArr, a)
     };
   }
@@ -4763,7 +4885,9 @@ class SquidGameWatch {
     const lt = this._getDiverLighting(pivotX, pivotY);
     const isUnderwater = opts.isUnderwater !== false;
     const footOffsetY = opts.footOffsetY || 58;
-    const baseAlpha = (opts.shadowAlpha || 0.42) * lt.shadowStrength;
+    // 明るい日差しの時ほど影をくっきり濃く（上限0.88で真っ黒な塗りつぶしにはしない）
+    const brightBoost = 1.0 + lt.specPower * 0.45;
+    const baseAlpha = Math.min(0.88, (opts.shadowAlpha || 0.42) * lt.shadowStrength * 1.55 * brightBoost);
     if (baseAlpha <= 0.02) return;
 
     // 影が伸びる距離（光源の高さと向きに応じ、滑らかなグラデーションコーンとして伸ばす）
@@ -4786,8 +4910,8 @@ class SquidGameWatch {
 
       // (A) 足元直下の柔らかい接地アンビエントオクルージョン楕円
       const aoGrad = ctx.createRadialGradient(footX, footY, 2, footX + lt.nx * 5, footY + 1, isUnderwater ? 18 : 13);
-      aoGrad.addColorStop(0, lt.shadowColor(baseAlpha * 0.68));
-      aoGrad.addColorStop(0.55, lt.shadowColor(baseAlpha * 0.32));
+      aoGrad.addColorStop(0, lt.shadowColor(Math.min(0.9, baseAlpha * 0.95)));
+      aoGrad.addColorStop(0.55, lt.shadowColor(baseAlpha * 0.48));
       aoGrad.addColorStop(1, lt.shadowColor(0));
       ctx.fillStyle = aoGrad;
       ctx.beginPath();
@@ -4796,9 +4920,9 @@ class SquidGameWatch {
 
       // (B) 足元から先端へ境目なく溶ける滑らかな1本の影リボン（分身シルエットを一切作らない）
       const gGrad = ctx.createLinearGradient(footX, footY, tipX, tipY);
-      gGrad.addColorStop(0, lt.shadowColor(baseAlpha * 0.58));
-      gGrad.addColorStop(0.45, lt.shadowColor(baseAlpha * 0.34));
-      gGrad.addColorStop(0.82, lt.shadowColor(baseAlpha * 0.12));
+      gGrad.addColorStop(0, lt.shadowColor(baseAlpha * 0.82));
+      gGrad.addColorStop(0.45, lt.shadowColor(baseAlpha * 0.52));
+      gGrad.addColorStop(0.82, lt.shadowColor(baseAlpha * 0.20));
       gGrad.addColorStop(1, lt.shadowColor(0));
 
       ctx.save();
@@ -4828,10 +4952,10 @@ class SquidGameWatch {
     ctx.rotate(tilt);
     ctx.scale(1.0, ry / rx);
     const volGrad = ctx.createRadialGradient(-lt.nx * 3, 0, 2, 0, 0, rx);
-    const coreAlpha = baseAlpha * (opts.drawGroundShadow ? 0.44 : 0.48);
+    const coreAlpha = baseAlpha * (opts.drawGroundShadow ? 0.66 : 0.72);
     volGrad.addColorStop(0, lt.shadowColor(coreAlpha));
-    volGrad.addColorStop(0.48, lt.shadowColor(coreAlpha * 0.55));
-    volGrad.addColorStop(0.82, lt.shadowColor(coreAlpha * 0.16));
+    volGrad.addColorStop(0.48, lt.shadowColor(coreAlpha * 0.62));
+    volGrad.addColorStop(0.82, lt.shadowColor(coreAlpha * 0.22));
     volGrad.addColorStop(1, lt.shadowColor(0));
     ctx.fillStyle = volGrad;
     ctx.beginPath();
@@ -5008,7 +5132,7 @@ class SquidGameWatch {
           const lt = this._getDiverLighting(540, 220);
           const swX = Math.sin(this.bioTime * 2.4) * 1.2;
           const swY = Math.cos(this.bioTime * 2.0) * 1.0;
-          const effAlpha = shadowAlpha * lt.shadowStrength * 0.28;
+          const effAlpha = shadowAlpha * lt.shadowStrength * 0.42;
           const col = lt.shadowColor(effAlpha);
           ctx.shadowColor = col;
           ctx.shadowBlur = 12;
@@ -5816,8 +5940,8 @@ class SquidGameWatch {
       const sx = lt.nx * 8.5 * lt.shadowStretch + (-lt.ny) * wave;
       const sy = bagH * 0.55 + lt.ny * 6.0 * lt.shadowStretch;
       const sGrad = c.createRadialGradient(sx, sy, 2, sx, sy, bagH * 0.78);
-      sGrad.addColorStop(0, lt.shadowColor(lt.shadowAlpha * 0.52));
-      sGrad.addColorStop(0.55, lt.shadowColor(lt.shadowAlpha * 0.22));
+      sGrad.addColorStop(0, lt.shadowColor(lt.shadowAlpha * 0.72));
+      sGrad.addColorStop(0.55, lt.shadowColor(lt.shadowAlpha * 0.34));
       sGrad.addColorStop(1, lt.shadowColor(0));
       c.save();
       c.fillStyle = sGrad;
