@@ -2107,9 +2107,10 @@ class SquidGameWatch {
     ctx.restore();
 
     // 海面に落ちる雲の影（光源の反対側へ斜めに落ちる）
-    if (this.skyClouds && clearSkyFactor > 0.05) {
+    const clearSky = Math.pow(Math.max(0, 1.0 - env.rainIntensity * 1.45), 1.6);
+    if (this.skyClouds && clearSky > 0.05) {
       const ltSky = this._getDiverLighting(360, 60);
-      const cloudShadowAlpha = Math.min(0.28, 0.22 * ltSky.shadowStrength * clearSkyFactor);
+      const cloudShadowAlpha = Math.min(0.28, 0.22 * ltSky.shadowStrength * clearSky);
       if (cloudShadowAlpha > 0.02) {
         ctx.save();
         ctx.fillStyle = ltSky.shadowColor(cloudShadowAlpha);
@@ -4168,12 +4169,15 @@ class SquidGameWatch {
         Math.round(spA.ray[1] + (spB.ray[1] - spA.ray[1]) * t),
         Math.round(spA.ray[2] + (spB.ray[2] - spA.ray[2]) * t)
       ];
-      const rayShift = Math.sin(this.bioTime * 0.55) * 18;
+      // 太陽・満月の水平位置(ltSun.nx)と完全に連動し、光線が斜めに差し込む
+      const ltSun = this._getDiverLighting(360, 100);
+      const sunSlopeX = -ltSun.nx * 110 * ltSun.lenMul;
+      const rayShift = Math.sin(this.bioTime * 0.55) * 16;
       const rays = [
-        { xTop: 140 + rayShift, wTop: 45, xBot: 60 + rayShift * 1.4, wBot: 110, alpha: 0.16 },
-        { xTop: 265 - rayShift * 0.7, wTop: 60, xBot: 210 - rayShift, wBot: 145, alpha: 0.20 },
-        { xTop: 410 + rayShift * 0.8, wTop: 50, xBot: 370 + rayShift, wBot: 130, alpha: 0.14 },
-        { xTop: 560 - rayShift * 0.6, wTop: 45, xBot: 520 - rayShift, wBot: 115, alpha: 0.11 }
+        { xTop: 135 + rayShift, wTop: 45, xBot: 135 + sunSlopeX + rayShift * 1.3, wBot: 120, alpha: 0.18 },
+        { xTop: 275 - rayShift * 0.7, wTop: 55, xBot: 275 + sunSlopeX - rayShift * 1.1, wBot: 140, alpha: 0.22 },
+        { xTop: 420 + rayShift * 0.8, wTop: 50, xBot: 420 + sunSlopeX + rayShift, wBot: 130, alpha: 0.17 },
+        { xTop: 565 - rayShift * 0.6, wTop: 45, xBot: 565 + sunSlopeX - rayShift * 0.9, wBot: 115, alpha: 0.14 }
       ];
       for (const r of rays) {
         const rg = ctx.createLinearGradient(r.xTop, 100, r.xBot, 440);
@@ -5262,45 +5266,45 @@ class SquidGameWatch {
     const baseAlpha = Math.min(0.88, (opts.shadowAlpha || 0.42) * lt.shadowStrength * 1.55 * brightBoost);
     if (baseAlpha <= 0.02) return;
 
-    // 影が伸びる距離（光源の高さと向きに応じ、滑らかなグラデーションコーンとして伸ばす）
-    const reach = (isUnderwater ? 34.0 : 22.0) * (0.9 + Math.abs(lt.nx) * 0.75) * lt.lenMul;
+    // 影が伸びる距離（光源の高さと向きに応じ、明確かつダイナミックに伸ばす）
+    const reach = (isUnderwater ? 46.0 : 30.0) * (1.0 + Math.abs(lt.nx) * 0.95) * lt.lenMul;
     const phase = this.bioTime * (isUnderwater ? 3.0 : 1.9) + pivotX * 0.02 + pivotY * 0.015;
     const smoothWave = Math.sin(phase) * 0.7 + Math.cos(phase * 1.5 + 0.5) * 0.3;
 
     ctx.save();
 
-    // 1. 足元の甲板・海底から光源の反対側へ滑らかに伸びる「連続テーパード・グラデーション影」
+    // 1. 足元の甲板・海底から光源の反対側へ斜めにしっかり伸びる「連続テーパード・グラデーション影」
     if (opts.drawGroundShadow) {
       const footX = pivotX;
       const footY = pivotY + footOffsetY - 2;
-      const swayPerpX = -lt.ny * smoothWave * (isUnderwater ? 4.5 : 1.6);
-      const swayPerpY = lt.nx * smoothWave * (isUnderwater ? 1.8 : 0.7);
-      const tipX = footX + lt.nx * reach * 2.1 + swayPerpX;
-      const tipY = footY + Math.max(4.0, lt.ny * reach * 0.44) + swayPerpY;
-      const midX = (footX + tipX) * 0.5 - lt.ny * Math.cos(phase * 1.3) * (isUnderwater ? 3.5 : 1.2);
-      const midY = (footY + tipY) * 0.5 + lt.nx * Math.cos(phase * 1.3) * 1.2;
+      const swayPerpX = -lt.ny * smoothWave * (isUnderwater ? 5.0 : 2.0);
+      const swayPerpY = lt.nx * smoothWave * (isUnderwater ? 2.2 : 0.8);
+      const tipX = footX + lt.nx * reach * 2.6 + swayPerpX;
+      const tipY = footY + Math.max(5.0, lt.ny * reach * 0.52) + swayPerpY;
+      const midX = (footX + tipX) * 0.5 - lt.ny * Math.cos(phase * 1.3) * (isUnderwater ? 4.0 : 1.5);
+      const midY = (footY + tipY) * 0.5 + lt.nx * Math.cos(phase * 1.3) * 1.5;
 
-      // (A) 足元直下の柔らかい接地アンビエントオクルージョン楕円（光源の反対側へオフセット）
-      const aoGrad = ctx.createRadialGradient(footX, footY, 2, footX + lt.nx * 7, footY + 1.5, isUnderwater ? 20 : 14);
-      aoGrad.addColorStop(0, lt.shadowColor(Math.min(0.92, baseAlpha * 0.98)));
-      aoGrad.addColorStop(0.55, lt.shadowColor(baseAlpha * 0.52));
+      // (A) 足元直下の接地アンビエントオクルージョン（光源の反対側へオフセット）
+      const aoGrad = ctx.createRadialGradient(footX, footY, 2, footX + lt.nx * 9, footY + 2.0, isUnderwater ? 24 : 16);
+      aoGrad.addColorStop(0, lt.shadowColor(Math.min(0.95, baseAlpha * 1.05)));
+      aoGrad.addColorStop(0.55, lt.shadowColor(baseAlpha * 0.58));
       aoGrad.addColorStop(1, lt.shadowColor(0));
       ctx.fillStyle = aoGrad;
       ctx.beginPath();
-      ctx.ellipse(footX + lt.nx * 6, footY + 1.5, isUnderwater ? 19 : 13, isUnderwater ? 7.2 : 5.0, 0, 0, Math.PI * 2);
+      ctx.ellipse(footX + lt.nx * 8, footY + 2.0, isUnderwater ? 23 : 15, isUnderwater ? 8.5 : 5.8, 0, 0, Math.PI * 2);
       ctx.fill();
 
-      // (B) 足元から先端へ境目なく溶ける滑らかな1本の影リボン（光源の反対側へしっかり伸びる）
+      // (B) 足元から先端へ境目なく溶ける滑らかな1本の影リボン（光源の反対側へしっかり長く伸びる）
       const gGrad = ctx.createLinearGradient(footX, footY, tipX, tipY);
-      gGrad.addColorStop(0, lt.shadowColor(baseAlpha * 0.88));
-      gGrad.addColorStop(0.40, lt.shadowColor(baseAlpha * 0.58));
-      gGrad.addColorStop(0.78, lt.shadowColor(baseAlpha * 0.24));
+      gGrad.addColorStop(0, lt.shadowColor(baseAlpha * 0.92));
+      gGrad.addColorStop(0.35, lt.shadowColor(baseAlpha * 0.65));
+      gGrad.addColorStop(0.72, lt.shadowColor(baseAlpha * 0.32));
       gGrad.addColorStop(1, lt.shadowColor(0));
 
       ctx.save();
       ctx.strokeStyle = gGrad;
       ctx.lineCap = 'round';
-      ctx.lineWidth = isUnderwater ? 24 : 16;
+      ctx.lineWidth = isUnderwater ? 26 : 18;
       ctx.beginPath();
       ctx.moveTo(footX, footY);
       ctx.quadraticCurveTo(midX, midY, tipX, tipY);
@@ -5309,25 +5313,24 @@ class SquidGameWatch {
     }
 
     // 2. 水中・空間のダイバー背後（光源の反対側）に落ちる「分身にならない滑らかなソフト・ボリューメトリック影」
-    // ※ pathFn(ctx) のような頭・目穴・泡・棒手足の切り抜きシルエットは描かず、境界が自然に溶ける楕円グラデーションで表現
     const bodyCenterY = pivotY + footOffsetY * 0.36;
-    const shiftX = lt.nx * reach * 0.68 + (-lt.ny) * smoothWave * (isUnderwater ? 3.2 : 1.2);
-    const shiftY = lt.ny * reach * 0.40 + lt.nx * smoothWave * 1.2;
+    const shiftX = lt.nx * reach * 0.85 + (-lt.ny) * smoothWave * (isUnderwater ? 3.5 : 1.5);
+    const shiftY = lt.ny * reach * 0.50 + lt.nx * smoothWave * 1.4;
     const shX = pivotX + shiftX;
     const shY = bodyCenterY + shiftY;
-    const rx = isUnderwater ? 23 : 16;
-    const ry = footOffsetY * 0.62;
-    const tilt = Math.atan2(shiftY, shiftX) * 0.22 + lt.nx * 0.26 + smoothWave * 0.05;
+    const rx = isUnderwater ? 26 : 18;
+    const ry = footOffsetY * 0.66;
+    const tilt = Math.atan2(shiftY, shiftX) * 0.25 + lt.nx * 0.30 + smoothWave * 0.05;
 
     ctx.save();
     ctx.translate(shX, shY);
     ctx.rotate(tilt);
     ctx.scale(1.0, ry / rx);
-    const volGrad = ctx.createRadialGradient(-lt.nx * 3, 0, 2, 0, 0, rx);
-    const coreAlpha = baseAlpha * (opts.drawGroundShadow ? 0.66 : 0.72);
+    const volGrad = ctx.createRadialGradient(-lt.nx * 4, 0, 2, 0, 0, rx);
+    const coreAlpha = baseAlpha * (opts.drawGroundShadow ? 0.75 : 0.82);
     volGrad.addColorStop(0, lt.shadowColor(coreAlpha));
-    volGrad.addColorStop(0.48, lt.shadowColor(coreAlpha * 0.62));
-    volGrad.addColorStop(0.82, lt.shadowColor(coreAlpha * 0.22));
+    volGrad.addColorStop(0.45, lt.shadowColor(coreAlpha * 0.68));
+    volGrad.addColorStop(0.80, lt.shadowColor(coreAlpha * 0.28));
     volGrad.addColorStop(1, lt.shadowColor(0));
     ctx.fillStyle = volGrad;
     ctx.beginPath();
@@ -5531,11 +5534,18 @@ class SquidGameWatch {
 
     ctx.save();
     if (isLit) {
-      // 1. 反射板へのドロップシャドウ
+      // 1. 反射板へのドロップシャドウ（GAME C時は上空の太陽・月光源の反対側へダイナミックに投影）
       ctx.save();
-      ctx.translate(2.2, 2.8);
-      ctx.fillStyle = 'rgba(24, 32, 18, 0.18)';
-      ctx.strokeStyle = 'rgba(24, 32, 18, 0.18)';
+      if (this.gameMode === 'C') {
+        const lt = this._getDiverLighting(360, 240);
+        ctx.translate(lt.nx * 5.5, Math.max(3.2, lt.ny * 5.0));
+        ctx.fillStyle = 'rgba(16, 24, 18, 0.28)';
+        ctx.strokeStyle = 'rgba(16, 24, 18, 0.28)';
+      } else {
+        ctx.translate(2.2, 2.8);
+        ctx.fillStyle = 'rgba(24, 32, 18, 0.18)';
+        ctx.strokeStyle = 'rgba(24, 32, 18, 0.18)';
+      }
       pathFn(ctx);
       ctx.restore();
 
