@@ -314,7 +314,7 @@ class SquidGameWatch {
       { x: 660, y: 38, rx: 58, ry: 14, speed: 7.8,  layer: 0, puffs: [[-22, 3, 0.74], [2, -2, 0.98], [26, 4, 0.76]] }
     ];
 
-    // 空を飛ぶ多彩なキャラクター群（全18種類・20体：カモメ、ペリカン、アホウドリ、アオサギ、渡り鳥V字編隊、カワセミ、ツバメ、赤トンボ、アゲハ蝶、フクロウ、コウモリ、複葉機、飛行船、熱気球、フラミンゴ、ハクトウワシ、コンゴウインコ、UFO）
+    // 空を飛ぶ多彩なキャラクター群（全24種類・26体：カモメ、ペリカン、アホウドリ、アオサギ、渡り鳥V字編隊、カワセミ、ツバメ、赤トンボ、アゲハ蝶、フクロウ、コウモリ、複葉機、飛行船、熱気球、フラミンゴ、ハクトウワシ、コンゴウインコ、UFO、トビ、オオハシ、気象観測気球、プテラノドン、花火、ペガサス）
     this.skyBirds = [
       { kind: 'seagull',         x: 175, y: 32, vx: 22.0,  vy: 0.4, wingSpeed: 7.5,  phase: 0.0, scale: 0.96, activeTime: 'all' },
       { kind: 'seagull',         x: 154, y: 42, vx: 21.5,  vy: 0.3, wingSpeed: 7.8,  phase: 1.2, scale: 0.82, activeTime: 'all' },
@@ -334,7 +334,13 @@ class SquidGameWatch {
       { kind: 'flamingo',        x: 445, y: 54, vx: 20.5,  vy: 0.22, wingSpeed: 5.8,  phase: 2.5, scale: 0.96, activeTime: 'all' },
       { kind: 'eagle',           x: 125, y: 24, vx: 24.0,  vy: 0.20, wingSpeed: 4.2,  phase: 1.9, scale: 1.06, activeTime: 'all' },
       { kind: 'macaw',           x: 382, y: 60, vx: -26.5, vy: 0.45, wingSpeed: 9.2,  phase: 3.1, scale: 0.90, activeTime: 'all' },
-      { kind: 'ufo',             x: 690, y: 14, vx: -32.0, vy: 0.35, wingSpeed: 12.0, phase: 5.1, scale: 0.82, activeTime: 'night' }
+      { kind: 'ufo',             x: 690, y: 14, vx: -32.0, vy: 0.35, wingSpeed: 12.0, phase: 5.1, scale: 0.82, activeTime: 'night' },
+      { kind: 'black_kite',      x: 190, y: 36, vx: 21.0,  vy: 0.25, wingSpeed: 3.8, phase: 1.6, scale: 1.02, activeTime: 'all' },
+      { kind: 'toucan',          x: 430, y: 62, vx: -23.0, vy: 0.35, wingSpeed: 7.2, phase: 2.8, scale: 0.95, activeTime: 'all' },
+      { kind: 'weather_balloon', x: 110, y: 16, vx: 5.5,   vy: 0.05, wingSpeed: 1.4, phase: 0.8, scale: 0.88, activeTime: 'all' },
+      { kind: 'pterosaur',       x: 640, y: 28, vx: -29.0, vy: 0.28, wingSpeed: 4.5, phase: 4.2, scale: 1.05, activeTime: 'all' },
+      { kind: 'firework_rocket', x: 260, y: 20, vx: 18.0,  vy: 0.50, wingSpeed: 22.0,phase: 0.0, scale: 0.85, activeTime: 'night' },
+      { kind: 'pegasus',         x: 580, y: 22, vx: -24.0, vy: 0.20, wingSpeed: 6.2, phase: 3.0, scale: 1.00, activeTime: 'all' }
     ];
 
     this.skyStars = [];
@@ -365,7 +371,7 @@ class SquidGameWatch {
       });
     }
 
-    // 海中を回遊する多彩な海洋生物（全22種・24体＋海底生物4種：イワシ銀鱗群・カクレクマノミ・ツノダシ・チョウチョウウオ・ウミガメ・マンタ・クラゲ・タツノオトシゴ・ハリセンボン・イルカ・サメ・マンボウ・チョウチンアンコウ・オウムガイ・トビウオ・クジラ・シャチ・メカジキ・マダラトビエイ・ハコフグ・メンダコ・ウツボ）
+    // 海中を回遊する多彩な海洋生物（全30種・32体＋海底生物4種：イワシ銀鱗群・カクレクマノミ・ツノダシ・チョウチョウウオ・ウミガメ・マンタ・クラゲ・タツノオトシゴ・ハリセンボン・イルカ・サメ・マンボウ・チョウチンアンコウ・オウムガイ・トビウオ・クジラ・シャチ・メカジキ・マダラトビエイ・ハコフグ・メンダコ・ウツボ・シュモクザメ・クリオネ・ジンベエザメ・カジキマグロ・リュウグウノツカイ・シーラカンス・潜水球・マーメイド）
     this.underwaterFish = [
       { kind: 'sardine_school', x: 235, y: 162, vx: 22.0,  scale: 0.90, phase: 0.0, hue: 198, fg: false },
       { kind: 'clownfish',      x: 165, y: 315, vx: 15.5,  scale: 0.95, phase: 0.6, hue: 22,  fg: true },
@@ -390,7 +396,14 @@ class SquidGameWatch {
       { kind: 'eagle_ray',      x: 272, y: 292, vx: -19.0, scale: 1.04, phase: 3.3, hue: 208, fg: true },
       { kind: 'boxfish',        x: 318, y: 368, vx: 11.5,  scale: 0.92, phase: 1.8, hue: 48,  fg: true },
       { kind: 'mini_octopus',   x: 455, y: 344, vx: -8.5,  scale: 0.94, phase: 2.9, hue: 8,   fg: true },
-      { kind: 'moray_eel',      x: 188, y: 374, vx: 13.0,  scale: 0.96, phase: 4.4, hue: 135, fg: true }
+      { kind: 'moray_eel',      x: 188, y: 374, vx: 13.0,  scale: 0.96, phase: 4.4, hue: 135, fg: true },
+      { kind: 'hammerhead',     x: 620, y: 235, vx: -20.5, scale: 1.08, phase: 1.4, hue: 215, fg: true },
+      { kind: 'clione',         x: 360, y: 210, vx: 3.8,   scale: 0.90, phase: 3.7, hue: 190, fg: true },
+      { kind: 'whale_shark',    x: 120, y: 185, vx: 9.8,   scale: 1.25, phase: 0.5, hue: 225, fg: false },
+      { kind: 'oarfish',        x: 530, y: 330, vx: -12.0, scale: 1.15, phase: 2.2, hue: 345, fg: true },
+      { kind: 'coelacanth',     x: 210, y: 360, vx: 8.5,   scale: 0.98, phase: 4.8, hue: 230, fg: true },
+      { kind: 'bathysphere',    x: 420, y: 275, vx: -4.2,  scale: 0.92, phase: 1.9, hue: 45,  fg: false },
+      { kind: 'mermaid',        x: 670, y: 310, vx: -14.5, scale: 0.96, phase: 5.5, hue: 160, fg: true }
     ];
 
     this._resetCreatureDiscovery();
@@ -2471,65 +2484,96 @@ class SquidGameWatch {
       goose_flock: '渡り鳥の群れ', kingfisher: 'カワセミ', swallow: 'ツバメ', dragonfly: '赤トンボ',
       butterfly: 'アゲハチョウ', owl: 'フクロウ', bat: 'コウモリ', biplane: '複葉機', blimp: '飛行船',
       hot_air_balloon: '熱気球', flamingo: 'フラミンゴ', eagle: 'ハクトウワシ', macaw: 'コンゴウインコ', ufo: 'UFO',
+      black_kite: 'トビ', toucan: 'オオハシ', weather_balloon: '気象観測気球', pterosaur: 'プテラノドン', firework_rocket: '打ち上げ花火', pegasus: '天馬ペガサス',
       sardine_school: 'イワシの群れ', clownfish: 'カクレクマノミ', angelfish: 'キンチャクダイ',
       butterflyfish: 'チョウチョウウオ', sea_turtle: 'ウミガメ', manta_ray: 'マンタ', jellyfish: 'クラゲ',
       seahorse: 'タツノオトシゴ', pufferfish: 'ハリセンボン', dolphin: 'イルカ', shark: 'サメ',
       sunfish: 'マンボウ', anglerfish: 'チョウチンアンコウ', nautilus: 'オウムガイ', flying_fish: 'トビウオ',
       whale: 'ザトウクジラ', orca: 'シャチ', swordfish: 'メカジキ', eagle_ray: 'マダラトビエイ',
       boxfish: 'ハコフグ', mini_octopus: 'メンダコ', moray_eel: 'ウツボ',
+      hammerhead: 'シュモクザメ', clione: 'クリオネ', whale_shark: 'ジンベエザメ', oarfish: 'リュウグウノツカイ',
+      coelacanth: 'シーラカンス', bathysphere: '潜水探査球', mermaid: '人魚マーメイド',
       garden_eel: 'チンアナゴ', hermit_crab: 'ヤドカリ'
     };
     return names[kind] || kind;
   }
 
   _resetCreatureDiscovery() {
-    this.discoveryTime = 0;
     this.discoveryAnnounced = {};
-    // 空：最初はカモメ2羽だけ。以降 約14秒ごとに新しい飛行キャラが1種類ずつ登場
-    if (this.skyBirds) {
-      let skyStep = 0;
-      let prevKind = null;
-      this.skyBirds.forEach((bd, i) => {
-        if (i >= 2 && bd.kind !== prevKind) skyStep++;
-        bd.unlockAt = i < 2 ? 0 : 8 + skyStep * 14;
-        prevKind = bd.kind;
-        bd.revealed = bd.unlockAt <= 0;
-        bd.revealT = bd.revealed ? 1 : 0;
+    this.seabedRevealT = {};
+
+    // 同じ種類が連続するもの（カモメ2羽・クマノミのペア等）は1つのグループとして同時に登場させる
+    const buildGroups = (list, starters) => {
+      const groups = [];
+      let prev = null;
+      (list || []).forEach((it, i) => {
+        if (i < starters) {
+          it.unlockScore = 0;
+          it.revealed = true;
+          it.revealT = 1;
+          prev = it.kind;
+          return;
+        }
+        if (it.kind !== prev || groups.length === 0) groups.push([]);
+        groups[groups.length - 1].push(it);
+        it.revealed = false;
+        it.revealT = 0;
+        prev = it.kind;
       });
+      return groups;
+    };
+    // 開始時：空はカモメ2羽、海はイワシの群れ＋クマノミのペアだけ
+    const skyGroups = buildGroups(this.skyBirds, 2);
+    const seaGroups = buildGroups(this.underwaterFish, 3);
+
+    // 海 → 空 → 海 → 空… と交互に並べ、途中に海底の隠れキャラ（チンアナゴ・ヤドカリ）を挟む
+    const order = [];
+    const maxLen = Math.max(skyGroups.length, seaGroups.length);
+    for (let i = 0; i < maxLen; i++) {
+      if (seaGroups[i]) order.push({ type: 'group', items: seaGroups[i] });
+      if (skyGroups[i]) order.push({ type: 'group', items: skyGroups[i] });
+      if (order.length === 18) order.push({ type: 'seabed', kind: 'garden_eel' });
+      if (order.length === 34) order.push({ type: 'seabed', kind: 'hermit_crab' });
     }
-    // 海：最初はイワシの群れ＋クマノミのペアだけ。以降 約11秒ごとに新しい海洋生物が1種類ずつ登場（同種のペアは同時に登場）
-    if (this.underwaterFish) {
-      let seaStep = 0;
-      let prevKind = null;
-      this.underwaterFish.forEach((f, i) => {
-        if (i >= 3 && f.kind !== prevKind) seaStep++;
-        f.unlockAt = i < 3 ? 0 : 3 + seaStep * 11;
-        prevKind = f.kind;
-        f.revealed = f.unlockAt <= 0;
-        f.revealT = f.revealed ? 1 : 0;
-      });
-    }
-    // 海底の隠れキャラ：チンアナゴ（中盤）・ヤドカリ（終盤）
-    this.seabedUnlocks = { garden_eel: 120, hermit_crab: 215 };
+
+    // 点数しきい値：序盤はサクサク、後半ほど高得点が必要（k番目 ≒ 4k + 0.06k²点：5,8,13…約200点で半分、全員集合は約400点）
+    this.seabedUnlocks = {};
+    this.creatureUnlockScores = [];
+    order.forEach((step, idx) => {
+      const k = idx + 1;
+      const need = Math.round(4 * k + 0.06 * k * k);
+      this.creatureUnlockScores.push(need);
+      if (step.type === 'seabed') {
+        this.seabedUnlocks[step.kind] = need;
+      } else {
+        for (const it of step.items) it.unlockScore = need;
+      }
+    });
+  }
+
+  // 現在の「発見ポイント」：GAME中はスコア、TIME（時計・デモ）表示中は全員集合で賑やかに見せる
+  _getDiscoveryProgress() {
+    if (this.state === 'TIME') return Infinity;
+    return Math.max(0, this.score || 0);
   }
 
   _updateCreatureDiscovery(dt) {
-    if (typeof this.discoveryTime !== 'number') this._resetCreatureDiscovery();
-    // ゲームオーバー中は時計を止め、プレイ中・デモ中は進める
-    if (this.state !== 'GAMEOVER') this.discoveryTime += dt;
-    const tNow = this.discoveryTime;
+    if (!this.creatureUnlockScores) this._resetCreatureDiscovery();
+    const progress = this._getDiscoveryProgress();
     const announce = (kind) => {
       if (this.discoveryAnnounced[kind]) return;
       this.discoveryAnnounced[kind] = true;
-      if (this._isRealColor() && this.state === 'PLAYING') {
-        this._setStatusText(`✨ NEW! ${this._getCreatureJpName(kind)} が現れた！`);
+      if (this._isRealColor() && this.state !== 'TIME') {
+        const next = this.creatureUnlockScores.find(s => s > progress);
+        const nextMsg = next ? `（次の仲間は ${next} 点で登場）` : '（全員集合！）';
+        this._setStatusText(`✨ NEW! ${this._getCreatureJpName(kind)} が現れた！${nextMsg}`);
       }
     };
 
     const revealList = (list, leftX, rightX) => {
       if (!list) return;
       for (const it of list) {
-        if (!it.revealed && tNow >= it.unlockAt) {
+        if (!it.revealed && progress >= it.unlockScore) {
           it.revealed = true;
           it.revealT = 0;
           // 画面の外側から飛び込んで／泳いで登場する
@@ -2546,15 +2590,18 @@ class SquidGameWatch {
 
     if (this.seabedUnlocks) {
       for (const k of Object.keys(this.seabedUnlocks)) {
-        if (tNow >= this.seabedUnlocks[k]) announce(k);
+        if (progress >= this.seabedUnlocks[k]) {
+          announce(k);
+          this.seabedRevealT[k] = Math.min(1, (this.seabedRevealT[k] || 0) + dt / 2.5);
+        }
       }
     }
   }
 
   _seabedRevealAlpha(kind) {
-    if (!this.seabedUnlocks || typeof this.discoveryTime !== 'number') return 1;
-    const at = this.seabedUnlocks[kind] || 0;
-    return Math.max(0, Math.min(1, (this.discoveryTime - at) / 2.5));
+    if (!this.seabedUnlocks || !this.seabedRevealT) return 1;
+    if (this._getDiscoveryProgress() === Infinity) return 1;
+    return this.seabedRevealT[kind] || 0;
   }
 
   // 空を飛ぶ18種類のキャラクターの個別描画
@@ -3016,6 +3063,138 @@ class SquidGameWatch {
         ctx.arc(i * 3.2, 0.2, 1.0, 0, Math.PI * 2);
         ctx.fill();
       }
+    } else if (kind === 'black_kite') {
+      // 18. トビ（鳶：褐色の翼・特徴的な三味線のバチ型の尾羽・悠然とした旋回滑空）
+      const wy = flap * 4.2;
+      ctx.fillStyle = '#78350f';
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 6.5, 2.6, 0, 0, Math.PI * 2);
+      ctx.fill();
+      // バチ型の尾羽（中央が凹んだ扇形）
+      ctx.beginPath();
+      ctx.moveTo(-6, 0); ctx.lineTo(-12.5, -3.2); ctx.lineTo(-10.5, 0); ctx.lineTo(-12.5, 3.2);
+      ctx.closePath();
+      ctx.fill();
+      // 滑空する幅広の翼
+      ctx.strokeStyle = '#92400e';
+      ctx.lineWidth = 2.6;
+      ctx.beginPath();
+      ctx.moveTo(-1, 0); ctx.quadraticCurveTo(-6, -wy * 0.4 - 2.8, -13, -wy);
+      ctx.moveTo(1, 0);  ctx.quadraticCurveTo(6, -wy * 0.4 - 2.8, 13, -wy);
+      ctx.stroke();
+    } else if (kind === 'toucan') {
+      // 19. オオハシ（巨大な黄色とオレンジのくちばし・黒い胴体・白い胸元）
+      const wy = flap * 6.0;
+      ctx.fillStyle = '#0f172a';
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 5.5, 2.8, 0, 0, Math.PI * 2);
+      ctx.arc(4.8, -1.0, 2.2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#f8fafc';
+      ctx.beginPath();
+      ctx.arc(4.8, -0.6, 1.4, 0, Math.PI * 2);
+      ctx.fill();
+      // 鮮やかな巨大くちばし
+      const bg = ctx.createLinearGradient(6, -1.5, 14, 1.5);
+      bg.addColorStop(0, '#facc15');
+      bg.addColorStop(0.7, '#f97316');
+      bg.addColorStop(1, '#ef4444');
+      ctx.fillStyle = bg;
+      ctx.beginPath();
+      ctx.moveTo(6.5, -2.4); ctx.quadraticCurveTo(14.5, -1.2, 14.0, 2.0); ctx.quadraticCurveTo(9.0, 1.5, 6.5, 0.4);
+      ctx.closePath();
+      ctx.fill();
+      // 翼
+      ctx.strokeStyle = '#1e293b';
+      ctx.lineWidth = 2.2;
+      ctx.beginPath();
+      ctx.moveTo(0, 0); ctx.quadraticCurveTo(-3, -wy * 0.6 - 2, -7.5, -wy);
+      ctx.moveTo(1, 0); ctx.quadraticCurveTo(3, -wy * 0.6 - 2, 7.5, -wy);
+      ctx.stroke();
+    } else if (kind === 'weather_balloon') {
+      // 20. 気象観測気球（真っ白な巨大ゴム気球・吊り下げられた小型ラジオゾンデ観測機）
+      ctx.fillStyle = '#f8fafc';
+      ctx.strokeStyle = '#94a3b8';
+      ctx.lineWidth = 1.0;
+      ctx.beginPath();
+      ctx.arc(0, -2, 8.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      // 吊り紐と観測機器ボックス
+      ctx.strokeStyle = '#64748b';
+      ctx.lineWidth = 0.8;
+      ctx.beginPath();
+      ctx.moveTo(0, 6.5); ctx.lineTo(0, 13.5);
+      ctx.stroke();
+      ctx.fillStyle = '#dc2626';
+      ctx.fillRect(-2, 13.5, 4, 3);
+    } else if (kind === 'pterosaur') {
+      // 21. プテラノドン（長いトサカ・大きな翼膜・太古の翼竜）
+      const wy = flap * 7.0;
+      ctx.fillStyle = '#713f12';
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 6.0, 2.2, 0, 0, Math.PI * 2);
+      ctx.fill();
+      // 後頭部の長いトサカ
+      ctx.strokeStyle = '#a16207';
+      ctx.lineWidth = 1.6;
+      ctx.beginPath();
+      ctx.moveTo(4, -1); ctx.lineTo(-6.5, -5.2);
+      ctx.stroke();
+      // 長いくちばし
+      ctx.fillStyle = '#eab308';
+      ctx.beginPath();
+      ctx.moveTo(4, -1.5); ctx.lineTo(13.5, 0); ctx.lineTo(4, 1.0);
+      ctx.closePath();
+      ctx.fill();
+      // 皮膜の翼
+      ctx.fillStyle = 'rgba(202, 138, 4, 0.72)';
+      ctx.strokeStyle = '#854d0e';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(-1, 0); ctx.lineTo(-14, -wy); ctx.quadraticCurveTo(-6, -wy * 0.4 + 2, -3, 2);
+      ctx.moveTo(1, 0);  ctx.lineTo(14, -wy);  ctx.quadraticCurveTo(6, -wy * 0.4 + 2, 3, 2);
+      ctx.stroke();
+    } else if (kind === 'firework_rocket') {
+      // 22. 打ち上げ花火ロケット（火花を噴き出しながら夜空を上昇）
+      ctx.fillStyle = '#ef4444';
+      ctx.fillRect(-1.5, -4, 3, 8);
+      ctx.fillStyle = '#facc15';
+      ctx.beginPath();
+      ctx.moveTo(-2, -4); ctx.lineTo(0, -8); ctx.lineTo(2, -4);
+      ctx.closePath();
+      ctx.fill();
+      // 噴射する火花パーティクル
+      ctx.strokeStyle = '#fbbf24';
+      ctx.lineWidth = 1.2;
+      for (let s = 1; s <= 3; s++) {
+        ctx.beginPath();
+        ctx.moveTo(0, 4); ctx.lineTo((s % 2 === 0 ? -3 : 3) * s * 0.6, 5 + s * 3.5);
+        ctx.stroke();
+      }
+    } else if (kind === 'pegasus') {
+      // 23. 天馬ペガサス（純白の跳ね馬と黄金に輝く大翼）
+      const wy = flap * 6.5;
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 7.5, 3.8, -0.15, 0, Math.PI * 2);
+      ctx.fill();
+      // 首と頭
+      ctx.beginPath();
+      ctx.moveTo(4, -1); ctx.lineTo(9.5, -6.5); ctx.lineTo(12, -5.5); ctx.lineTo(8, 2);
+      ctx.closePath();
+      ctx.fill();
+      // 黄金に輝く翼
+      const pg = ctx.createLinearGradient(0, -2, 0, -wy - 6);
+      pg.addColorStop(0, '#ffffff');
+      pg.addColorStop(0.5, '#fef08a');
+      pg.addColorStop(1, '#facc15');
+      ctx.strokeStyle = pg;
+      ctx.lineWidth = 2.6;
+      ctx.beginPath();
+      ctx.moveTo(1, -2); ctx.quadraticCurveTo(5, -wy * 0.6 - 5, 12, -wy - 6);
+      ctx.moveTo(-1, -2); ctx.quadraticCurveTo(-5, -wy * 0.6 - 5, -12, -wy - 6);
+      ctx.stroke();
     }
 
     ctx.restore();
@@ -3718,6 +3897,170 @@ class SquidGameWatch {
       ctx.fillStyle = '#fef08a';
       ctx.beginPath();
       ctx.arc(9.2, -0.8, 1.0, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (kind === 'hammerhead') {
+      // 23. シュモクザメ（ハンマーヘッド：左右に大きく張り出した頭部・鋭い背ビレ）
+      const tailW = wag * 2.2;
+      ctx.fillStyle = '#475569';
+      ctx.strokeStyle = '#0f172a';
+      ctx.lineWidth = 0.9;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 13.5, 4.0, 0, 0, Math.PI * 2);
+      ctx.fill();
+      // ハンマー状の頭部（T字）
+      ctx.beginPath();
+      ctx.roundRect(10.5, -6.5, 3.5, 13.0, 1.2);
+      ctx.fill();
+      ctx.stroke();
+      // 左右端の目
+      ctx.fillStyle = '#0f172a';
+      ctx.beginPath();
+      ctx.arc(12.2, -5.8, 0.9, 0, Math.PI * 2);
+      ctx.arc(12.2, 5.8, 0.9, 0, Math.PI * 2);
+      ctx.fill();
+      // 背ビレと尾ビレ
+      ctx.fillStyle = '#334155';
+      ctx.beginPath();
+      ctx.moveTo(-1, -3.5); ctx.lineTo(-4.5, -11.0); ctx.lineTo(-7.5, -3.5);
+      ctx.moveTo(-12.5, 0); ctx.lineTo(-17.5, -5.5 + tailW * 0.6); ctx.lineTo(-15.5, 0); ctx.lineTo(-17.5, 4.5 + tailW * 0.6);
+      ctx.closePath();
+      ctx.fill();
+    } else if (kind === 'clione') {
+      // 24. クリオネ（流氷の妖精：透明なゼラチン質の翼足とオレンジ色の内臓）
+      const wingA = Math.sin(this.bioTime * 9.0 + f.phase) * 3.5;
+      ctx.fillStyle = 'rgba(224, 242, 254, 0.85)';
+      ctx.strokeStyle = '#38bdf8';
+      ctx.lineWidth = 0.8;
+      // 紡錘形の胴体
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 3.5, 6.5, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      // パタパタ羽ばたく一対の翼足（パラポディア）
+      ctx.fillStyle = 'rgba(186, 230, 253, 0.92)';
+      ctx.beginPath();
+      ctx.ellipse(-4.5, -1.0 + wingA * 0.3, 3.2, 1.5, -0.3 + wingA * 0.08, 0, Math.PI * 2);
+      ctx.ellipse(4.5, -1.0 - wingA * 0.3, 3.2, 1.5, 0.3 - wingA * 0.08, 0, Math.PI * 2);
+      ctx.fill();
+      // 透けて見えるオレンジ色の生殖腺＆消化器官
+      ctx.fillStyle = '#f97316';
+      ctx.beginPath();
+      ctx.ellipse(0, -0.5, 1.6, 2.4, 0, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (kind === 'whale_shark') {
+      // 25. ジンベエザメ（巨大な青灰色ボディ・無数の白い水玉模様・平たい頭）
+      const tailW = wag * 1.8;
+      ctx.fillStyle = '#1e293b';
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 19.0, 6.8, 0, 0, Math.PI * 2);
+      ctx.fill();
+      // 白いドット模様（碁盤目状）
+      ctx.fillStyle = '#f8fafc';
+      for (let ix = -10; ix <= 10; ix += 4.5) {
+        for (let iy = -3.2; iy <= 3.2; iy += 2.2) {
+          ctx.beginPath();
+          ctx.arc(ix, iy, 0.85, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+      // 背ビレと巨大な三日月尾ビレ
+      ctx.fillStyle = '#0f172a';
+      ctx.beginPath();
+      ctx.moveTo(-2, -6.0); ctx.lineTo(-5.5, -13.5); ctx.lineTo(-8.5, -6.0);
+      ctx.moveTo(-17.5, 0); ctx.lineTo(-24.5, -6.8 + tailW * 0.5); ctx.lineTo(-21.5, 0); ctx.lineTo(-24.5, 6.8 + tailW * 0.5);
+      ctx.closePath();
+      ctx.fill();
+    } else if (kind === 'oarfish') {
+      // 26. リュウグウノツカイ（銀白色の超長身・真紅の長いトサカ背ビレと糸状の腹ビレ）
+      const undul = Math.sin(this.bioTime * 4.5 + f.phase);
+      ctx.strokeStyle = '#e2e8f0';
+      ctx.lineWidth = 4.0;
+      ctx.beginPath();
+      ctx.moveTo(18, 0);
+      ctx.quadraticCurveTo(6, undul * 4.5, -6, -undul * 4.5);
+      ctx.quadraticCurveTo(-18, undul * 3.0, -28, 0);
+      ctx.stroke();
+      // 真紅の長い背ビレトサカ
+      ctx.strokeStyle = '#ef4444';
+      ctx.lineWidth = 1.4;
+      ctx.beginPath();
+      ctx.moveTo(17, -2); ctx.lineTo(19, -12); ctx.lineTo(15, -3);
+      ctx.moveTo(14, -2); ctx.lineTo(15, -9);
+      ctx.stroke();
+      // 糸状の赤い腹ビレ
+      ctx.beginPath();
+      ctx.moveTo(15, 2); ctx.lineTo(12, 10 + undul * 2);
+      ctx.stroke();
+    } else if (kind === 'coelacanth') {
+      // 27. シーラカンス（深海性の紺青色・肉質の肢状ヒレ・三葉の尾ビレ・生きた化石）
+      const tailW = wag * 1.5;
+      ctx.fillStyle = '#1e3a8a';
+      ctx.strokeStyle = '#0f172a';
+      ctx.lineWidth = 1.0;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 11.5, 4.8, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      // 特有の三葉の尾ビレ
+      ctx.beginPath();
+      ctx.moveTo(-10.5, 0);
+      ctx.lineTo(-16.0, -3.8 + tailW * 0.5);
+      ctx.lineTo(-14.0, 0);
+      ctx.lineTo(-17.5, 0 + tailW * 0.5);
+      ctx.lineTo(-14.0, 0);
+      ctx.lineTo(-16.0, 3.8 + tailW * 0.5);
+      ctx.closePath();
+      ctx.fill();
+      // 肢のような肉質ヒレ
+      ctx.fillStyle = '#172554';
+      ctx.beginPath();
+      ctx.ellipse(-2, 4.5, 3.2, 1.8, 0.4, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (kind === 'bathysphere') {
+      // 28. 潜水探査球（丸い黄色い潜水球・丸窓から光るサーチライト探照灯）
+      ctx.fillStyle = '#eab308';
+      ctx.strokeStyle = '#713f12';
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.arc(0, 0, 6.8, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      // サーチライトビーム
+      const beamGrad = ctx.createRadialGradient(-3, 0, 1, -16, 0, 18);
+      beamGrad.addColorStop(0, 'rgba(254, 240, 138, 0.85)');
+      beamGrad.addColorStop(1, 'rgba(250, 204, 21, 0)');
+      ctx.fillStyle = beamGrad;
+      ctx.beginPath();
+      ctx.moveTo(-5, -2); ctx.lineTo(-20, -7); ctx.lineTo(-20, 7); ctx.lineTo(-5, 2);
+      ctx.closePath();
+      ctx.fill();
+      // 丸窓
+      ctx.fillStyle = '#38bdf8';
+      ctx.beginPath();
+      ctx.arc(-2.5, 0, 2.2, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (kind === 'mermaid') {
+      // 29. 人魚マーメイド（エメラルドグリーンの魚尾・流れる長い金髪・優雅な遊泳）
+      const tailW = wag * 2.8;
+      // 金髪と上半身
+      ctx.fillStyle = '#fde047';
+      ctx.beginPath();
+      ctx.arc(6.5, -2.5, 2.8, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#fed7aa';
+      ctx.beginPath();
+      ctx.ellipse(3.8, -0.5, 3.2, 1.8, 0.2, 0, Math.PI * 2);
+      ctx.fill();
+      // エメラルドの魚尾
+      ctx.fillStyle = '#10b981';
+      ctx.beginPath();
+      ctx.moveTo(1.5, 0);
+      ctx.quadraticCurveTo(-4, tailW * 0.5, -9, tailW);
+      ctx.lineTo(-14, tailW - 4.5);
+      ctx.lineTo(-12, tailW);
+      ctx.lineTo(-14, tailW + 4.5);
+      ctx.quadraticCurveTo(-4, tailW * 0.5 + 2, 1.5, 1.5);
+      ctx.closePath();
       ctx.fill();
     }
 
