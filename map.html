@@ -675,18 +675,33 @@
         width: 45px;
       }
 
-      /* スマホ時のサイドバー（リスト）は下部ハーフモーダルで地図を邪魔しない */
+      /* スマホ時はサイドバー（潜水士一覧）を全画面表示にして快適に閲覧 */
       #sidebar {
-        width: auto;
-        top: auto;
-        bottom: 8px;
-        right: 8px;
-        left: 8px;
-        max-height: 42vh;
-        border-radius: 12px;
+        width: 100vw;
+        height: 100%;
+        max-height: none;
+        top: 0;
+        bottom: 0;
+        right: 0;
+        left: 0;
+        border-radius: 0;
+        border: none;
+        z-index: 2000; /* ヘッダーや地図上部コントロールよりも最前面に全画面表示 */
       }
       #sidebar.hidden-sidebar {
-        transform: translateY(calc(100% + 20px));
+        transform: translateY(100%);
+      }
+      .sidebar-header {
+        padding: 14px 16px;
+      }
+      .sidebar-title {
+        font-size: 1.05rem;
+      }
+      #sidebar-close {
+        font-size: 1.3rem !important;
+        padding: 4px 8px;
+        background: rgba(255, 255, 255, 0.1) !important;
+        border-radius: 6px !important;
       }
       #sidebar-toggle {
         display: none !important; /* 上部トグルボタンと重複するため非表示 */
@@ -1317,6 +1332,9 @@
 
           if (coords) {
             div.addEventListener('click', () => {
+              if (window.innerWidth <= 768) {
+                setListVisible(false); // スマホ全画面表示時はクリックで一覧を閉じてピンへジャンプ
+              }
               map.flyTo(coords, Math.max(map.getZoom(), 11), { duration: 1.2 });
               document.querySelectorAll('.city-item').forEach(el => el.classList.remove('active'));
               div.classList.add('active');
@@ -1367,6 +1385,9 @@
 
           if (coords) {
             div.addEventListener('click', () => {
+              if (window.innerWidth <= 768) {
+                setListVisible(false); // スマホ全画面表示時はクリックで一覧を閉じてピンへジャンプ
+              }
               map.flyTo(coords, Math.max(map.getZoom(), 11), { duration: 1.2 });
               document.querySelectorAll('.city-item').forEach(el => el.classList.remove('active'));
               div.classList.add('active');
