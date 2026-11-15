@@ -484,6 +484,9 @@ class SquidGameWatch {
     if (errEl) errEl.classList.add('hidden');
     startModal?.classList.remove('hidden');
     setTimeout(() => startNameIn?.focus(), 60);
+
+    // スタート画面を開いた際にもバックグラウンドで最新の現在地を取得・更新
+    this._detectPlayerLocation(true);
   }
 
   /* --------------------------------------------------------------------------
@@ -658,9 +661,10 @@ class SquidGameWatch {
       if (profPlaceIn) profPlaceIn.value = this.customPlace;
       const geoInfo = document.getElementById('detected-geo-info');
       if (geoInfo) {
-        geoInfo.textContent = `自動検出された地名: ${countryToFlag(this.detectedGeo.country)} ${this.detectedGeo.display || 'Unknown'}`;
+        geoInfo.textContent = `自動検出された地名: ${countryToFlag(this.detectedGeo.country)} ${this.detectedGeo.display || '取得中...'}`;
       }
       profileModal?.classList.remove('hidden');
+      this._detectPlayerLocation(true);
     });
     document.getElementById('profile-save-btn')?.addEventListener('click', () => {
       this._savePlayerProfile(profNameIn?.value, profPlaceIn?.value);
@@ -773,17 +777,103 @@ class SquidGameWatch {
     if (startGeoEl) {
       startGeoEl.textContent = `📍 自動検出された地域: ${flag} ${this.detectedGeo.display || 'Japan'}`;
     }
+    const profGeoEl = document.getElementById('detected-geo-info');
+    if (profGeoEl) {
+      profGeoEl.textContent = `自動検出された地名: ${flag} ${this.detectedGeo.display || 'Japan'}`;
+    }
   }
 
   /* --------------------------------------------------------------------------
-     Geolocation & Global Ranking API (Cloudflare + Client Fallback)
+     Geolocation & Global Ranking API (GPS Geolocation + IP Geo + Cloudflare)
      -------------------------------------------------------------------------- */
-  async _detectPlayerLocation() {
-    // 1. まず Cloudflare Worker / Pages Function の ?mode=whoami からエッジ位置情報を取得
+  async _detectPlayerLocation(forceRefresh = false) {
+    // 0. 最優先：高精度ブラウザ Geolocation API（スマホ・PCのGPS/Wi-Fi測位）
+    // 横須賀市・横浜市など、ISPのIP基地局（Kawasaki/Tokyo）に依存せず真の現在地市区町村を取得
+    if (typeof navigator !== 'undefined' && navigator.geolocation) {
+      const getGpsLoc = () => new Promise((resolve) => {
+        const timeoutId = setTimeout(() => resolve(null), 3500);
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            clearTimeout(timeoutId);
+            resolve(pos.coords);
+          },
+          () => {
+            clearTimeout(timeoutId);
+            resolve(null);
+          },
+          { enableHighAccuracy: false, timeout: 3200, maximumAge: 60000 }
+        );
+      });
+
+      try {
+        const coords = await getGpsLoc();
+        if (coords) {
+          const lat = coords.latitude.toFixed(4);
+          const lon = coords.longitude.toFixed(4);
+          // 逆ジオコーディング（OSM Nominatim）
+          const revRes = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=12&accept-language=en`,
+            { headers: { 'Accept': 'application/json' } }
+          );
+          if (revRes.ok) {
+            const data = await revRes.json();
+            const addr = data.address || {};
+            const city = addr.city || addr.town || addr.municipality || addr.village || addr.county || '';
+            const region = addr.province || addr.state || '';
+            const country = (addr.country_code || 'jp').toUpperCase();
+            if (city) {
+              const disp = (region && region !== city) ? `${city}, ${region}` : city;
+              this.detectedGeo = {
+                city,
+                region,
+                country,
+                display: disp
+              };
+              this._updateProfilePill();
+              return;
+            }
+          }
+        }
+      } catch (_) {}
+    }
+
+    // 1. IPジオコーディング（より高精度なパブリックGeo APIを優先）
+    // ipinfo.io や ipwho.is は国内大手ISP（BIGLOBE等）でYokohama/Kanagawaを正確に返す
+    const geoApis = [
+      'https://ipinfo.io/json',
+      'https://ipwho.is/'
+    ];
+    for (const url of geoApis) {
+      try {
+        const ctrl = new AbortController();
+        const tid = setTimeout(() => ctrl.abort(), 2500);
+        const res = await fetch(url, { signal: ctrl.signal });
+        clearTimeout(tid);
+        if (res.ok) {
+          const g = await res.json();
+          const city = g.city || g.region || '';
+          const region = g.region || g.region_name || '';
+          const country = g.country || g.country_code || 'JP';
+          if (city && city !== 'Unknown') {
+            const disp = (region && region !== city) ? `${city}, ${region}` : city;
+            this.detectedGeo = {
+              city,
+              region,
+              country: String(country).substring(0, 2).toUpperCase(),
+              display: disp
+            };
+            this._updateProfilePill();
+            return;
+          }
+        }
+      } catch (_) {}
+    }
+
+    // 2. Cloudflare Worker / Pages Function の ?mode=whoami からエッジ位置情報を取得
     for (const base of API_ENDPOINTS) {
       try {
         const ctrl = new AbortController();
-        const tid = setTimeout(() => ctrl.abort(), 2800);
+        const tid = setTimeout(() => ctrl.abort(), 2500);
         const res = await fetch(`${base}?mode=whoami`, { signal: ctrl.signal });
         clearTimeout(tid);
         if (res.ok) {
@@ -800,37 +890,6 @@ class SquidGameWatch {
               this._updateProfilePill();
               return;
             }
-          }
-        }
-      } catch (_) {}
-    }
-
-    // 2. ローカル環境やKV未接続時でも地名が確実に記録されるようパブリックGeo APIへフォールバック
-    const geoApis = [
-      'https://ipwho.is/',
-      'https://ipapi.co/json/'
-    ];
-    for (const url of geoApis) {
-      try {
-        const ctrl = new AbortController();
-        const tid = setTimeout(() => ctrl.abort(), 3000);
-        const res = await fetch(url, { signal: ctrl.signal });
-        clearTimeout(tid);
-        if (res.ok) {
-          const g = await res.json();
-          const city = g.city || g.region || '';
-          const region = g.region || g.region_name || '';
-          const country = g.country_code || g.country || 'JP';
-          if (city) {
-            const disp = (region && region !== city) ? `${city}, ${region}` : city;
-            this.detectedGeo = {
-              city,
-              region,
-              country: String(country).substring(0, 2).toUpperCase(),
-              display: disp
-            };
-            this._updateProfilePill();
-            return;
           }
         }
       } catch (_) {}
@@ -1174,6 +1233,9 @@ class SquidGameWatch {
     this._updateModeButtons(this.gameMode);
     this._setStatusText(`GAME ${this.gameMode} START! 宝箱へ進んで財宝を持ち帰ろう！`);
     this.sound.gameStart();
+
+    // ゲームを開始するたびに最新の現在地を取得（移動やWi-Fi切替時もリアルタイム反映）
+    this._detectPlayerLocation(true);
 
     // GAME C: 空と海の仲間たちは最初は少数から始まり、プレイ時間の経過とともに1種類ずつ新しく登場する
     this._resetCreatureDiscovery();
