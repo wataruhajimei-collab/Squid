@@ -788,59 +788,89 @@ class SquidGameWatch {
      -------------------------------------------------------------------------- */
   async _detectPlayerLocation(allowGps = false) {
     // 0. GPS (Geolocation API) による高精度測位
-    // ユーザー指示に従い、ゲーム終了時（allowGps = true）にGPS測位を実行
-    if (allowGps && typeof navigator !== 'undefined' && navigator.geolocation) {
-      const getGpsLoc = () => new Promise((resolve) => {
-        // ユーザーがブラウザの許可ダイアログを押すまでの待機時間を十分に確保 (10秒)
-        const timeoutId = setTimeout(() => resolve(null), 10000);
-        navigator.geolocation.getCurrentPosition(
-          (pos) => {
-            clearTimeout(timeoutId);
-            resolve(pos.coords);
-          },
-          (err) => {
-            console.warn('Geolocation permission denied or error:', err);
-            clearTimeout(timeoutId);
-            resolve(null);
-          },
-          { enableHighAccuracy: true, timeout: 9500, maximumAge: 0 }
-        );
-      });
-
-      try {
-        const coords = await getGpsLoc();
-        if (coords) {
-          const lat = coords.latitude.toFixed(4);
-          const lon = coords.longitude.toFixed(4);
-          if (coords.altitude !== null && coords.altitude !== undefined) {
-            this.detectedAltitude = Math.round(coords.altitude);
+    // 許可状態のチェック、またはゲーム終了時(allowGps=true)に実行
+    if (typeof navigator !== 'undefined' && navigator.geolocation) {
+      let shouldTryGps = allowGps;
+      
+      // 既に一度許可されているか Permissions API で確認できる場合は自動的にGPSを利用
+      if (!shouldTryGps && navigator.permissions && navigator.permissions.query) {
+        try {
+          const perm = await navigator.permissions.query({ name: 'geolocation' });
+          if (perm.state === 'granted') {
+            shouldTryGps = true;
           }
-          // 逆ジオコーディング（OSM Nominatim）
-          const revRes = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=12&accept-language=en`,
-            { headers: { 'Accept': 'application/json' } }
+        } catch (_) {}
+      }
+
+      if (shouldTryGps) {
+        const getGpsLoc = () => new Promise((resolve) => {
+          const timeoutId = setTimeout(() => resolve(null), 10000);
+          navigator.geolocation.getCurrentPosition(
+            (pos) => {
+              clearTimeout(timeoutId);
+              resolve(pos.coords);
+            },
+            (err) => {
+              console.warn('Geolocation error or denied:', err);
+              clearTimeout(timeoutId);
+              resolve(null);
+            },
+            { enableHighAccuracy: true, timeout: 9500, maximumAge: 60000 }
           );
-          if (revRes.ok) {
-            const data = await revRes.json();
-            const addr = data.address || {};
-            const city = addr.city || addr.town || addr.municipality || addr.village || addr.county || addr.suburb || '';
-            const region = addr.province || addr.state || '';
-            const country = (addr.country_code || 'jp').toUpperCase();
-            if (city) {
-              const disp = (region && region !== city) ? `${city}, ${region}` : city;
-              this.detectedGeo = {
-                city,
-                region,
-                country,
-                display: disp
-              };
-              this._updateProfilePill();
-              return;
+        });
+
+        try {
+          const coords = await getGpsLoc();
+          if (coords) {
+            const lat = coords.latitude.toFixed(4);
+            const lon = coords.longitude.toFixed(4);
+            if (coords.altitude !== null && coords.altitude !== undefined) {
+              this.detectedAltitude = Math.round(coords.altitude);
+            }
+            // 逆ジオコーディング（OSM Nominatim）
+            const revRes = await fetch(
+              `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=12&accept-language=en`,
+              { headers: { 'Accept': 'application/json' } }
+            );
+            if (revRes.ok) {
+              const data = await revRes.json();
+              const addr = data.address || {};
+              const city = addr.city || addr.town || addr.municipality || addr.village || addr.county || addr.suburb || '';
+              const region = addr.province || addr.state || '';
+              const country = (addr.country_code || 'jp').toUpperCase();
+              if (city) {
+                const disp = (region && region !== city) ? `${city}, ${region}` : city;
+                this.detectedGeo = {
+                  city,
+                  region,
+                  country,
+                  display: disp
+                };
+                // GPSで取得できた位置情報をローカルに永続キャッシュ（IPフォールバックでKawasakiに上書きされるのを防ぐ）
+                try {
+                  localStorage.setItem('squid_last_gps_geo', JSON.stringify(this.detectedGeo));
+                } catch (_) {}
+                this._updateProfilePill();
+                return;
+              }
             }
           }
-        }
-      } catch (_) {}
+        } catch (_) {}
+      }
     }
+
+    // 0.5. 以前にGPSで取得した保存済み位置情報があればそれを優先利用（プロバイダIPのKawasakiで上書きさせない）
+    try {
+      const cached = localStorage.getItem('squid_last_gps_geo');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (parsed && parsed.city && parsed.city !== 'Kawasaki') {
+          this.detectedGeo = parsed;
+          this._updateProfilePill();
+          return;
+        }
+      }
+    } catch (_) {}
 
     // 1. IPジオコーディング（GPSが不許可・未取得の場合の自動プロバイダ位置取得）
     // ipinfo.io や ipwho.is は国内プロバイダ（BIGLOBE, au, SoftBank等）の位置を即座に自動検出
