@@ -879,21 +879,52 @@
       renderList();
     });
 
+    // API候補リスト（同一オリジン相対パス + workers.devフォールバック）
+    const API_BASES = [
+      '/api/scores',
+      'https://squid.wataruhajimei.workers.dev/api/scores',
+      'https://squid-api.wataruhajimei.workers.dev'
+    ];
+
+    async function fetchApiData(params = '') {
+      for (const base of API_BASES) {
+        try {
+          const sep = base.includes('?') ? '&' : '?';
+          const url = `${base}${sep}${params}&_t=${Date.now()}`;
+          const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+          if (res.ok) {
+            const data = await res.json();
+            if (Array.isArray(data)) return data;
+          }
+        } catch (_) {}
+      }
+      throw new Error('All API endpoints failed');
+    }
+
     // データ読み込み
     async function loadData() {
       try {
-        const [regRes, allRes] = await Promise.all([
-          fetch('/api/scores?mode=regional&t=' + Date.now()),
-          fetch('/api/scores?t=' + Date.now())
+        const [regData, allData] = await Promise.all([
+          fetchApiData('mode=regional'),
+          fetchApiData('mode=all')
         ]);
-        if (!regRes.ok || !allRes.ok) throw new Error("API response error");
-        regionalData = await regRes.json();
-        playerScoresData = await allRes.json();
+        regionalData = regData || [];
+        playerScoresData = allData || [];
         
         renderMap(regionalData);
         renderList();
       } catch (e) {
         console.error("Failed to load data:", e);
+        // ローカルストレージ（game.jsでローカル保存されたデータ）があればフォールバック表示
+        try {
+          const localLb = JSON.parse(localStorage.getItem('squid_gw_local_leaderboard') || '[]');
+          if (localLb.length > 0) {
+            playerScoresData = localLb;
+            renderList();
+            return;
+          }
+        } catch (_) {}
+
         document.getElementById('city-list').innerHTML = 
           `<div style="text-align:center; padding: 20px; color: #ff6b6b;">データ取得に失敗しました<br><button onclick="loadData()" class="btn" style="margin-top:10px;">再試行</button></div>`;
       }
