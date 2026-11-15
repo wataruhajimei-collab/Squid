@@ -759,6 +759,12 @@
       return null;
     }
 
+    function formatCityLabel(rawCity) {
+      if (!rawCity) return 'Unknown';
+      const parts = String(rawCity).split(',');
+      return parts[0].trim();
+    }
+
     // プレイヤーのテレメトリー情報整形（データ未取得の場合は「未取得」と明示）
     function formatTelemetry(rawTele) {
       const t = rawTele || {};
