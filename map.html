@@ -251,6 +251,44 @@
       border-bottom: 1px solid rgba(255,255,255,0.06);
     }
 
+    .sort-control-bar {
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      padding: 6px 14px;
+      background: rgba(0, 255, 204, 0.05);
+      border-bottom: 1px solid rgba(0, 255, 204, 0.15);
+      font-size: 0.75rem;
+      color: #9cb0c9;
+    }
+
+    .sort-btn-group {
+      display: flex;
+      gap: 4px;
+      background: rgba(0,0,0,0.3);
+      padding: 2px;
+      border-radius: 6px;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .sort-btn {
+      background: transparent;
+      border: none;
+      color: #8da2c0;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .sort-btn.active {
+      background: var(--gold);
+      color: #071322;
+      box-shadow: 0 0 6px rgba(212, 175, 55, 0.4);
+    }
+
     .sidebar-tab-btn {
       flex: 1;
       background: transparent;
@@ -965,6 +1003,15 @@
         <button class="sidebar-tab-btn" id="tab-btn-players">🤿 潜水士個人別</button>
       </div>
 
+      <!-- 潜水士個人別のソート切り替えバー -->
+      <div class="sort-control-bar" id="player-sort-bar">
+        <span>並び順:</span>
+        <div class="sort-btn-group">
+          <button class="sort-btn active" id="sort-btn-score">🏆 スコア順</button>
+          <button class="sort-btn" id="sort-btn-recent">🕒 最終プレイ順</button>
+        </div>
+      </div>
+
       <div class="stat-cards">
         <div class="stat-card">
           <div class="val" id="total-cities">--</div>
@@ -1173,6 +1220,7 @@
     let regionalData = [];
     let playerScoresData = [];
     let currentViewMode = 'cities'; // 'cities' | 'players'
+    let currentPlayerSort = 'score'; // 'score' | 'recent'
 
     // リスト On/Off トグル管理
     const sidebar = document.getElementById('sidebar');
@@ -1238,11 +1286,15 @@
     // タブ切り替え
     const tabBtnCities = document.getElementById('tab-btn-cities');
     const tabBtnPlayers = document.getElementById('tab-btn-players');
+    const playerSortBar = document.getElementById('player-sort-bar');
+    const sortBtnScore = document.getElementById('sort-btn-score');
+    const sortBtnRecent = document.getElementById('sort-btn-recent');
 
     tabBtnCities.addEventListener('click', () => {
       currentViewMode = 'cities';
       tabBtnCities.classList.add('active');
       tabBtnPlayers.classList.remove('active');
+      if (playerSortBar) playerSortBar.style.display = 'none';
       renderList();
     });
 
@@ -1250,8 +1302,27 @@
       currentViewMode = 'players';
       tabBtnPlayers.classList.add('active');
       tabBtnCities.classList.remove('active');
+      if (playerSortBar) playerSortBar.style.display = 'flex';
       renderList();
     });
+
+    if (sortBtnScore) {
+      sortBtnScore.addEventListener('click', () => {
+        currentPlayerSort = 'score';
+        sortBtnScore.classList.add('active');
+        if (sortBtnRecent) sortBtnRecent.classList.remove('active');
+        renderList();
+      });
+    }
+
+    if (sortBtnRecent) {
+      sortBtnRecent.addEventListener('click', () => {
+        currentPlayerSort = 'recent';
+        sortBtnRecent.classList.add('active');
+        if (sortBtnScore) sortBtnScore.classList.remove('active');
+        renderList();
+      });
+    }
 
     // 日時に応じたヒートマップカラー算出（最近プレイ＝赤、古い＝寒色）
     function getRecencyColor(dateStr, minTime, maxTime) {
@@ -1522,7 +1593,20 @@
         });
       } else {
         // プレイヤー個人別
-        playerScoresData.slice(0, 60).forEach((entry, idx) => {
+        let displayList = [...playerScoresData];
+        if (currentPlayerSort === 'recent') {
+          // 最後にプレイした日時順（最新順に降順ソート）
+          displayList.sort((a, b) => {
+            const timeA = new Date(a.date || a.lastDate || 0).getTime() || 0;
+            const timeB = new Date(b.date || b.lastDate || 0).getTime() || 0;
+            return timeB - timeA;
+          });
+        } else {
+          // スコア順（ハイスコア降順）
+          displayList.sort((a, b) => (b.score || 0) - (a.score || 0));
+        }
+
+        displayList.slice(0, 80).forEach((entry, idx) => {
           const rawTele = entry.telemetry || {};
           const coords = resolveCoords(entry.city, entry.country, idx % 6);
           const tele = formatTelemetry(rawTele);
@@ -1538,9 +1622,13 @@
           const inText = tele.inputType;
           const batText = tele.battery;
 
+          const rankLabel = currentPlayerSort === 'recent'
+            ? `<span style="font-size:0.75rem; color:var(--radar-cyan);">[最新順]</span>`
+            : `#${idx+1}`;
+
           div.innerHTML = `
             <div class="city-item-top">
-              <span class="city-name">#${idx+1} 🤿 <strong>${escapeHtml(entry.name)}</strong></span>
+              <span class="city-name">${rankLabel} 🤿 <strong>${escapeHtml(entry.name)}</strong></span>
               <span class="city-score">${entry.score} pt</span>
             </div>
             <div class="city-meta">
