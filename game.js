@@ -133,6 +133,33 @@ class PiezoSoundEngine {
     });
   }
 
+  // 200点ごとのイカ怒りの墨吐きジェット音（重低音ノイズ＆急激ピッチダウン）
+  squidInkBlast() {
+    if (!this.enabled) return;
+    this.init();
+    if (!this.ctx) return;
+    try {
+      const now = this.ctx.currentTime;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(320, now);
+      osc.frequency.exponentialRampToValueAtTime(45, now + 0.65);
+
+      gain.gain.setValueAtTime(0.18, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.70);
+
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.72);
+
+      // 追従する噴射ブザー低音
+      this.beep(98, 0.45, 0.05, 'square', 0.12);
+      this.beep(65, 0.55, 0.18, 'triangle', 0.15);
+    } catch (_) {}
+  }
+
   // ゲーム開始音
   gameStart() {
     this.beep(1046, 0.045, 0, 'square', 0.09);
@@ -231,6 +258,9 @@ class SquidGameWatch {
   _initBioSquidAndBubbles() {
     this.bioTime = 0;
     this.squidFlushBoost = 0; // 攻撃時・捕獲時に色素胞が一気に赤茶色に集約・興奮するブースト値
+    this.squidInkClouds = []; // 200点ごとのイカ怒りの墨吐きパーティクル
+    this.squidInkBlastTimer = 0;
+    this.lastInkBlast200 = 0;
     this.bubbles = [];
     this.surfaceRipples = [];
     this.bubbleSpawnTimer = 0;
@@ -1333,6 +1363,13 @@ class SquidGameWatch {
     const crossed200 = !this.bonus200Triggered && prev < 200 && this.score >= 200;
     const crossedEvery500 = Math.floor(prev / 500) < Math.floor(this.score / 500);
 
+    // 200点刻み（200, 400, 600, 800...）でイカが激怒して海中に大量の濃黒・セピア墨をブシャーッと吐き出す！
+    const current200Step = Math.floor(this.score / 200);
+    const prev200Step = Math.floor(prev / 200);
+    if (current200Step > prev200Step && current200Step > 0) {
+      this._triggerSquidInkBlast(current200Step * 200);
+    }
+
     if (crossed200 || crossedEvery500) {
       if (crossed200) this.bonus200Triggered = true;
       if (this.lives < 3) {
@@ -1343,6 +1380,41 @@ class SquidGameWatch {
       const milestone = crossedEvery500 ? Math.floor(this.score / 500) * 500 : 200;
       this._setStatusText(`🎉 ${milestone} PTS BONUS! ダイバーが1名復活 (+1UP)！`);
     }
+  }
+
+  // 200点刻み（200, 400, 600, 800...）でイカが激怒して海中に大量の濃黒・セピア墨をブシャーッと吐き出す！
+  _triggerSquidInkBlast(pts = 200) {
+    this.squidInkBlastTimer = 4.2;
+    this.squidFlushBoost = 1.0; // 激怒して外套膜と触腕の色素胞が深紅・赤茶に最大発色
+    this.sound.squidInkBlast();
+    if (navigator.vibrate) {
+      try { navigator.vibrate([120, 60, 180, 80, 240]); } catch (_) {}
+    }
+    this._setStatusText(`🦑 激怒！ダイオウイカが墨を吐いた（${pts}点到達）！！`);
+
+    // 漏斗(614, 222)から海中へ勢いよく噴射される大小45個の濃黒・セピア墨雲パーティクル
+    if (!this.squidInkClouds) this.squidInkClouds = [];
+    for (let i = 0; i < 48; i++) {
+      const angle = Math.PI * 0.95 + (Math.random() - 0.5) * 0.95; // 左〜左下（ダイバー＆海底方向）へ斜め噴射
+      const speed = 75 + Math.random() * 145;
+      const r = 16 + Math.random() * 26;
+      this.squidInkClouds.push({
+        x: 608 + (Math.random() - 0.5) * 16,
+        y: 222 + (Math.random() - 0.5) * 12,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed * 0.55 + 6,
+        r,
+        maxR: r * (2.8 + Math.random() * 1.8),
+        alpha: 0.92,
+        decay: 0.18 + Math.random() * 0.14,
+        rot: Math.random() * Math.PI * 2,
+        rotSpeed: (Math.random() - 0.5) * 1.8,
+        tone: (i % 3 === 0) ? 'pitch' : (i % 3 === 1 ? 'sepia' : 'dark')
+      });
+    }
+
+    // 墨吐きに伴う大量の激突気泡バースト
+    this._spawnDiverBubbleBurst(24, 605, 222);
   }
 
   _isPositionDangerous(pos) {
@@ -1594,6 +1666,28 @@ class SquidGameWatch {
       this.demoUnloadTimer = Math.max(0, this.demoUnloadTimer - dt);
     }
 
+    // イカ怒りの墨雲パーティクル更新
+    if (this.squidInkBlastTimer > 0) {
+      this.squidInkBlastTimer = Math.max(0, this.squidInkBlastTimer - dt);
+    }
+    if (this.squidInkClouds && this.squidInkClouds.length > 0) {
+      for (let i = this.squidInkClouds.length - 1; i >= 0; i--) {
+        const ink = this.squidInkClouds[i];
+        ink.x += ink.vx * dt;
+        ink.y += ink.vy * dt;
+        // 水中抵抗による減速と拡散膨張
+        ink.vx *= Math.pow(0.55, dt);
+        ink.vy *= Math.pow(0.55, dt);
+        ink.vy += 1.8 * dt; // わずかな沈降
+        ink.r = Math.min(ink.maxR, ink.r + (ink.maxR - ink.r) * 1.8 * dt);
+        ink.rot += ink.rotSpeed * dt;
+        ink.alpha -= ink.decay * dt;
+        if (ink.alpha <= 0.01) {
+          this.squidInkClouds.splice(i, 1);
+        }
+      }
+    }
+
     // 空の雲・海鳥・季節天候パーティクル・海中魚の移動更新
     const env = this._getEnvAtmosphere();
     const windMul = 1.0 + env.rainIntensity * 0.85;
@@ -1615,8 +1709,10 @@ class SquidGameWatch {
         if (!bd.revealed) continue;
         bd.x += bd.vx * dt;
         bd.y += Math.sin(this.bioTime * 2.2 + bd.phase) * bd.vy * dt * 12;
-        if (bd.vx > 0 && bd.x > 820) bd.x = -95;
-        if (bd.vx < 0 && bd.x < -95) bd.x = 820;
+        // 画面外に出たら、常に無限の多様性を持つ新たな創作キャラクターとして再生成・メタモルフォーゼ
+        if ((bd.vx > 0 && bd.x > 820) || (bd.vx < 0 && bd.x < -95)) {
+          this._respawnProceduralSkyCreature(bd);
+        }
       }
     }
 
@@ -1655,8 +1751,10 @@ class SquidGameWatch {
       for (const f of this.underwaterFish) {
         if (!f.revealed) continue;
         f.x += f.vx * dt;
-        if (f.vx > 0 && f.x > 790) f.x = -65;
-        if (f.vx < 0 && f.x < -65) f.x = 790;
+        // 画面外に出たら、常に無限の多様性を持つ新たな海洋生物・架空生物として再生成
+        if ((f.vx > 0 && f.x > 790) || (f.vx < 0 && f.x < -65)) {
+          this._respawnProceduralSeaCreature(f);
+        }
       }
     }
 
@@ -2602,6 +2700,61 @@ class SquidGameWatch {
     ctx.restore();
   }
 
+  // 空のキャラクターが画面外へ出た時に、常に無限に色々な創作キャラクターとして再生成・創出する
+  _respawnProceduralSkyCreature(bd) {
+    const skyKinds = [
+      'seagull', 'pelican', 'albatross', 'heron', 'goose_flock', 'kingfisher',
+      'swallow', 'dragonfly', 'butterfly', 'owl', 'bat', 'biplane', 'blimp',
+      'hot_air_balloon', 'flamingo', 'eagle', 'macaw', 'ufo', 'black_kite',
+      'toucan', 'weather_balloon', 'pterosaur', 'firework_rocket', 'pegasus'
+    ];
+    // 多彩なクリエイティブ種別をランダム選択
+    bd.kind = skyKinds[Math.floor(Math.random() * skyKinds.length)];
+    // 飛行方向（左から右、または右から左）をランダム化
+    const toRight = Math.random() < 0.5;
+    const baseSpeed = 14 + Math.random() * 26;
+    bd.vx = toRight ? baseSpeed : -baseSpeed;
+    bd.x = toRight ? -90 : 815;
+    bd.y = 12 + Math.random() * 78;
+    bd.scale = 0.75 + Math.random() * 0.48;
+    bd.wingSpeed = 3.5 + Math.random() * 16.0;
+    bd.phase = Math.random() * Math.PI * 2;
+    // 個体ごとの創作バリエーション（色相シフト・発光・アクセサリ）
+    bd.hueShift = Math.floor(Math.random() * 360);
+    bd.hasGlow = Math.random() < 0.28;
+    bd.sparklePhase = Math.random() * Math.PI * 2;
+    bd.revealed = true;
+    bd.revealT = 1.0;
+  }
+
+  // 海中のキャラクターが画面外へ出た時に、常に無限に色々な創作海洋・架空生物として再生成・創出する
+  _respawnProceduralSeaCreature(f) {
+    const seaKinds = [
+      'sardine_school', 'clownfish', 'angelfish', 'butterflyfish', 'sea_turtle',
+      'manta_ray', 'jellyfish', 'seahorse', 'pufferfish', 'dolphin', 'shark',
+      'sunfish', 'anglerfish', 'nautilus', 'flying_fish', 'whale', 'orca',
+      'swordfish', 'eagle_ray', 'boxfish', 'mini_octopus', 'moray_eel',
+      'hammerhead', 'clione', 'whale_shark', 'oarfish', 'coelacanth',
+      'bathysphere', 'mermaid'
+    ];
+    f.kind = seaKinds[Math.floor(Math.random() * seaKinds.length)];
+    const toRight = Math.random() < 0.5;
+    const baseSpeed = 8 + Math.random() * 28;
+    f.vx = toRight ? baseSpeed : -baseSpeed;
+    f.x = toRight ? -60 : 785;
+    f.y = 130 + Math.random() * 240;
+    f.scale = 0.72 + Math.random() * 0.55;
+    f.phase = Math.random() * Math.PI * 2;
+    // 無限の色彩創出（色相シフト、前景/背景ランダムレイヤー、蛍光発光、気泡軌跡）
+    f.hue = Math.floor(Math.random() * 360);
+    f.hueShift = Math.floor((Math.random() - 0.5) * 120);
+    f.fg = Math.random() < 0.55;
+    f.hasBiolum = Math.random() < 0.32;
+    f.accessory = Math.random() < 0.18 ? 'bubble_trail' : (Math.random() < 0.12 ? 'crown' : null);
+    f.revealed = true;
+    f.revealT = 1.0;
+  }
+
   /* --------------------------------------------------------------------------
      空と海の仲間たちの「段階的な登場（ディスカバリー）」演出
      ・ゲーム開始時は空2体・海3体だけ。プレイ時間が進むたびに1種類ずつ新しい仲間が画面外から登場する
@@ -2753,6 +2906,15 @@ class SquidGameWatch {
     ctx.scale(dir * bd.scale, bd.scale);
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
+
+    // 創作キャラクター演出（色相シフトフィルター＆魔法のキラキラオーラ）
+    if (bd.hueShift) {
+      ctx.filter = `hue-rotate(${bd.hueShift}deg)`;
+    }
+    if (bd.hasGlow) {
+      ctx.shadowColor = `hsl(${bd.hueShift || 45}, 90%, 65%)`;
+      ctx.shadowBlur = 6;
+    }
 
     if (kind === 'seagull') {
       // 1. カモメ（白い翼・黒い翼端・黄色いくちばし）
@@ -3345,6 +3507,15 @@ class SquidGameWatch {
     ctx.scale(dir * f.scale, f.scale);
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
+
+    // 創作海洋生物演出（多彩な色相シフト・生物発光グロー）
+    if (f.hueShift) {
+      ctx.filter = `hue-rotate(${f.hueShift}deg)`;
+    }
+    if (f.hasBiolum) {
+      ctx.shadowColor = `hsl(${f.hue || 180}, 95%, 65%)`;
+      ctx.shadowBlur = 8;
+    }
 
     if (kind === 'sardine_school') {
       // 1. イワシ・キビナゴの銀鱗大群（7匹が隊列を組んでキラキラ銀色に光りながら泳ぐ）
@@ -4279,8 +4450,9 @@ class SquidGameWatch {
         Math.round(spA.ray[2] + (spB.ray[2] - spA.ray[2]) * t)
       ];
       // 太陽・満月の水平位置(ltSun.nx)と完全に連動し、光線が斜めに差し込む
+      // 光源(lightX)から海底へ差し込むため、海底での光線のずれは +ltSun.nx (光源の反対側・下流) へ向かう
       const ltSun = this._getDiverLighting(360, 100);
-      const sunSlopeX = -ltSun.nx * 110 * ltSun.lenMul;
+      const sunSlopeX = ltSun.nx * 110 * ltSun.lenMul;
       const rayShift = Math.sin(this.bioTime * 0.55) * 16;
       const rays = [
         { xTop: 135 + rayShift, wTop: 45, xBot: 135 + sunSlopeX + rayShift * 1.3, wBot: 120, alpha: 0.18 },
@@ -5357,6 +5529,54 @@ class SquidGameWatch {
     ctx.restore();
   }
 
+  // 200点刻みで激怒したイカが吹き出す濃黒・セピア墨雲を描画
+  _drawSquidInkClouds(ctx) {
+    if (!this.squidInkClouds || this.squidInkClouds.length === 0) return;
+    ctx.save();
+    for (const ink of this.squidInkClouds) {
+      if (ink.alpha <= 0.01) continue;
+      ctx.save();
+      ctx.translate(ink.x, ink.y);
+      ctx.rotate(ink.rot);
+
+      // 有機的な不定形の墨塊（3重の放射状グラデーション＋複数の外周パフ）
+      const grad = ctx.createRadialGradient(0, 0, 2, 0, 0, ink.r);
+      const a = Math.min(0.95, ink.alpha);
+      if (ink.tone === 'pitch') {
+        grad.addColorStop(0, `rgba(10, 8, 12, ${(a * 0.98).toFixed(3)})`);
+        grad.addColorStop(0.45, `rgba(28, 18, 22, ${(a * 0.85).toFixed(3)})`);
+        grad.addColorStop(0.80, `rgba(45, 25, 30, ${(a * 0.42).toFixed(3)})`);
+        grad.addColorStop(1, 'rgba(30, 15, 20, 0)');
+      } else if (ink.tone === 'sepia') {
+        grad.addColorStop(0, `rgba(38, 16, 10, ${(a * 0.95).toFixed(3)})`);
+        grad.addColorStop(0.48, `rgba(74, 28, 16, ${(a * 0.82).toFixed(3)})`);
+        grad.addColorStop(0.82, `rgba(110, 48, 26, ${(a * 0.38).toFixed(3)})`);
+        grad.addColorStop(1, 'rgba(80, 30, 15, 0)');
+      } else {
+        grad.addColorStop(0, `rgba(18, 12, 20, ${(a * 0.96).toFixed(3)})`);
+        grad.addColorStop(0.50, `rgba(40, 22, 32, ${(a * 0.80).toFixed(3)})`);
+        grad.addColorStop(0.85, `rgba(62, 32, 45, ${(a * 0.35).toFixed(3)})`);
+        grad.addColorStop(1, 'rgba(35, 18, 25, 0)');
+      }
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      // ゆらゆら波打つ雲状の墨塊
+      const lobes = 6;
+      for (let j = 0; j <= lobes; j++) {
+        const theta = (j / lobes) * Math.PI * 2;
+        const radDist = ink.r * (0.85 + Math.sin(theta * 3 + ink.rot * 2) * 0.18);
+        const px = Math.cos(theta) * radDist;
+        const py = Math.sin(theta) * radDist;
+        if (j === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      }
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    }
+    ctx.restore();
+  }
+
   // GAME C: 太陽・満月・朝焼け・夕焼け・快晴・雨天・水深に応じたダイバーのライティング＆逆向き影ベクトルを算出
   _getDiverLighting(x, y) {
     const env = this._getEnvAtmosphere();
@@ -5367,7 +5587,7 @@ class SquidGameWatch {
     else if (env.todIdx === 2) nightWeight = Math.max(0, (env.todSmooth - 0.35) / 0.65);
     else if (env.todIdx === 0) nightWeight = Math.max(0, 0.55 - env.todSmooth * 0.9);
 
-    // 太陽と満月の現在座標（空の描画と完全同期）
+    // 太陽と満月の現在座標（空の描画と完全同期: sunProg: 0=朝焼け左, 1=夕焼け右）
     const sunProg = Math.min(1, Math.max(0, (env.todCycle < 3.2 ? env.todCycle : 0) / 2.8));
     const sunX = 165 + sunProg * 330;
     const sunY = 78 - Math.sin(sunProg * Math.PI) * 52;
@@ -5383,10 +5603,12 @@ class SquidGameWatch {
     const waveRefractX = isUnderwater ? Math.sin(this.bioTime * 2.9 + x * 0.045) * 16 : 0;
 
     // 光源(lightX, lightY)から対象(x, y)へ向かうベクトル＝「光源の反対側（影が落ちる向き）」
+    // lightXが対象の左側にあれば (x - lightX > 0) -> 影は右(nx > 0)へ伸びる
+    // lightXが対象の右側にあれば (x - lightX < 0) -> 影は左(nx < 0)へ伸びる
     const rawDx = (x - lightX) * 1.45 + waveRefractX;
     const rawDy = Math.max(22, (y - lightY) * 0.75);
     const dist = Math.hypot(rawDx, rawDy) || 1;
-    const nx = rawDx / dist; // 影が伸びるX方向（光源の反対側。光源が左にあれば nx>0、右にあれば nx<0）
+    const nx = rawDx / dist; // 影が伸びるX方向（光源の反対側）
     const ny = Math.max(0.28, rawDy / dist); // 影が落ちるY方向（光源が上にあるため常に下方へ落ちる）
 
     // 4つの時間帯別ダイバー照光パレット (0:朝焼け, 1:快晴真昼, 2:夕焼け, 3:満月の夜)
@@ -5975,6 +6197,9 @@ class SquidGameWatch {
 
     // 7.5. GAME C 専用：ダイバーから海面へ「ぼこぼこ」とリアルに浮かび上がる空気の泡＆波紋
     this._drawRealisticBubbleStream(ctx);
+
+    // 7.8. 200点刻みでイカが激怒して噴射する濃黒・セピア墨雲
+    this._drawSquidInkClouds(ctx);
 
     // 8. 右上の7セグメントデジタルスコア＆モード・ステータス表示
     this._drawTopRightHudSegments(ctx);
@@ -7800,8 +8025,8 @@ class SquidGameWatch {
 
     // 捕獲用の巻き付き触腕＋ダイバーの頭と胴体
     this._drawSegment(ctx, isCaught, (c) => {
-      // イカから伸びてダイバーの胴体に巻き付く太い触腕
-      c.lineWidth = 12;
+      // イカから伸びてダイバーの胴体に巻き付く太い触腕（GAME A/B モノクロ液晶）
+      c.lineWidth = 14;
       c.lineCap = 'round';
       c.beginPath();
       c.moveTo(492, 186);
@@ -7824,14 +8049,118 @@ class SquidGameWatch {
       c.roundRect(cx - 12, cy + 12, 24, 26, 6);
       c.fill();
     }, (c) => {
-      // イカの巻き付き触腕
-      c.strokeStyle = '#9f1239';
-      c.lineWidth = 12;
-      c.lineCap = 'round';
+      // GAME C: イカらしい超リアルな質感の巻き付き触腕（テーパー筋肉、興奮した赤茶色色素胞マダラ、吸盤列、白抜きキチン輪）
+      const segFlush = this._getSquidFlushLevel(cx + 20, cy + 18);
+
+      // 触腕のテーパーポリゴン（根本 x:492, y:186 幅28px -> ダイバー胴体巻き付き部 x:cx-14..cx+14 幅16px -> 先端フック）
+      c.save();
+      const armPts = [
+        { t: 0.0,  x: 492,     y: 186,    w: 28 },
+        { t: 0.25, x: 450,     y: 174,    w: 24 },
+        { t: 0.50, x: cx + 22, y: cy + 18, w: 20 },
+        { t: 0.75, x: cx,      y: cy + 24, w: 17 },
+        { t: 1.0,  x: cx - 18, y: cy + 20, w: 13 }
+      ];
+
+      // 触腕本体のアウトラインパス
+      c.beginPath();
+      // 上側エッジ
+      c.moveTo(492, 186 - 14);
+      c.quadraticCurveTo(448, 172 - 12, cx + 20, cy + 18 - 10);
+      c.quadraticCurveTo(cx, cy + 24 - 9, cx - 18, cy + 20 - 7);
+      // 先端半円
+      c.arc(cx - 18, cy + 20, 6.5, -Math.PI * 0.5, Math.PI * 0.5, true);
+      // 下側エッジ
+      c.quadraticCurveTo(cx, cy + 24 + 9, cx + 20, cy + 18 + 10);
+      c.quadraticCurveTo(448, 172 + 12, 492, 186 + 14);
+      c.closePath();
+
+      // 活イカ半透明〜興奮時の赤茶色マダラ筋肉グラデーション
+      const tentacleGrad = c.createLinearGradient(492, 170, cx - 18, cy + 30);
+      const dorsalA = 0.42 + segFlush * 0.52;
+      const ventralA = 0.48 + segFlush * 0.44;
+      tentacleGrad.addColorStop(0, `rgba(${Math.round(180 - segFlush * 110)}, ${Math.round(210 - segFlush * 190)}, ${Math.round(230 - segFlush * 215)}, ${dorsalA.toFixed(3)})`);
+      tentacleGrad.addColorStop(0.55, `rgba(${Math.round(210 - segFlush * 70)}, ${Math.round(225 - segFlush * 180)}, ${Math.round(235 - segFlush * 205)}, ${((dorsalA + ventralA) * 0.5).toFixed(3)})`);
+      tentacleGrad.addColorStop(1, `rgba(245, ${Math.round(235 - segFlush * 35)}, ${Math.round(230 - segFlush * 45)}, ${ventralA.toFixed(3)})`);
+      c.fillStyle = tentacleGrad;
+      c.fill();
+
+      // 触腕内部を走る白い主神経索（半透明時に透けて見える）
+      c.save();
+      c.clip();
+      c.strokeStyle = `rgba(255, 255, 255, ${(0.45 * (1 - segFlush * 0.55)).toFixed(3)})`;
+      c.lineWidth = 3.2;
       c.beginPath();
       c.moveTo(492, 186);
-      c.quadraticCurveTo(435, 168, cx + 10, cy + 18);
+      c.quadraticCurveTo(440, 172, cx + 10, cy + 20);
+      c.quadraticCurveTo(cx - 4, cy + 22, cx - 18, cy + 20);
       c.stroke();
+
+      // 興奮して赤茶色・焦茶色・琥珀色に収縮・拡張するリアルな色素胞（クロマトフォア）斑点
+      const mottleColors = [[58, 14, 7], [130, 30, 18], [170, 48, 22], [198, 96, 26]];
+      const mottleSeeds = [
+        [475, 180, 0, 2.8], [460, 174, 1, 2.4], [445, 173, 2, 2.2], [430, 175, 0, 2.6],
+        [415, 178, 1, 2.2], [400, 182, 2, 2.4], [cx + 18, cy + 18, 0, 2.2], [cx + 8, cy + 22, 1, 2.0],
+        [cx - 4, cy + 23, 2, 1.8], [cx - 12, cy + 21, 0, 1.6]
+      ];
+      for (const [mx, my, tier, baseR] of mottleSeeds) {
+        const rgb = mottleColors[tier];
+        const rad = baseR * (0.6 + segFlush * 0.7);
+        c.fillStyle = `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, ${(0.45 + segFlush * 0.48).toFixed(3)})`;
+        c.beginPath();
+        c.arc(mx, my, rad, 0, Math.PI * 2);
+        c.fill();
+      }
+      c.restore();
+
+      // 触腕の輪郭リム光沢ハイライト
+      c.strokeStyle = `rgba(224, 242, 254, ${(0.45 - segFlush * 0.15).toFixed(3)})`;
+      c.lineWidth = 1.4;
+      c.stroke();
+
+      // 触腕の内側（ダイバー胴体に食い込む側）に並ぶリアルな「吸盤列（キチン環＋暗赤色の吸盤腔）」
+      const suckers = [
+        { sx: 468, sy: 191, sr: 4.8 },
+        { sx: 442, sy: 185, sr: 4.5 },
+        { sx: 418, sy: 184, sr: 4.2 },
+        { sx: cx + 18, sy: cy + 26, sr: 4.0 },
+        { sx: cx + 4,  sy: cy + 29, sr: 3.6 },
+        { sx: cx - 10, sy: cy + 26, sr: 3.2 }
+      ];
+      for (const sk of suckers) {
+        // 吸盤のカップ外輪（淡いクリーム〜ピンクベージュ）
+        const sGrad = c.createRadialGradient(sk.sx - 1, sk.sy - 1, 0.5, sk.sx, sk.sy, sk.sr);
+        sGrad.addColorStop(0, 'rgba(255, 250, 245, 0.95)');
+        sGrad.addColorStop(0.65, 'rgba(244, 218, 206, 0.90)');
+        sGrad.addColorStop(1, `rgba(148, 52, 36, ${(0.65 + segFlush * 0.3).toFixed(3)})`);
+        c.fillStyle = sGrad;
+        c.beginPath();
+        c.arc(sk.sx, sk.sy, sk.sr, 0, Math.PI * 2);
+        c.fill();
+
+        // 吸盤中央の角質キチン環（淡黄色エッジ）と吸盤腔（暗褐色ピット）
+        const hr = sk.sr * 0.46;
+        c.fillStyle = '#3b0d06';
+        c.strokeStyle = 'rgba(253, 224, 71, 0.75)';
+        c.lineWidth = 0.9;
+        c.beginPath();
+        c.arc(sk.sx, sk.sy, hr, 0, Math.PI * 2);
+        c.fill();
+        c.stroke();
+      }
+
+      // 触腕先端のフック（ダイバーの脇を巻き締めるカール）
+      c.strokeStyle = `rgba(${Math.round(210 - segFlush * 65)}, ${Math.round(190 - segFlush * 145)}, ${Math.round(195 - segFlush * 165)}, ${(0.65 + segFlush * 0.35).toFixed(3)})`;
+      c.lineWidth = 3.6;
+      c.lineCap = 'round';
+      c.beginPath();
+      c.moveTo(cx - 18, cy + 20);
+      c.quadraticCurveTo(cx - 26, cy + 14, cx - 28, cy + 7);
+      c.moveTo(cx - 18, cy + 20);
+      c.quadraticCurveTo(cx - 24, cy + 28, cx - 20, cy + 34);
+      c.stroke();
+
+      c.restore();
 
       // 胴体（時間帯・天候の光で照らされる潜水服）
       const suitGrad = c.createLinearGradient(
