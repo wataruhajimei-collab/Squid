@@ -729,9 +729,187 @@
         display: none; /* スマホ画面上の極小吹き出し内では日時を省略してスッキリ（詳細ポップアップ＆リスト側で常時確認可能） */
       }
     }
+
+    /* ============================================================
+       管理者 指紋 / 顔認証 生体認証ロック画面（Windows Hello / Face ID / Touch ID）
+       ============================================================ */
+    #auth-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: radial-gradient(circle at center, #0a1c38 0%, #030814 100%);
+      z-index: 99999;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      backdrop-filter: blur(16px);
+      transition: opacity 0.35s ease, visibility 0.35s ease;
+    }
+
+    #auth-overlay.auth-passed {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    .auth-card {
+      background: rgba(10, 25, 47, 0.95);
+      border: 2px solid var(--gold);
+      border-radius: 16px;
+      padding: 32px 24px;
+      max-width: 420px;
+      width: 100%;
+      text-align: center;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8), 0 0 20px rgba(212, 175, 55, 0.3);
+      position: relative;
+    }
+
+    .auth-icon-wrap {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background: rgba(0, 255, 204, 0.1);
+      border: 2px solid var(--radar-cyan);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 16px;
+      font-size: 2.4rem;
+      box-shadow: 0 0 15px rgba(0, 255, 204, 0.3);
+      animation: authPulse 2s infinite ease-in-out;
+    }
+
+    @keyframes authPulse {
+      0%, 100% { transform: scale(1); box-shadow: 0 0 15px rgba(0, 255, 204, 0.3); }
+      50% { transform: scale(1.05); box-shadow: 0 0 25px rgba(0, 255, 204, 0.6); }
+    }
+
+    .auth-title {
+      font-size: 1.25rem;
+      font-weight: 800;
+      color: var(--gold-light);
+      margin-bottom: 6px;
+      letter-spacing: 1px;
+    }
+
+    .auth-desc {
+      font-size: 0.82rem;
+      color: #9cb0c9;
+      line-height: 1.5;
+      margin-bottom: 20px;
+    }
+
+    .btn-auth-verify {
+      width: 100%;
+      background: linear-gradient(135deg, #00b4d8 0%, #00ffcc 100%);
+      color: #051326;
+      border: none;
+      border-radius: 10px;
+      padding: 13px 18px;
+      font-size: 1rem;
+      font-weight: 800;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      box-shadow: 0 4px 15px rgba(0, 255, 204, 0.4);
+      transition: all 0.2s;
+    }
+
+    .btn-auth-verify:hover {
+      filter: brightness(1.1);
+      transform: translateY(-2px);
+    }
+
+    .auth-status {
+      margin-top: 14px;
+      font-size: 0.8rem;
+      color: #8da2c0;
+      min-height: 20px;
+    }
+
+    .auth-status.error {
+      color: #ff6b6b;
+      font-weight: bold;
+    }
+
+    .auth-status.success {
+      color: var(--radar-cyan);
+      font-weight: bold;
+    }
+
+    .auth-fallback-box {
+      margin-top: 18px;
+      padding-top: 14px;
+      border-top: 1px dashed rgba(255, 255, 255, 0.15);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .auth-pin-input {
+      background: rgba(0, 0, 0, 0.4);
+      border: 1px solid rgba(212, 175, 55, 0.4);
+      border-radius: 6px;
+      color: #fff;
+      padding: 8px 12px;
+      font-size: 0.95rem;
+      text-align: center;
+      letter-spacing: 4px;
+      font-family: var(--font-digital);
+    }
+    .auth-pin-input:focus {
+      outline: none;
+      border-color: var(--gold);
+      box-shadow: 0 0 10px rgba(212, 175, 55, 0.5);
+    }
+
+    .btn-pin-unlock {
+      background: #1b2e4b;
+      color: #e6f1ff;
+      border: 1px solid #3b5984;
+      border-radius: 6px;
+      padding: 8px 14px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
+
+  <!-- 指紋認証 / 顔認証 / 生体認証 管理者ロック画面 -->
+  <div id="auth-overlay">
+    <div class="auth-card">
+      <div class="auth-icon-wrap" id="auth-icon-visual">🔐</div>
+      <div class="auth-title" id="auth-modal-title">🔒 管理者認証</div>
+      <p class="auth-desc" id="auth-prompt-desc">
+        SQUID グローバルレーダー管理画面です。<br>
+        端末の生体認証（指紋 / 顔認証）でロックを解除してください。
+      </p>
+
+      <!-- 登録済み生体認証でワンタップ解除ボタン -->
+      <button class="btn-auth-verify" id="btn-biometric-auth">
+        <span id="btn-auth-text">👆 生体認証でロック解除</span>
+      </button>
+
+      <div class="auth-status" id="auth-status-msg">生体認証の準備ができました</div>
+
+      <!-- 管理者マスターPIN解除＆この端末を生体認証登録するフォーム -->
+      <div class="auth-fallback-box" id="pin-section">
+        <span id="pin-section-label" style="font-size:0.75rem; color:#8da2c0;">管理者PINコードで認証・端末登録:</span>
+        <div style="display:flex; gap:6px;">
+          <input type="password" id="auth-pin-field" class="auth-pin-input" placeholder="PIN" maxlength="8" style="flex:1;">
+          <button id="btn-pin-submit" class="btn-pin-unlock">解除</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <header>
     <div class="brand">
@@ -1417,7 +1595,196 @@
     setListVisible(isListOn);
     setBubbleVisible(isBubbleOn);
 
-    loadData();
+    // ============================================================
+    // 指紋・顔認証 (WebAuthn) & 管理者マスター認証ロック機構
+    // ============================================================
+    const authOverlay = document.getElementById('auth-overlay');
+    const btnBiometricAuth = document.getElementById('btn-biometric-auth');
+    const authStatusMsg = document.getElementById('auth-status-msg');
+    const authPinField = document.getElementById('auth-pin-field');
+    const btnPinSubmit = document.getElementById('btn-pin-submit');
+    const authVisualIcon = document.getElementById('auth-icon-visual');
+    const authModalTitle = document.getElementById('auth-modal-title');
+    const authPromptDesc = document.getElementById('auth-prompt-desc');
+    const btnAuthText = document.getElementById('btn-auth-text');
+    const pinSection = document.getElementById('pin-section');
+    const pinSectionLabel = document.getElementById('pin-section-label');
+
+    // 管理者マスターPIN（任天堂OC-22発売年: 1981）
+    // ※あなた以外の人が開いても、このPINを知らない限り生体登録も閲覧もできません
+    const MASTER_ADMIN_PIN = "1981";
+    const SESSION_AUTH_KEY = "squid_admin_auth_passed";
+    const WEBAUTHN_CREDENTIAL_KEY = "squid_admin_webauthn_key_id";
+
+    const isMobileDevice = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || window.innerWidth <= 768;
+
+    // デバイス別に案内文言をカスタマイズ
+    if (isMobileDevice) {
+      authVisualIcon.textContent = '👤';
+      authModalTitle.textContent = '🔒 管理者 顔認証 (Face ID)';
+      authPromptDesc.innerHTML = 'SQUID グローバルレーダー管理画面です。<br>Face ID（顔認証）でロックを解除してください。';
+      btnAuthText.textContent = '👤 顔認証 (Face ID) で解除';
+    } else {
+      authVisualIcon.textContent = '👆';
+      authModalTitle.textContent = '🔒 管理者 指紋認証';
+      authPromptDesc.innerHTML = 'SQUID グローバルレーダー管理画面です。<br>PCの指紋センサー（Windows Hello）で解除してください。';
+      btnAuthText.textContent = '👆 指紋認証でロック解除';
+    }
+
+    function unlockAdminAccess() {
+      sessionStorage.setItem(SESSION_AUTH_KEY, "true");
+      authStatusMsg.textContent = "認証成功！ロックを解除しています...";
+      authStatusMsg.className = "auth-status success";
+      setTimeout(() => {
+        authOverlay.classList.add('auth-passed');
+        loadData(); // 認証通過後に初めてAPI通信＆マップ描画
+      }, 350);
+    }
+
+    // 生体キーの登録状況をチェック
+    function updateAuthUIState() {
+      const hasRegisteredKey = !!localStorage.getItem(WEBAUTHN_CREDENTIAL_KEY);
+      if (hasRegisteredKey) {
+        // すでにあなたの生体キーが登録されている端末：ワンタップ／自動生体認証
+        btnBiometricAuth.style.display = 'flex';
+        pinSectionLabel.textContent = "PINコードで認証:";
+      } else {
+        // 未登録の端末（他人の端末や初回）：他人が生体登録できないようPINを要求
+        btnBiometricAuth.style.display = 'none';
+        authStatusMsg.textContent = "管理者認証が必要です。管理者PINを入力してこの端末の生体認証を有効化してください。";
+        authStatusMsg.className = "auth-status";
+        pinSectionLabel.textContent = "管理者PINコードを入力:";
+      }
+    }
+
+    // WebAuthn 生体認証（すでに登録済みの生体キーとの照合）
+    async function verifyRegisteredBiometric() {
+      const savedCredId = localStorage.getItem(WEBAUTHN_CREDENTIAL_KEY);
+      if (!savedCredId) {
+        authStatusMsg.textContent = "管理者PINを入力して生体認証を有効化してください。";
+        return;
+      }
+
+      authStatusMsg.textContent = isMobileDevice ? "Face ID（顔認証）を起動中..." : "指紋センサーにタッチしてください...";
+      authStatusMsg.className = "auth-status";
+
+      try {
+        const challenge = new Uint8Array(32);
+        crypto.getRandomValues(challenge);
+        const rawIdBytes = Uint8Array.from(atob(savedCredId), c => c.charCodeAt(0));
+
+        const assertion = await navigator.credentials.get({
+          publicKey: {
+            challenge,
+            rpId: window.location.hostname,
+            allowCredentials: [{
+              id: rawIdBytes,
+              type: 'public-key',
+              transports: ['internal']
+            }],
+            userVerification: 'required',
+            timeout: 60000
+          }
+        });
+
+        if (assertion) {
+          unlockAdminAccess();
+        }
+      } catch (err) {
+        console.error("Biometric verification error:", err);
+        authStatusMsg.textContent = "生体認証が一致しないかキャンセルされました。";
+        authStatusMsg.className = "auth-status error";
+      }
+    }
+
+    // 初回端末登録（管理者PIN入力後にあなたの顔／指紋をマスターキーとして登録）
+    async function registerDeviceBiometric() {
+      if (!window.PublicKeyCredential) {
+        unlockAdminAccess();
+        return;
+      }
+
+      try {
+        const hasBio = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+        if (!hasBio) {
+          unlockAdminAccess();
+          return;
+        }
+
+        authStatusMsg.textContent = isMobileDevice ? "Face IDを登録中...画面を見てください" : "指紋センサーにタッチして登録してください...";
+        authStatusMsg.className = "auth-status";
+
+        const challenge = new Uint8Array(32);
+        crypto.getRandomValues(challenge);
+        const userId = new Uint8Array(16);
+        crypto.getRandomValues(userId);
+
+        const credential = await navigator.credentials.create({
+          publicKey: {
+            challenge,
+            rp: { name: "SQUID Radar Admin", id: window.location.hostname },
+            user: {
+              id: userId,
+              name: "master_admin@squid",
+              displayName: "SQUID Master Admin"
+            },
+            pubKeyCredParams: [{ alg: -7, type: "public-key" }, { alg: -257, type: "public-key" }],
+            authenticatorSelection: {
+              authenticatorAttachment: "platform",
+              userVerification: "required"
+            },
+            timeout: 60000
+          }
+        });
+
+        if (credential) {
+          const credIdStr = btoa(String.fromCharCode(...new Uint8Array(credential.rawId)));
+          localStorage.setItem(WEBAUTHN_CREDENTIAL_KEY, credIdStr);
+        }
+      } catch (e) {
+        console.warn("Biometric enrollment skipped or canceled:", e);
+      }
+      unlockAdminAccess();
+    }
+
+    btnBiometricAuth.addEventListener('click', verifyRegisteredBiometric);
+
+    // PINコードによる認証＆端末登録処理
+    btnPinSubmit.addEventListener('click', () => {
+      const pin = authPinField.value.trim();
+      if (pin === MASTER_ADMIN_PIN) {
+        authStatusMsg.textContent = "PIN確認成功！";
+        authStatusMsg.className = "auth-status success";
+        // 未登録端末の場合、あなたの顔/指紋をこの端末の解除キーとして登録
+        if (!localStorage.getItem(WEBAUTHN_CREDENTIAL_KEY)) {
+          registerDeviceBiometric();
+        } else {
+          unlockAdminAccess();
+        }
+      } else {
+        authStatusMsg.textContent = "管理者PINコードが違います。アクセスは拒否されました。";
+        authStatusMsg.className = "auth-status error";
+        authPinField.value = "";
+      }
+    });
+
+    authPinField.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') btnPinSubmit.click();
+    });
+
+    // 認証状態の初期判定
+    if (sessionStorage.getItem(SESSION_AUTH_KEY) === "true") {
+      authOverlay.classList.add('auth-passed');
+      loadData();
+    } else {
+      updateAuthUIState();
+      // すでに登録済みの端末であれば、即座にFace ID / 指紋認証プロンプトを自動起動
+      if (localStorage.getItem(WEBAUTHN_CREDENTIAL_KEY)) {
+        setTimeout(() => {
+          verifyRegisteredBiometric();
+        }, 400);
+      }
+    }
   </script>
 </body>
 </html>
