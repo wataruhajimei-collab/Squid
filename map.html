@@ -640,20 +640,78 @@
     }
 
     @media (max-width: 768px) {
-      .map-controls-bar {
-        left: 10px;
-        top: 60px;
+      header {
+        padding: 6px 10px;
       }
+      .brand h1 {
+        font-size: 0.95rem;
+        letter-spacing: 1px;
+      }
+      .badge-radar {
+        display: none;
+      }
+      .header-actions .btn {
+        padding: 4px 8px;
+        font-size: 0.75rem;
+      }
+
+      .map-controls-bar {
+        left: 8px;
+        top: 8px;
+        right: 8px;
+        gap: 5px;
+        pointer-events: none; /* 下の地図操作を妨げず、ボタンのみ反応 */
+      }
+      .map-controls-bar > * {
+        pointer-events: auto;
+      }
+      .map-style-bar,
+      .toggle-list-btn,
+      .recency-legend-bar {
+        padding: 4px 8px;
+        font-size: 0.72rem;
+      }
+      .recency-legend-bar .legend-gradient-line {
+        width: 45px;
+      }
+
+      /* スマホ時のサイドバー（リスト）は下部ハーフモーダルで地図を邪魔しない */
       #sidebar {
         width: auto;
         top: auto;
-        bottom: 12px;
-        right: 12px;
-        left: 12px;
-        max-height: 48vh;
+        bottom: 8px;
+        right: 8px;
+        left: 8px;
+        max-height: 42vh;
+        border-radius: 12px;
+      }
+      #sidebar.hidden-sidebar {
+        transform: translateY(calc(100% + 20px));
       }
       #sidebar-toggle {
-        display: block;
+        display: none !important; /* 上部トグルボタンと重複するため非表示 */
+      }
+
+      /* スマホ時の吹き出しバッジをコンパクト化して重なりを大幅軽減 */
+      .diver-badge {
+        padding: 2px 5px;
+        font-size: 0.68rem;
+        border-width: 1px;
+      }
+      .diver-badge-top .loc-title {
+        font-size: 0.72rem;
+      }
+      .diver-badge-top .score {
+        font-size: 0.72rem;
+      }
+      .diver-badge-bottom {
+        font-size: 0.62rem;
+      }
+      .diver-badge-bottom .player-name {
+        max-width: 80px;
+      }
+      .diver-badge-bottom span[style*="font-size"] {
+        display: none; /* スマホ画面上の極小吹き出し内では日時を省略してスッキリ（詳細ポップアップ＆リスト側で常時確認可能） */
       }
     }
   </style>
@@ -931,7 +989,8 @@
     const sidebarClose = document.getElementById('sidebar-close');
     const sidebarToggleMobile = document.getElementById('sidebar-toggle');
 
-    let isListOn = true;
+    let isMobile = window.innerWidth <= 768;
+    let isListOn = !isMobile; // スマホ時は初期表示でリストを閉じ、地図全体を広く見せる
     let isBubbleOn = true;
 
     // 吹き出し On/Off トグル管理
@@ -1332,6 +1391,10 @@
       document.getElementById('city-list').innerHTML = '<div style="text-align:center; padding: 20px; color: #8da2c0;">レーダー探査中...</div>';
       loadData();
     });
+
+    // 初期状態の反映（スマホ時はリストOFF）
+    setListVisible(isListOn);
+    setBubbleVisible(isBubbleOn);
 
     loadData();
   </script>
