@@ -419,18 +419,18 @@ class SquidGameWatch {
       });
     }
 
-    // 海底の超リアルな揺れる海藻（ジャイアントケルプ・カジメ・紅藻）の株データ
+    // 海底の超リアルな揺れる海藻（背丈7割に調整・ジャイアントケルプ、羽状のウミウチワ/紅藻、リボン状のアマモ、気泡付カジメなど多彩な形状）の株データ
     this.kelpPlants = [
-      { baseX: 74,  baseY: 422, height: 108, blades: 11, hue: 96,  sat: 64, light: 28, freq: 1.45, phase: 0.2, kind: 'kelp' },
-      { baseX: 92,  baseY: 425, height: 76,  blades: 8,  hue: 122, sat: 58, light: 24, freq: 1.68, phase: 1.4, kind: 'kelp' },
-      { baseX: 112, baseY: 426, height: 58,  blades: 7,  hue: 348, sat: 62, light: 30, freq: 1.85, phase: 2.7, kind: 'red' },
-      { baseX: 252, baseY: 438, height: 118, blades: 12, hue: 88,  sat: 68, light: 30, freq: 1.38, phase: 0.9, kind: 'kelp' },
-      { baseX: 268, baseY: 440, height: 84,  blades: 9,  hue: 114, sat: 56, light: 25, freq: 1.62, phase: 2.1, kind: 'kelp' },
-      { baseX: 374, baseY: 442, height: 124, blades: 13, hue: 102, sat: 65, light: 27, freq: 1.32, phase: 1.7, kind: 'kelp' },
-      { baseX: 392, baseY: 444, height: 74,  blades: 8,  hue: 42,  sat: 72, light: 32, freq: 1.74, phase: 3.3, kind: 'amber' },
-      { baseX: 500, baseY: 440, height: 112, blades: 11, hue: 92,  sat: 62, light: 26, freq: 1.48, phase: 2.8, kind: 'kelp' },
-      { baseX: 516, baseY: 442, height: 68,  blades: 8,  hue: 352, sat: 58, light: 28, freq: 1.90, phase: 4.1, kind: 'red' },
-      { baseX: 598, baseY: 440, height: 92,  blades: 10, hue: 108, sat: 60, light: 26, freq: 1.54, phase: 3.9, kind: 'kelp' }
+      { baseX: 74,  baseY: 422, height: 74, blades: 9,  hue: 96,  sat: 64, light: 28, freq: 1.45, phase: 0.2, kind: 'kelp' },
+      { baseX: 92,  baseY: 425, height: 53, blades: 7,  hue: 122, sat: 58, light: 24, freq: 1.68, phase: 1.4, kind: 'feather' },
+      { baseX: 112, baseY: 426, height: 41, blades: 6,  hue: 348, sat: 62, light: 30, freq: 1.85, phase: 2.7, kind: 'red' },
+      { baseX: 252, baseY: 438, height: 82, blades: 10, hue: 88,  sat: 68, light: 30, freq: 1.38, phase: 0.9, kind: 'ribbon' },
+      { baseX: 268, baseY: 440, height: 58, blades: 7,  hue: 114, sat: 56, light: 25, freq: 1.62, phase: 2.1, kind: 'feather' },
+      { baseX: 374, baseY: 442, height: 86, blades: 10, hue: 102, sat: 65, light: 27, freq: 1.32, phase: 1.7, kind: 'kelp' },
+      { baseX: 392, baseY: 444, height: 51, blades: 6,  hue: 42,  sat: 72, light: 32, freq: 1.74, phase: 3.3, kind: 'amber' },
+      { baseX: 500, baseY: 440, height: 78, blades: 9,  hue: 92,  sat: 62, light: 26, freq: 1.48, phase: 2.8, kind: 'ribbon' },
+      { baseX: 516, baseY: 442, height: 48, blades: 6,  hue: 352, sat: 58, light: 28, freq: 1.90, phase: 4.1, kind: 'red' },
+      { baseX: 598, baseY: 440, height: 64, blades: 8,  hue: 108, sat: 60, light: 26, freq: 1.54, phase: 3.9, kind: 'feather' }
     ];
   }
 
@@ -1432,6 +1432,43 @@ class SquidGameWatch {
     }
   }
 
+  // GAME C: リアルな波浪シミュレーションによる海面高(y)と法線勾配を算出
+  _getSeaWaveHeight(x) {
+    if (!this._isRealColor()) return 96;
+    const t = this.bioTime;
+    // 3つの異なる周波数・波長の進行波を合成したリアルな海洋重力波
+    const w1 = Math.sin(t * 2.2 + x * 0.038) * 4.6;
+    const w2 = Math.sin(t * 3.4 - x * 0.065 + 1.2) * 2.5;
+    const w3 = Math.cos(t * 1.5 + x * 0.022 - 0.7) * 2.0;
+    return 101 + w1 + w2 + w3;
+  }
+
+  // GAME C: 波の起伏と連動するボートの浮沈・ピッチング（傾き）揺れ
+  _getBoatWaveMotion() {
+    if (!this._isRealColor()) return { yOff: 0, pitch: 0, rollX: 0 };
+    // 船体中央(x=125)とその前後の喫水点における海面高さをサンプリング
+    const yCenter = this._getSeaWaveHeight(125);
+    const yBow = this._getSeaWaveHeight(190);
+    const yStern = this._getSeaWaveHeight(60);
+    const yOff = yCenter - 101; // 基準海面からの上下浮沈変位
+    const pitch = Math.max(-0.09, Math.min(0.09, (yBow - yStern) / 130)); // 前後トリム（傾き角ラジアン）
+    const rollX = Math.sin(this.bioTime * 1.8) * 1.8; // 微小な左右ローリング変位
+    return { yOff, pitch, rollX };
+  }
+
+  // GAME C: 水中オブジェクトの光学的屈折によるゆらぎ変位（深さと水面波に連動）
+  _getWaterRefractionOffset(x, y) {
+    if (!this._isRealColor() || y <= 108) return { dx: 0, dy: 0 };
+    const depthRatio = Math.min(1.0, (y - 108) / 320);
+    const t = this.bioTime;
+    // 水面波の屈折によって生じる横揺れ・縦揺れの多重ハーモニクス
+    const dx = (Math.sin(t * 2.8 + y * 0.042 + x * 0.028) * 2.8
+              + Math.cos(t * 4.2 - y * 0.075) * 1.4) * depthRatio;
+    const dy = (Math.sin(t * 3.1 - x * 0.052) * 1.6
+              + Math.cos(t * 2.1 + y * 0.035) * 1.0) * depthRatio;
+    return { dx, dy };
+  }
+
   // GAME C: 時間帯・季節・天候の滑らかな連続変化パラメータを算出
   _getEnvAtmosphere() {
     // 時間経過(bioTime)とスコア進行の両方で、時間帯・季節・天候がゆっくり美しく巡る
@@ -1657,10 +1694,10 @@ class SquidGameWatch {
       b.x += (b.vx * 0.35 + sway) * dt;
       b.y += b.vy * dt;
 
-      // 海面の波ライン(y ≒ 104〜108)に達したら弾けて波紋リングを作る
-      const surfaceY = 104 + Math.sin(b.x * 0.065) * 4;
+      // 海面の波ラインに達したら弾けて波紋リングを作る
+      const surfaceY = this._getSeaWaveHeight(b.x);
       if (b.y - b.r <= surfaceY) {
-        if (b.r >= 2.2 && this.surfaceRipples.length < 30) {
+        if (b.r >= 2.0 && this.surfaceRipples.length < 30) {
           this.surfaceRipples.push({
             x: b.x,
             y: surfaceY,
@@ -2213,7 +2250,7 @@ class SquidGameWatch {
     }
   }
 
-  // GAME C: 海流にたなびく超リアルな海藻群（ジャイアントケルプ・カジメ・紅藻）の描画
+  // GAME C: 海流にたなびく超リアルな海藻群（形状バリエーション：ジャイアントケルプ・羽状紅藻・リボンアマモ・カジメ）の描画
   _drawRealisticSwayingKelp(ctx) {
     if (!this.kelpPlants) return;
     ctx.save();
@@ -2230,98 +2267,164 @@ class SquidGameWatch {
       for (let s = 1; s <= segments; s++) {
         const u = s / segments;
         // 海流の進行波（根元はしっかり、先端ほど大きくしなやかに揺れる）
-        const wave = Math.sin(this.bioTime * kp.freq - s * 0.48 + kp.phase) * (5 + u * 16)
-                   + Math.cos(this.bioTime * (kp.freq * 0.62) + kp.phase) * (u * 6);
+        const wave = Math.sin(this.bioTime * kp.freq - s * 0.48 + kp.phase) * (4 + u * 13)
+                   + Math.cos(this.bioTime * (kp.freq * 0.62) + kp.phase) * (u * 5);
         currX = kp.baseX + wave;
         currY = kp.baseY - s * segLen;
         spinePts.push({ x: currX, y: currY, u });
       }
 
-      // 1. 各節から左右に広がるリアルな葉状体（フリル＆鋸歯エッジ・葉脈・気胞付き）
-      for (let s = 1; s < spinePts.length; s++) {
-        const pt = spinePts[s];
-        const side = (s % 2 === 0) ? 1 : -1;
-        const u = pt.u;
-        const bladeLen = (18 + Math.sin(u * Math.PI) * 22) * (kp.kind === 'red' ? 0.75 : 1.0);
-        const bladeWid = (5.2 + Math.sin(u * Math.PI) * 4.5) * (kp.kind === 'red' ? 0.82 : 1.0);
-        const flutter = Math.sin(this.bioTime * (kp.freq * 1.6) - s * 0.7 + kp.phase) * 0.32;
-        const angle = (side > 0 ? -0.38 : -2.76) + flutter;
+      if (kp.kind === 'ribbon') {
+        // --- 形状バリエーション1: リボン状のアマモ・ウミヒルモ（帯状にうねる長い海藻） ---
+        const ribGrad = ctx.createLinearGradient(kp.baseX, kp.baseY, currX, currY);
+        ribGrad.addColorStop(0, `hsla(${kp.hue - 8}, ${kp.sat}%, ${kp.light - 4}%, 0.90)`);
+        ribGrad.addColorStop(0.5, `hsla(${kp.hue + 6}, ${kp.sat + 10}%, ${kp.light + 8}%, 0.82)`);
+        ribGrad.addColorStop(1, `hsla(${kp.hue + 16}, ${kp.sat + 14}%, ${kp.light + 18}%, 0.70)`);
+        ctx.strokeStyle = ribGrad;
+        ctx.lineWidth = 5.2;
+        ctx.beginPath();
+        ctx.moveTo(spinePts[0].x, spinePts[0].y);
+        for (let s = 1; s < spinePts.length; s++) {
+          const prev = spinePts[s - 1];
+          const curr = spinePts[s];
+          const mx = (prev.x + curr.x) * 0.5;
+          const my = (prev.y + curr.y) * 0.5;
+          ctx.quadraticCurveTo(prev.x, prev.y, mx, my);
+        }
+        ctx.lineTo(spinePts[spinePts.length - 1].x, spinePts[spinePts.length - 1].y);
+        ctx.stroke();
 
-        ctx.save();
-        ctx.translate(pt.x, pt.y);
-        ctx.rotate(angle);
+        // 葉脈の細い光沢ハイライト
+        ctx.strokeStyle = `hsla(${kp.hue + 20}, ${kp.sat + 16}%, ${kp.light + 24}%, 0.55)`;
+        ctx.lineWidth = 1.2;
+        ctx.stroke();
+      } else if (kp.kind === 'feather') {
+        // --- 形状バリエーション2: 羽状・ウミウチワ状の細かな小羽片が交互に茂る海藻 ---
+        for (let s = 1; s < spinePts.length; s++) {
+          const pt = spinePts[s];
+          const side = (s % 2 === 0) ? 1 : -1;
+          const u = pt.u;
+          const flen = (10 + Math.sin(u * Math.PI) * 14);
+          const fAngle = (side > 0 ? -0.45 : -2.69) + Math.sin(this.bioTime * 2.2 + s) * 0.28;
+          ctx.save();
+          ctx.translate(pt.x, pt.y);
+          ctx.rotate(fAngle);
 
-        // 根元の気胞（ウキ袋：ジャイアントケルプ特有の丸い浮き球）
-        if (kp.kind !== 'red') {
-          ctx.fillStyle = `hsla(${kp.hue + 12}, ${kp.sat + 10}%, ${kp.light + 16}%, 0.92)`;
+          const fGrad = ctx.createLinearGradient(0, -2, flen, 2);
+          fGrad.addColorStop(0, `hsla(${kp.hue}, ${kp.sat}%, ${kp.light}%, 0.88)`);
+          fGrad.addColorStop(1, `hsla(${kp.hue + 15}, ${kp.sat + 10}%, ${kp.light + 14}%, 0.65)`);
+          ctx.strokeStyle = fGrad;
+          ctx.lineWidth = 2.4;
           ctx.beginPath();
-          ctx.ellipse(3.2, 0, 3.2, 2.3, 0, 0, Math.PI * 2);
+          ctx.moveTo(0, 0);
+          ctx.quadraticCurveTo(flen * 0.5, (side > 0 ? -3 : 3), flen, 0);
+          ctx.stroke();
+
+          // 小羽片の先端のふんわり広がる丸み
+          ctx.fillStyle = `hsla(${kp.hue + 12}, ${kp.sat}%, ${kp.light + 10}%, 0.75)`;
+          ctx.beginPath();
+          ctx.ellipse(flen, 0, 2.2, 1.4, 0, 0, Math.PI * 2);
           ctx.fill();
+          ctx.restore();
         }
 
-        // 半透明の太陽光透過グラデーションを持つ葉身
-        const bGrad = ctx.createLinearGradient(0, -bladeWid, bladeLen, bladeWid);
-        bGrad.addColorStop(0, `hsla(${kp.hue - 6}, ${kp.sat}%, ${kp.light - 4}%, 0.86)`);
-        bGrad.addColorStop(0.55, `hsla(${kp.hue + 8}, ${kp.sat + 12}%, ${kp.light + 12}%, 0.78)`);
-        bGrad.addColorStop(1, `hsla(${kp.hue + 18}, ${kp.sat + 16}%, ${kp.light + 22}%, 0.62)`);
-        ctx.fillStyle = bGrad;
-        ctx.strokeStyle = `hsla(${kp.hue + 16}, ${kp.sat + 14}%, ${kp.light + 20}%, 0.55)`;
-        ctx.lineWidth = 0.9;
-
-        // 波打つ鋸歯（ギザギザ）状のリアルな海藻ブレード輪郭
+        // 幹の細い茎
+        ctx.strokeStyle = `hsla(${kp.hue - 10}, ${kp.sat}%, ${kp.light - 4}%, 0.92)`;
+        ctx.lineWidth = 2.2;
         ctx.beginPath();
-        ctx.moveTo(4, 0);
-        const ripples = 4;
-        for (let r = 1; r <= ripples; r++) {
-          const rx = 4 + (bladeLen - 4) * (r / ripples);
-          const prevX = 4 + (bladeLen - 4) * ((r - 0.5) / ripples);
-          const w = bladeWid * Math.sin((r / ripples) * Math.PI * 0.92);
-          const waveOff = Math.sin(this.bioTime * 3.2 + r * 1.4 + s) * 1.6;
-          ctx.quadraticCurveTo(prevX, -w * 1.25 + waveOff, rx, -w * 0.72 + waveOff);
+        ctx.moveTo(spinePts[0].x, spinePts[0].y);
+        for (let s = 1; s < spinePts.length; s++) {
+          ctx.lineTo(spinePts[s].x, spinePts[s].y);
         }
-        ctx.lineTo(bladeLen + 2, Math.sin(this.bioTime * 3.5 + s) * 2.0);
-        for (let r = ripples; r >= 1; r--) {
-          const rx = 4 + (bladeLen - 4) * ((r - 1) / ripples);
-          const midX = 4 + (bladeLen - 4) * ((r - 0.5) / ripples);
-          const w = bladeWid * Math.sin((r / ripples) * Math.PI * 0.92);
-          const waveOff = Math.sin(this.bioTime * 3.2 + r * 1.4 + s) * 1.6;
-          ctx.quadraticCurveTo(midX, w * 1.25 + waveOff, rx, (r === 1 ? 0 : w * 0.72 + waveOff));
+        ctx.stroke();
+      } else {
+        // --- 形状バリエーション3 & 4: ジャイアントケルプ / 気泡付き琥珀カジメ ---
+        // 1. 各節から左右に広がるリアルな葉状体（フリル＆鋸歯エッジ・葉脈・気胞付き）
+        for (let s = 1; s < spinePts.length; s++) {
+          const pt = spinePts[s];
+          const side = (s % 2 === 0) ? 1 : -1;
+          const u = pt.u;
+          const bladeLen = (14 + Math.sin(u * Math.PI) * 16) * (kp.kind === 'red' ? 0.75 : 1.0);
+          const bladeWid = (4.0 + Math.sin(u * Math.PI) * 3.4) * (kp.kind === 'red' ? 0.82 : 1.0);
+          const flutter = Math.sin(this.bioTime * (kp.freq * 1.6) - s * 0.7 + kp.phase) * 0.32;
+          const angle = (side > 0 ? -0.38 : -2.76) + flutter;
+
+          ctx.save();
+          ctx.translate(pt.x, pt.y);
+          ctx.rotate(angle);
+
+          // 根元の気胞（ウキ袋：ジャイアントケルプ特有の丸い浮き球）
+          if (kp.kind !== 'red') {
+            ctx.fillStyle = `hsla(${kp.hue + 12}, ${kp.sat + 10}%, ${kp.light + 16}%, 0.92)`;
+            ctx.beginPath();
+            ctx.ellipse(2.6, 0, 2.6, 1.9, 0, 0, Math.PI * 2);
+            ctx.fill();
+          }
+
+          // 半透明の太陽光透過グラデーションを持つ葉身
+          const bGrad = ctx.createLinearGradient(0, -bladeWid, bladeLen, bladeWid);
+          bGrad.addColorStop(0, `hsla(${kp.hue - 6}, ${kp.sat}%, ${kp.light - 4}%, 0.86)`);
+          bGrad.addColorStop(0.55, `hsla(${kp.hue + 8}, ${kp.sat + 12}%, ${kp.light + 12}%, 0.78)`);
+          bGrad.addColorStop(1, `hsla(${kp.hue + 18}, ${kp.sat + 16}%, ${kp.light + 22}%, 0.62)`);
+          ctx.fillStyle = bGrad;
+          ctx.strokeStyle = `hsla(${kp.hue + 16}, ${kp.sat + 14}%, ${kp.light + 20}%, 0.55)`;
+          ctx.lineWidth = 0.8;
+
+          // 波打つ鋸歯（ギザギザ）状のリアルな海藻ブレード輪郭
+          ctx.beginPath();
+          ctx.moveTo(3, 0);
+          const ripples = 3;
+          for (let r = 1; r <= ripples; r++) {
+            const rx = 3 + (bladeLen - 3) * (r / ripples);
+            const prevX = 3 + (bladeLen - 3) * ((r - 0.5) / ripples);
+            const w = bladeWid * Math.sin((r / ripples) * Math.PI * 0.92);
+            const waveOff = Math.sin(this.bioTime * 3.2 + r * 1.4 + s) * 1.3;
+            ctx.quadraticCurveTo(prevX, -w * 1.25 + waveOff, rx, -w * 0.72 + waveOff);
+          }
+          ctx.lineTo(bladeLen + 2, Math.sin(this.bioTime * 3.5 + s) * 1.6);
+          for (let r = ripples; r >= 1; r--) {
+            const rx = 3 + (bladeLen - 3) * ((r - 1) / ripples);
+            const midX = 3 + (bladeLen - 3) * ((r - 0.5) / ripples);
+            const w = bladeWid * Math.sin((r / ripples) * Math.PI * 0.92);
+            const waveOff = Math.sin(this.bioTime * 3.2 + r * 1.4 + s) * 1.3;
+            ctx.quadraticCurveTo(midX, w * 1.25 + waveOff, rx, (r === 1 ? 0 : w * 0.72 + waveOff));
+          }
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+
+          // 葉の中央を走る主脈（ミッドリブ）
+          ctx.strokeStyle = `hsla(${kp.hue + 20}, ${kp.sat + 18}%, ${kp.light + 26}%, 0.52)`;
+          ctx.lineWidth = 1.0;
+          ctx.beginPath();
+          ctx.moveTo(3, 0);
+          ctx.quadraticCurveTo(bladeLen * 0.5, Math.sin(this.bioTime * 3.2 + s) * 1.4, bladeLen * 0.92, Math.sin(this.bioTime * 3.5 + s) * 1.3);
+          ctx.stroke();
+
+          ctx.restore();
         }
-        ctx.closePath();
-        ctx.fill();
+
+        // 2. しなやかに湾曲する主茎（スタイプ）
+        ctx.strokeStyle = `hsla(${kp.hue - 8}, ${kp.sat}%, ${kp.light - 2}%, 0.94)`;
+        ctx.lineWidth = 2.8;
+        ctx.beginPath();
+        ctx.moveTo(spinePts[0].x, spinePts[0].y);
+        for (let s = 1; s < spinePts.length; s++) {
+          const prev = spinePts[s - 1];
+          const curr = spinePts[s];
+          const mx = (prev.x + curr.x) * 0.5;
+          const my = (prev.y + curr.y) * 0.5;
+          ctx.quadraticCurveTo(prev.x, prev.y, mx, my);
+        }
+        const last = spinePts[spinePts.length - 1];
+        ctx.lineTo(last.x, last.y);
         ctx.stroke();
 
-        // 葉の中央を走る主脈（ミッドリブ）
-        ctx.strokeStyle = `hsla(${kp.hue + 20}, ${kp.sat + 18}%, ${kp.light + 26}%, 0.52)`;
-        ctx.lineWidth = 1.1;
-        ctx.beginPath();
-        ctx.moveTo(4, 0);
-        ctx.quadraticCurveTo(bladeLen * 0.5, Math.sin(this.bioTime * 3.2 + s) * 1.8, bladeLen * 0.92, Math.sin(this.bioTime * 3.5 + s) * 1.6);
+        // 茎のハイライトライン
+        ctx.strokeStyle = `hsla(${kp.hue + 14}, ${kp.sat + 12}%, ${kp.light + 18}%, 0.45)`;
+        ctx.lineWidth = 1.0;
         ctx.stroke();
-
-        ctx.restore();
       }
-
-      // 2. しなやかに湾曲する主茎（スタイプ）と根元の付着器（ホールドファスト）
-      ctx.strokeStyle = `hsla(${kp.hue - 8}, ${kp.sat}%, ${kp.light - 2}%, 0.94)`;
-      ctx.lineWidth = 3.4;
-      ctx.beginPath();
-      ctx.moveTo(spinePts[0].x, spinePts[0].y);
-      for (let s = 1; s < spinePts.length; s++) {
-        const prev = spinePts[s - 1];
-        const curr = spinePts[s];
-        const mx = (prev.x + curr.x) * 0.5;
-        const my = (prev.y + curr.y) * 0.5;
-        ctx.quadraticCurveTo(prev.x, prev.y, mx, my);
-      }
-      const last = spinePts[spinePts.length - 1];
-      ctx.lineTo(last.x, last.y);
-      ctx.stroke();
-
-      // 茎のハイライトライン
-      ctx.strokeStyle = `hsla(${kp.hue + 14}, ${kp.sat + 12}%, ${kp.light + 18}%, 0.45)`;
-      ctx.lineWidth = 1.2;
-      ctx.stroke();
     }
 
     // 3. 海底の岩肌や砂地に棲むヒトデ＆横歩きするカニ
@@ -4132,9 +4235,15 @@ class SquidGameWatch {
     // --- 海面の波ライン＆海中の表現 ---
     ctx.beginPath();
     ctx.moveTo(0, 108);
-    for (let x = 0; x <= 720; x += 48) {
-      const waveY = real ? (96 + Math.sin(this.bioTime * 2.4 + x * 0.045) * 2.8) : 96;
-      ctx.quadraticCurveTo(x + 24, waveY, x + 48, 108);
+    if (real) {
+      // リアルな多重海洋波シミュレーションによる曲面
+      for (let x = 0; x <= 720; x += 16) {
+        ctx.lineTo(x, this._getSeaWaveHeight(x));
+      }
+    } else {
+      for (let x = 0; x <= 720; x += 48) {
+        ctx.quadraticCurveTo(x + 24, 96, x + 48, 108);
+      }
     }
     ctx.lineTo(720, 480);
     ctx.lineTo(0, 480);
@@ -4216,10 +4325,19 @@ class SquidGameWatch {
       ctx.strokeStyle = `rgba(${rayCol[0]}, ${rayCol[1]}, ${rayCol[2]}, 0.88)`;
       ctx.lineWidth = 3.5;
       ctx.beginPath();
-      ctx.moveTo(0, 108);
-      for (let x = 0; x <= 720; x += 48) {
-        const waveY = 96 + Math.sin(this.bioTime * 2.4 + x * 0.045) * 2.8;
-        ctx.quadraticCurveTo(x + 24, waveY, x + 48, 108);
+      ctx.moveTo(0, this._getSeaWaveHeight(0));
+      for (let x = 16; x <= 720; x += 16) {
+        ctx.lineTo(x, this._getSeaWaveHeight(x));
+      }
+      ctx.stroke();
+
+      // 波頭の細やかな白い泡しぶきライン
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.65)';
+      ctx.lineWidth = 1.6;
+      ctx.beginPath();
+      ctx.moveTo(0, this._getSeaWaveHeight(0) - 0.8);
+      for (let x = 20; x <= 720; x += 20) {
+        ctx.lineTo(x, this._getSeaWaveHeight(x) - 0.8);
       }
       ctx.stroke();
     } else {
@@ -4238,6 +4356,14 @@ class SquidGameWatch {
 
     // --- 左上のサルベージ船 ---
     const ltBoat = real ? this._getDiverLighting(128, 96) : null;
+    const boatMotion = real ? this._getBoatWaveMotion() : { yOff: 0, pitch: 0, rollX: 0 };
+    ctx.save();
+    if (real && (boatMotion.yOff !== 0 || boatMotion.pitch !== 0 || boatMotion.rollX !== 0)) {
+      // 波のうねりに合わせた浮沈・ピッチング（傾き）・微小ロール変位
+      ctx.translate(125 + boatMotion.rollX, 99 + boatMotion.yOff);
+      ctx.rotate(boatMotion.pitch);
+      ctx.translate(-125, -99);
+    }
     if (real) {
       // 1. 船底から光源の反対側（水中）へ滑らかに伸びる一体型の船影と、光の強さに連動する水鏡リフレクション
       ctx.save();
@@ -4382,14 +4508,23 @@ class SquidGameWatch {
       ctx.lineTo(rx + 16, ry);
     }
     ctx.stroke();
+    ctx.restore();
 
     // --- 右奥〜宝箱の後ろにそびえる大きな沈没帆船（ガレオン船・カラー印刷層） ---
-    this._drawSunkenGalleon(ctx);
+    if (real) {
+      const shipRefract = this._getWaterRefractionOffset(520, 310);
+      ctx.save();
+      ctx.translate(shipRefract.dx * 0.8, shipRefract.dy * 0.8);
+      this._drawSunkenGalleon(ctx);
+      ctx.restore();
+    } else {
+      this._drawSunkenGalleon(ctx);
+    }
 
     // --- 左側〜海底の岩礁と海藻プリント ---
     const ltReef = real ? this._getDiverLighting(220, 360) : null;
     if (real) {
-      // 岩礁斜面が光源の反対側へ落とす滑らかな海底シャドウ（nxの符号に応じて左右正しく伸びる）
+      // 1. 岩礁斜面が光源の反対側へ落とす滑らかな海底シャドウ
       ctx.save();
       const rShiftX = ltReef.nx * 42 * ltReef.lenMul;
       const rShiftY = Math.max(6, ltReef.ny * 16 * ltReef.lenMul);
@@ -4408,6 +4543,7 @@ class SquidGameWatch {
       ctx.fill();
       ctx.restore();
 
+      // 2. 本物の岩場のような凹凸・岩棚・亀裂を持つリアルな岩礁と海底ベース
       const reefGrad = ctx.createLinearGradient(
         180 - ltReef.nx * 140,
         195,
@@ -4415,28 +4551,131 @@ class SquidGameWatch {
         480
       );
       reefGrad.addColorStop(0, ltReef.suitMid);
-      reefGrad.addColorStop(0.32, '#334155');
-      reefGrad.addColorStop(0.72, '#1e293b');
-      reefGrad.addColorStop(1, '#090f1d');
+      reefGrad.addColorStop(0.25, '#2f3b4c');
+      reefGrad.addColorStop(0.55, '#1e2837');
+      reefGrad.addColorStop(0.85, '#151d28');
+      reefGrad.addColorStop(1, '#080c14');
       ctx.fillStyle = reefGrad;
-      ctx.strokeStyle = '#0f172a';
+      ctx.strokeStyle = '#0a0f18';
+      ctx.lineWidth = 2.2;
+
+      // ゴツゴツした岩肌のアウトライン（棚状の岩盤や亀裂を表現）
+      ctx.beginPath();
+      ctx.moveTo(0, 195);
+      ctx.lineTo(28, 198);
+      ctx.lineTo(46, 204);
+      ctx.lineTo(62, 222);
+      ctx.lineTo(76, 232);
+      ctx.lineTo(72, 248);
+      ctx.lineTo(84, 265);
+      ctx.lineTo(98, 290);
+      ctx.lineTo(112, 312);
+      ctx.lineTo(108, 334);
+      ctx.lineTo(126, 355);
+      ctx.lineTo(142, 376);
+      ctx.lineTo(164, 386);
+      ctx.lineTo(195, 396);
+      ctx.lineTo(228, 408);
+      ctx.lineTo(265, 418);
+      ctx.lineTo(310, 424);
+      ctx.lineTo(365, 429);
+      ctx.lineTo(425, 431);
+      ctx.lineTo(495, 434);
+      ctx.lineTo(570, 436);
+      ctx.lineTo(650, 437);
+      ctx.lineTo(720, 438);
+      ctx.lineTo(720, 480);
+      ctx.lineTo(0, 480);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      // 3. リアルな岩肌テクスチャ：岩棚の段差面、割れ目（クラック）、斑紋鉱物、地層
+      ctx.save();
+      // 段差・棚状岩盤のハイライト＆シャドウ
+      const rockShelves = [
+        { x1: 18, y1: 206, x2: 52, y2: 218, shade: 0.28 },
+        { x1: 58, y1: 242, x2: 82, y2: 254, shade: 0.32 },
+        { x1: 78, y1: 278, x2: 106, y2: 298, shade: 0.35 },
+        { x1: 96, y1: 326, x2: 130, y2: 348, shade: 0.38 },
+        { x1: 122, y1: 368, x2: 172, y2: 390, shade: 0.40 },
+        { x1: 182, y1: 405, x2: 245, y2: 416, shade: 0.34 },
+        { x1: 280, y1: 422, x2: 350, y2: 427, shade: 0.28 },
+        { x1: 390, y1: 430, x2: 480, y2: 434, shade: 0.25 }
+      ];
+
+      for (const s of rockShelves) {
+        // 岩棚の上面ハイライト
+        ctx.strokeStyle = ltReef.rimColor(s.shade * (0.6 + 0.4 * ltReef.rimPower));
+        ctx.lineWidth = 1.6;
+        ctx.beginPath();
+        ctx.moveTo(s.x1, s.y1);
+        ctx.lineTo(s.x2, s.y2);
+        ctx.stroke();
+
+        // 岩棚の直下の影
+        ctx.strokeStyle = 'rgba(6, 10, 16, 0.65)';
+        ctx.lineWidth = 2.2;
+        ctx.beginPath();
+        ctx.moveTo(s.x1 + 1, s.y1 + 2.5);
+        ctx.lineTo(s.x2, s.y2 + 2.5);
+        ctx.stroke();
+      }
+
+      // 岩肌の亀裂（岩の割れ目・フィッシャー）
+      ctx.strokeStyle = 'rgba(4, 7, 12, 0.82)';
+      ctx.lineWidth = 1.3;
+      const fissures = [
+        [[35, 212], [42, 230], [38, 246]],
+        [[68, 258], [74, 276], [82, 292]],
+        [[92, 305], [88, 328], [94, 345]],
+        [[138, 382], [148, 404], [142, 420]],
+        [[215, 412], [224, 432]],
+        [[330, 425], [338, 442]],
+        [[450, 433], [458, 450]]
+      ];
+      for (const pts of fissures) {
+        ctx.beginPath();
+        ctx.moveTo(pts[0][0], pts[0][1]);
+        for (let i = 1; i < pts.length; i++) {
+          ctx.lineTo(pts[i][0], pts[i][1]);
+        }
+        ctx.stroke();
+      }
+
+      // 岩肌の砂利・鉱物斑点・苔むした付着物テクスチャ
+      const rockSpecks = [
+        [15, 230, 2.5, '#475569'], [32, 260, 3.2, '#334155'], [22, 290, 2.0, '#166534'],
+        [48, 280, 2.8, '#1e293b'], [60, 310, 3.5, '#14532d'], [42, 340, 2.4, '#3b4252'],
+        [75, 360, 3.0, '#475569'], [95, 380, 4.0, '#15803d'], [110, 410, 3.2, '#334155'],
+        [150, 425, 3.8, '#1e293b'], [180, 435, 3.0, '#166534'], [230, 440, 4.2, '#475569'],
+        [300, 445, 3.5, '#334155'], [380, 448, 4.0, '#14532d'], [480, 450, 3.5, '#475569'],
+        [580, 452, 4.5, '#334155'], [660, 454, 3.8, '#1e293b']
+      ];
+      for (const [sx, sy, sr, scol] of rockSpecks) {
+        ctx.fillStyle = scol;
+        ctx.beginPath();
+        ctx.arc(sx, sy, sr, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
     } else {
       ctx.fillStyle = 'rgba(54, 78, 52, 0.34)';
       ctx.strokeStyle = 'rgba(40, 58, 38, 0.52)';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.moveTo(0, 195);
+      ctx.quadraticCurveTo(68, 205, 86, 260);
+      ctx.quadraticCurveTo(118, 330, 150, 382);
+      ctx.lineTo(265, 420);
+      ctx.lineTo(465, 434);
+      ctx.lineTo(720, 438);
+      ctx.lineTo(720, 480);
+      ctx.lineTo(0, 480);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
     }
-    ctx.lineWidth = 2.5;
-    ctx.beginPath();
-    ctx.moveTo(0, 195);
-    ctx.quadraticCurveTo(68, 205, 86, 260);
-    ctx.quadraticCurveTo(118, 330, 150, 382);
-    ctx.lineTo(265, 420);
-    ctx.lineTo(465, 434);
-    ctx.lineTo(720, 438);
-    ctx.lineTo(720, 480);
-    ctx.lineTo(0, 480);
-    ctx.closePath();
-    ctx.fill();
-    ctx.stroke();
 
     if (real && ltReef) {
       // 海底の砂地・岩肌のリアルな陰影ハイライトと、光の強さに連動する海底コースティクス
@@ -4513,6 +4752,11 @@ class SquidGameWatch {
     }
 
     // --- 右下の開いた黄金の宝箱（プリント層） ---
+    ctx.save();
+    if (real) {
+      const chestRefract = this._getWaterRefractionOffset(654, 414);
+      ctx.translate(chestRefract.dx * 0.7, chestRefract.dy * 0.7);
+    }
     const cx = 612, cy = 382;
     const ltChest = real ? this._getDiverLighting(cx + 42, cy + 32) : null;
     if (real && ltChest) {
@@ -4650,6 +4894,7 @@ class SquidGameWatch {
     ctx.lineTo(cx + 64, cy + 64);
     ctx.stroke();
 
+    ctx.restore();
     ctx.restore();
   }
 
@@ -5563,16 +5808,25 @@ class SquidGameWatch {
   }
 
   _drawAllLcdSegments(ctx) {
-    // 1. 船上に待機している残機ダイバー（2スロット）
-    // 3人残っている時は船上に2人待機、2人の時は1人待機、1人の時は船上0人
+    const real = this._isRealColor();
+    const boatMotion = real ? this._getBoatWaveMotion() : { yOff: 0, pitch: 0, rollX: 0 };
+
+    // 1 & 2. 船上のダイバー（残機待機ダイバー ＆ pos=0の船首ダイバー）
+    // GAME C では波に合わせてボート全体と一緒に揺れる
+    ctx.save();
+    if (real && (boatMotion.yOff !== 0 || boatMotion.pitch !== 0 || boatMotion.rollX !== 0)) {
+      ctx.translate(125 + boatMotion.rollX, 99 + boatMotion.yOff);
+      ctx.rotate(boatMotion.pitch);
+      ctx.translate(-125, -99);
+    }
     const waitingCount = Math.max(0, this.lives - 1);
     this._drawWaitingDiverInBoat(ctx, 62, 56, waitingCount >= 2);
     this._drawWaitingDiverInBoat(ctx, 112, 56, waitingCount >= 1);
 
-    // 2. 船の右端（pos=0）のダイバー ＆ 宝袋を掲げる+3点ボーナス演出セグメント
     const atBoat = (this.state === 'PLAYING' || this.state === 'UNLOADING' || this.state === 'TIME') && this.diverPos === 0;
     const isUnloading = this.state === 'UNLOADING';
     this._drawBoatBowDiver(ctx, 168, 52, atBoat, isUnloading);
+    ctx.restore();
 
     // 3. 海中の5つのポジションのダイバー (pos = 1..5)
     // 捕まり中(CAUGHT)は通常位置のダイバーが消え、中央の「捕まりバタバタ用セグメント」が点灯する
@@ -5589,22 +5843,54 @@ class SquidGameWatch {
       const c = diverCoordinates[p];
       const isHere = (this.state === 'PLAYING' || this.state === 'TIME' || this.state === 'BONUS') && this.diverPos === p;
       const showBag = isHere && this.hasBag;
-      this._drawUnderwaterDiver(ctx, c.x, c.y, c.pose, isHere, showBag);
+      if (real) {
+        const dRef = this._getWaterRefractionOffset(c.x, c.y);
+        ctx.save();
+        ctx.translate(dRef.dx, dRef.dy);
+        this._drawUnderwaterDiver(ctx, c.x, c.y, c.pose, isHere, showBag);
+        ctx.restore();
+      } else {
+        this._drawUnderwaterDiver(ctx, c.x, c.y, c.pose, isHere, showBag);
+      }
     }
 
     // 4. 宝箱前(pos=5)で宝を掴む2段階の腕セグメント
     const reach1Lit = (this.state === 'PLAYING' || this.state === 'TIME') && this.diverPos === 5 && this.grabAnimPhase === 1;
     const reach2Lit = (this.state === 'PLAYING' || this.state === 'TIME') && this.diverPos === 5 && this.grabAnimPhase === 2;
-    this._drawTreasureGrabArms(ctx, 534, 368, reach1Lit, reach2Lit);
+    if (real) {
+      const armRef = this._getWaterRefractionOffset(534, 368);
+      ctx.save();
+      ctx.translate(armRef.dx, armRef.dy);
+      this._drawTreasureGrabArms(ctx, 534, 368, reach1Lit, reach2Lit);
+      ctx.restore();
+    } else {
+      this._drawTreasureGrabArms(ctx, 534, 368, reach1Lit, reach2Lit);
+    }
 
     // 5. 巨大イカ（スクイッド）の胴体・エンペラ（三角ヒレ）・目・漏斗
-    this._drawGiantSquidBody(ctx);
+    if (real) {
+      const squidRef = this._getWaterRefractionOffset(570, 240);
+      ctx.save();
+      ctx.translate(squidRef.dx, squidRef.dy);
+      this._drawGiantSquidBody(ctx);
+      ctx.restore();
+    } else {
+      this._drawGiantSquidBody(ctx);
+    }
 
     // 6. 巨大イカの4本の伸縮する触腕セグメント (足0:4段, 足1:5段, 足2:4段, 足3:3段)
     this._drawSquidTentacles(ctx);
 
     // 7. イカに捕まった時の「手足バタバタもがきダイバー」セグメント（中央空中）
-    this._drawCaughtFlailingDiver(ctx);
+    if (real) {
+      const caughtRef = this._getWaterRefractionOffset(356, 260);
+      ctx.save();
+      ctx.translate(caughtRef.dx, caughtRef.dy);
+      this._drawCaughtFlailingDiver(ctx);
+      ctx.restore();
+    } else {
+      this._drawCaughtFlailingDiver(ctx);
+    }
 
     // 7.5. GAME C 専用：ダイバーから海面へ「ぼこぼこ」とリアルに浮かび上がる空気の泡＆波紋
     this._drawRealisticBubbleStream(ctx);
@@ -7203,11 +7489,23 @@ class SquidGameWatch {
         const segFlush = this._getSquidFlushLevel((seg.x1 + seg.x2) * 0.5, (seg.y1 + seg.y2) * 0.5);
         const segShadow = 0.08 + segFlush * 0.28;
 
-        this._drawSegment(ctx, isLit, (c) => {
-          this._drawTaperedTentacleSegment(c, seg, false, tIdx, sIdx);
-        }, (c) => {
-          this._drawTaperedTentacleSegment(c, seg, true, tIdx, sIdx);
-        }, segShadow);
+        if (this._isRealColor()) {
+          const tRef = this._getWaterRefractionOffset((seg.x1 + seg.x2) * 0.5, (seg.y1 + seg.y2) * 0.5);
+          ctx.save();
+          ctx.translate(tRef.dx, tRef.dy);
+          this._drawSegment(ctx, isLit, (c) => {
+            this._drawTaperedTentacleSegment(c, seg, false, tIdx, sIdx);
+          }, (c) => {
+            this._drawTaperedTentacleSegment(c, seg, true, tIdx, sIdx);
+          }, segShadow);
+          ctx.restore();
+        } else {
+          this._drawSegment(ctx, isLit, (c) => {
+            this._drawTaperedTentacleSegment(c, seg, false, tIdx, sIdx);
+          }, (c) => {
+            this._drawTaperedTentacleSegment(c, seg, true, tIdx, sIdx);
+          }, segShadow);
+        }
       }
     }
   }
