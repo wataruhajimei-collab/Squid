@@ -60,11 +60,30 @@ function extractLocation(request, body = {}) {
     displayCity = region;
   }
 
+  // 拡張テレメトリー情報 (回線・ISP・タイムゾーン・標高・端末等)
+  const clientTelemetry = body.telemetry || {};
+  const isp = cf.asOrganization || cf.asn ? `${cf.asOrganization || ''} (AS${cf.asn || ''})`.trim() : (clientTelemetry.isp || null);
+  const timezone = cf.timezone || clientTelemetry.timezone || "Asia/Tokyo";
+  const latitude = typeof cf.latitude === "number" ? cf.latitude : (clientTelemetry.lat || null);
+  const longitude = typeof cf.longitude === "number" ? cf.longitude : (clientTelemetry.lon || null);
+  const altitude = (typeof clientTelemetry.altitude === "number") ? clientTelemetry.altitude : null;
+
   return {
     country: String(country).substring(0, 8),
     region: String(region || "Unknown").substring(0, 40),
     city: String(city || "Unknown").substring(0, 40),
-    display: String(displayCity || "Unknown").substring(0, 60)
+    display: String(displayCity || "Unknown").substring(0, 60),
+    isp: isp ? String(isp).substring(0, 80) : null,
+    timezone: String(timezone).substring(0, 40),
+    lat: latitude,
+    lon: longitude,
+    altitude: altitude,
+    device: clientTelemetry.device || null,
+    os: clientTelemetry.os || null,
+    browser: clientTelemetry.browser || null,
+    inputType: clientTelemetry.inputType || null,
+    battery: clientTelemetry.battery || null,
+    connection: clientTelemetry.connection || null
   };
 }
 
@@ -87,11 +106,16 @@ export async function handleApiRequest(request, env) {
       const mode = url.searchParams.get("mode");
       const gameModeFilter = url.searchParams.get("gameMode"); // "A", "B", or "ALL"
 
-      // 現在のアクセス元地名を返すエンドポイント
+      // 現在のアクセス元地名および回線・ISP・タイムゾーンを返すエンドポイント
       if (mode === "whoami") {
         const loc = extractLocation(request);
+        const cf = request.cf || {};
         return new Response(JSON.stringify({
           ...loc,
+          isp: cf.asOrganization || cf.asn ? `${cf.asOrganization || ''} (AS${cf.asn || ''})`.trim() : "Unknown ISP",
+          timezone: cf.timezone || "Asia/Tokyo",
+          lat: cf.latitude || null,
+          lon: cf.longitude || null,
           storage: store.type
         }), {
           headers: { "Content-Type": "application/json", ...corsHeaders }
@@ -135,6 +159,7 @@ export async function handleApiRequest(request, env) {
           const city = (rawCity && rawCity !== "Unknown") ? rawCity : null;
           if (!city) continue;
 
+          const loc = entry.location || {};
           if (!cityMap.has(city)) {
             cityMap.set(city, {
               city,
@@ -142,7 +167,18 @@ export async function handleApiRequest(request, env) {
               count: 0,
               best: 0,
               topPlayer: entry.name,
-              country: entry.location?.country || entry.country || "JP"
+              country: entry.location?.country || entry.country || "JP",
+              isp: loc.isp || null,
+              timezone: loc.timezone || "Asia/Tokyo",
+              altitude: loc.altitude ?? null,
+              device: loc.device || null,
+              os: loc.os || null,
+              browser: loc.browser || null,
+              inputType: loc.inputType || null,
+              battery: loc.battery || null,
+              connection: loc.connection || null,
+              lat: loc.lat || null,
+              lon: loc.lon || null
             });
           }
           const rec = cityMap.get(city);
@@ -151,6 +187,15 @@ export async function handleApiRequest(request, env) {
           if (entry.score > rec.best) {
             rec.best = entry.score;
             rec.topPlayer = entry.name;
+            if (loc.isp) rec.isp = loc.isp;
+            if (loc.timezone) rec.timezone = loc.timezone;
+            if (loc.altitude != null) rec.altitude = loc.altitude;
+            if (loc.device) rec.device = loc.device;
+            if (loc.os) rec.os = loc.os;
+            if (loc.browser) rec.browser = loc.browser;
+            if (loc.inputType) rec.inputType = loc.inputType;
+            if (loc.battery) rec.battery = loc.battery;
+            if (loc.connection) rec.connection = loc.connection;
           }
         }
 
@@ -161,7 +206,20 @@ export async function handleApiRequest(request, env) {
             avg: Math.round((r.total / r.count) * 10) / 10,
             count: r.count,
             best: r.best,
-            topPlayer: r.topPlayer
+            topPlayer: r.topPlayer,
+            telemetry: {
+              isp: r.isp,
+              timezone: r.timezone,
+              altitude: r.altitude,
+              device: r.device,
+              os: r.os,
+              browser: r.browser,
+              inputType: r.inputType,
+              battery: r.battery,
+              connection: r.connection,
+              lat: r.lat,
+              lon: r.lon
+            }
           }))
           .sort((a, b) => {
             if (b.best !== a.best) return b.best - a.best;
@@ -192,7 +250,20 @@ export async function handleApiRequest(request, env) {
           date: entry.date,
           city: cityDisplay,
           region: (loc.region && loc.region !== "Unknown") ? loc.region : null,
-          country: loc.country || entry.country || "JP"
+          country: loc.country || entry.country || "JP",
+          telemetry: {
+            isp: loc.isp || null,
+            timezone: loc.timezone || "Asia/Tokyo",
+            altitude: loc.altitude ?? null,
+            device: loc.device || null,
+            os: loc.os || null,
+            browser: loc.browser || null,
+            inputType: loc.inputType || null,
+            battery: loc.battery || null,
+            connection: loc.connection || null,
+            lat: loc.lat || null,
+            lon: loc.lon || null
+          }
         };
       });
 

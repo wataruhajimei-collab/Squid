@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>SQUID - 全世界潜水士プレイヤーマップ (PLAYER RADAR MAP)</title>
+  <title>SQUID - 全世界潜水士プレイヤーマップ & テレメトリーレーダー</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🦑</text></svg>">
   
   <!-- Leaflet.js CSS & JS -->
@@ -17,7 +17,7 @@
       --radar-cyan: #00ffcc;
       --radar-cyan-glow: rgba(0, 255, 204, 0.4);
       --radar-blue: #0a192f;
-      --panel-bg: rgba(10, 25, 47, 0.94);
+      --panel-bg: rgba(10, 25, 47, 0.95);
       --font-digital: 'Courier New', 'Consolas', monospace;
     }
 
@@ -141,17 +141,23 @@
     }
 
     /* Map Mode Controller Floating Bar */
-    .map-style-bar {
+    .map-controls-bar {
       position: absolute;
       top: 14px;
       left: 60px;
       z-index: 1000;
       display: flex;
-      background: rgba(10, 25, 47, 0.9);
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .map-style-bar {
+      display: flex;
+      background: rgba(10, 25, 47, 0.92);
       border: 1px solid var(--gold);
       border-radius: 8px;
       overflow: hidden;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+      box-shadow: 0 4px 15px rgba(0,0,0,0.5);
     }
 
     .map-style-btn {
@@ -170,26 +176,54 @@
       color: #071322;
     }
 
+    .toggle-list-btn {
+      background: rgba(10, 25, 47, 0.92);
+      border: 1px solid var(--radar-cyan);
+      color: var(--radar-cyan);
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+
+    .toggle-list-btn:hover {
+      background: rgba(0, 255, 204, 0.2);
+    }
+
+    .toggle-list-btn.active {
+      background: var(--radar-cyan);
+      color: #071322;
+    }
+
     /* Sidebar / Drawer */
     #sidebar {
       position: absolute;
       top: 12px;
       right: 12px;
       bottom: 12px;
-      width: 360px;
+      width: 420px;
+      max-width: 95vw;
       background: var(--panel-bg);
-      backdrop-filter: blur(8px);
-      border: 1px solid rgba(212, 175, 55, 0.4);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(212, 175, 55, 0.5);
       border-radius: 10px;
       z-index: 1001;
       display: flex;
       flex-direction: column;
-      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.7);
-      transition: transform 0.3s cubic-bezier(0.2, 0.9, 0.3, 1);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.85);
+      transition: transform 0.3s cubic-bezier(0.2, 0.9, 0.3, 1), opacity 0.3s ease;
     }
 
-    #sidebar.collapsed {
-      transform: translateX(calc(100% + 20px));
+    #sidebar.hidden-sidebar {
+      transform: translateX(calc(100% + 25px));
+      opacity: 0;
+      pointer-events: none;
     }
 
     .sidebar-header {
@@ -204,6 +238,36 @@
       font-size: 0.95rem;
       font-weight: 700;
       color: var(--gold-light);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .sidebar-tabs {
+      display: flex;
+      background: rgba(0,0,0,0.3);
+      padding: 4px 12px;
+      gap: 6px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+
+    .sidebar-tab-btn {
+      flex: 1;
+      background: transparent;
+      border: none;
+      color: #9cb0c9;
+      padding: 6px 4px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      cursor: pointer;
+      border-radius: 4px;
+      transition: all 0.15s;
+    }
+
+    .sidebar-tab-btn.active {
+      background: rgba(0, 255, 204, 0.18);
+      color: var(--radar-cyan);
+      box-shadow: inset 0 0 4px rgba(0,255,204,0.3);
     }
 
     .stat-cards {
@@ -254,14 +318,14 @@
 
     .city-item {
       background: rgba(255, 255, 255, 0.03);
-      border: 1px solid rgba(255, 255, 255, 0.07);
-      border-radius: 6px;
-      padding: 8px 10px;
-      margin-bottom: 6px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 8px;
+      padding: 10px 12px;
+      margin-bottom: 8px;
       cursor: pointer;
       display: flex;
-      align-items: center;
-      justify-content: space-between;
+      flex-direction: column;
+      gap: 6px;
       transition: all 0.15s ease;
     }
 
@@ -276,43 +340,57 @@
       border-color: var(--gold);
     }
 
-    .city-item-left {
+    .city-item-top {
       display: flex;
-      flex-direction: column;
-      gap: 2px;
-      overflow: hidden;
+      justify-content: space-between;
+      align-items: baseline;
     }
 
     .city-name {
-      font-size: 0.85rem;
+      font-size: 0.9rem;
       font-weight: 700;
       color: #fff;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    .city-sub {
-      font-size: 0.72rem;
-      color: #8fa0b5;
-    }
-
-    .city-item-right {
-      text-align: right;
-      flex-shrink: 0;
-      margin-left: 8px;
     }
 
     .city-score {
-      font-size: 0.95rem;
+      font-size: 1rem;
       font-weight: 800;
       font-family: var(--font-digital);
       color: var(--gold-light);
     }
 
-    .city-count {
-      font-size: 0.7rem;
-      color: var(--radar-cyan);
+    .city-meta {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.75rem;
+      color: #a4b7cd;
+    }
+
+    /* テレメトリーバッジ群 */
+    .telemetry-badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      margin-top: 2px;
+      padding-top: 6px;
+      border-top: 1px dashed rgba(255, 255, 255, 0.12);
+    }
+
+    .tele-tag {
+      background: rgba(0, 0, 0, 0.4);
+      border: 1px solid rgba(0, 255, 204, 0.3);
+      border-radius: 4px;
+      padding: 2px 6px;
+      font-size: 0.68rem;
+      color: #c4d7ed;
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+    }
+
+    .tele-tag.highlight {
+      border-color: var(--gold);
+      color: var(--gold-light);
     }
 
     /* Mobile Toggle Button */
@@ -351,7 +429,6 @@
       filter: drop-shadow(0 4px 6px rgba(0,0,0,0.45));
     }
 
-    /* 常時表示のメインバッジ（地名・プレイヤー名・スコア・人数） */
     .diver-badge {
       background: linear-gradient(135deg, #10243d 0%, #071526 100%);
       border: 2px solid var(--radar-cyan);
@@ -446,22 +523,23 @@
 
     /* Popup Custom Style */
     .leaflet-popup-content-wrapper {
-      background: rgba(10, 25, 47, 0.95) !important;
+      background: rgba(10, 25, 47, 0.96) !important;
       color: #e6f1ff !important;
       border: 1px solid var(--gold) !important;
       border-radius: 8px !important;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.8) !important;
+      box-shadow: 0 8px 28px rgba(0,0,0,0.85) !important;
       padding: 4px !important;
     }
 
     .leaflet-popup-tip {
-      background: rgba(10, 25, 47, 0.95) !important;
+      background: rgba(10, 25, 47, 0.96) !important;
       border: 1px solid var(--gold) !important;
     }
 
     .popup-box {
       padding: 8px 10px;
-      min-width: 200px;
+      min-width: 240px;
+      max-width: 300px;
     }
 
     .popup-city {
@@ -479,7 +557,7 @@
     .popup-row {
       display: flex;
       justify-content: space-between;
-      font-size: 0.8rem;
+      font-size: 0.78rem;
       margin-bottom: 3px;
       color: #a4b7cd;
     }
@@ -488,6 +566,20 @@
       color: #fff;
       font-weight: 700;
       font-family: var(--font-digital);
+    }
+
+    .popup-telemetry-sec {
+      margin-top: 8px;
+      padding-top: 6px;
+      border-top: 1px solid rgba(0, 255, 204, 0.2);
+    }
+
+    .popup-tele-title {
+      font-size: 0.72rem;
+      font-weight: 800;
+      color: var(--radar-cyan);
+      margin-bottom: 4px;
+      letter-spacing: 0.5px;
     }
 
     .popup-top-player {
@@ -501,7 +593,7 @@
     }
 
     @media (max-width: 768px) {
-      .map-style-bar {
+      .map-controls-bar {
         left: 10px;
         top: 60px;
       }
@@ -511,7 +603,7 @@
         bottom: 12px;
         right: 12px;
         left: 12px;
-        max-height: 40vh;
+        max-height: 48vh;
       }
       #sidebar-toggle {
         display: block;
@@ -535,20 +627,34 @@
   <div id="main-container">
     <div id="map"></div>
 
-    <!-- 地図スタイル切り替えバー（日本地図がクッキリ出る日本語標準地図 / 海洋ダーク） -->
-    <div class="map-style-bar">
-      <button class="map-style-btn active" id="btn-tile-osm">🇯🇵 日本地図 (標準)</button>
-      <button class="map-style-btn" id="btn-tile-gsi">🗺️ 地理院地図</button>
-      <button class="map-style-btn" id="btn-tile-dark">🌊 海底ダーク</button>
+    <!-- 地図上部コントロールバー（地図切り替え & リストOn/Offボタン） -->
+    <div class="map-controls-bar">
+      <div class="map-style-bar">
+        <button class="map-style-btn active" id="btn-tile-osm">🇯🇵 日本地図</button>
+        <button class="map-style-btn" id="btn-tile-gsi">🗺️ 地理院</button>
+        <button class="map-style-btn" id="btn-tile-dark">🌊 海底ダーク</button>
+      </div>
+
+      <!-- リストの表示/非表示（On/Off）トグルボタン -->
+      <button class="toggle-list-btn active" id="btn-toggle-list">
+        <span id="list-toggle-icon">👁️</span>
+        <span id="list-toggle-text">プレイヤー情報リスト: ON</span>
+      </button>
     </div>
 
     <button id="sidebar-toggle">📋 潜水士一覧</button>
 
     <aside id="sidebar">
       <div class="sidebar-header">
-        <span class="sidebar-title">🌐 潜水士の分布</span>
-        <button id="sidebar-close" style="background:none; border:none; color:#8da2c0; font-size:1.1rem; cursor:pointer;">✕</button>
+        <span class="sidebar-title">🌐 潜水士テレメトリー情報</span>
+        <button id="sidebar-close" style="background:none; border:none; color:#8da2c0; font-size:1.1rem; cursor:pointer;" title="リストを非表示 (OFF)">✕</button>
       </div>
+
+      <div class="sidebar-tabs">
+        <button class="sidebar-tab-btn active" id="tab-btn-cities">📍 地域別テレメトリー</button>
+        <button class="sidebar-tab-btn" id="tab-btn-players">🤿 潜水士個人別</button>
+      </div>
+
       <div class="stat-cards">
         <div class="stat-card">
           <div class="val" id="total-cities">--</div>
@@ -559,6 +665,7 @@
           <div class="lbl">TOTAL DIVES</div>
         </div>
       </div>
+
       <div class="sidebar-list" id="city-list">
         <div style="text-align:center; padding: 20px; color: #8da2c0;">レーダー探査中...</div>
       </div>
@@ -639,37 +746,26 @@
       
       for (const [key, coords] of Object.entries(KNOWN_COORDS)) {
         if (lower.includes(key.toLowerCase()) || key.toLowerCase().includes(lower)) {
-          // 同じ都市に複数ピンが重なりすぎないよう微小ジッター
           const jitterLat = (Math.random() - 0.5) * 0.005;
           const jitterLng = (Math.random() - 0.5) * 0.005;
           return [coords[0] + jitterLat, coords[1] + jitterLng];
         }
       }
 
-      if (countryCode === "JP") {
-        return [35.6895 + (Math.random() - 0.5) * 0.4, 139.6917 + (Math.random() - 0.5) * 0.4];
-      }
-      if (countryCode === "US") {
-        return [29.7604, -95.3698];
-      }
-      if (countryCode === "SG") {
-        return [1.3521, 103.8198];
-      }
-      if (countryCode === "AU") {
-        return [-32.0461, 115.7672];
-      }
+      if (countryCode === "JP") return [35.6895 + (Math.random() - 0.5) * 0.4, 139.6917 + (Math.random() - 0.5) * 0.4];
+      if (countryCode === "US") return [29.7604, -95.3698];
+      if (countryCode === "SG") return [1.3521, 103.8198];
+      if (countryCode === "AU") return [-32.0461, 115.7672];
       return null;
     }
 
-    // 地名表示用の短いフォーマット
     function formatCityLabel(rawCity) {
       if (!rawCity) return 'Unknown';
-      // "Kawasaki, Kanagawa" -> "川崎 / Kawasaki" 風に短縮
       const parts = rawCity.split(',');
       return parts[0].trim();
     }
 
-    // Leaflet 初期化（初期表示は日本全域・関東が見やすい位置）
+    // Leaflet 初期化
     const map = L.map('map', {
       center: [35.45, 139.65],
       zoom: 8,
@@ -678,31 +774,25 @@
       zoomControl: true
     });
 
-    // タイルレイヤー定義
-    // 1. OpenStreetMap Japan（確実・高精細な日本語地図）
     const osmLayer = L.tileLayer('https://tile.openstreetmap.jp/{z}/{x}/{y}.png', {
       attribution: '&copy; <a href="https://openstreetmap.jp">OpenStreetMap Japan</a> contributors',
       maxZoom: 18
     });
 
-    // 2. 国土地理院 標準地図
     const gsiLayer = L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png', {
       attribution: '&copy; <a href="https://maps.gsi.go.jp/development/ichiran.html">国土地理院</a>',
       maxZoom: 18
     });
 
-    // 3. CartoDB DarkMatter (海底ダーク)
     const darkLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
       attribution: '&copy; CARTO, &copy; OpenStreetMap',
       subdomains: 'abcd',
       maxZoom: 19
     });
 
-    // デフォルトは日本の道路・海岸線・地名がくっきり出る「日本語標準地図」
     osmLayer.addTo(map);
     let currentTileLayer = osmLayer;
 
-    // スタイル切り替えボタン
     function switchTile(layer, btnId) {
       map.removeLayer(currentTileLayer);
       layer.addTo(map);
@@ -716,52 +806,93 @@
     document.getElementById('btn-tile-dark').addEventListener('click', () => switchTile(darkLayer, 'btn-tile-dark'));
 
     let markersLayer = L.layerGroup().addTo(map);
+    let regionalData = [];
+    let playerScoresData = [];
+    let currentViewMode = 'cities'; // 'cities' | 'players'
 
+    // リスト On/Off トグル管理
+    const sidebar = document.getElementById('sidebar');
+    const toggleListBtn = document.getElementById('btn-toggle-list');
+    const toggleListIcon = document.getElementById('list-toggle-icon');
+    const toggleListText = document.getElementById('list-toggle-text');
+    const sidebarClose = document.getElementById('sidebar-close');
+    const sidebarToggleMobile = document.getElementById('sidebar-toggle');
+
+    let isListOn = true;
+
+    function setListVisible(visible) {
+      isListOn = visible;
+      if (isListOn) {
+        sidebar.classList.remove('hidden-sidebar');
+        toggleListBtn.classList.add('active');
+        toggleListIcon.textContent = '👁️';
+        toggleListText.textContent = 'プレイヤー情報リスト: ON';
+      } else {
+        sidebar.classList.add('hidden-sidebar');
+        toggleListBtn.classList.remove('active');
+        toggleListIcon.textContent = '🙈';
+        toggleListText.textContent = 'プレイヤー情報リスト: OFF';
+      }
+    }
+
+    toggleListBtn.addEventListener('click', () => setListVisible(!isListOn));
+    sidebarClose.addEventListener('click', () => setListVisible(false));
+    sidebarToggleMobile.addEventListener('click', () => setListVisible(!isListOn));
+
+    // タブ切り替え
+    const tabBtnCities = document.getElementById('tab-btn-cities');
+    const tabBtnPlayers = document.getElementById('tab-btn-players');
+
+    tabBtnCities.addEventListener('click', () => {
+      currentViewMode = 'cities';
+      tabBtnCities.classList.add('active');
+      tabBtnPlayers.classList.remove('active');
+      renderList();
+    });
+
+    tabBtnPlayers.addEventListener('click', () => {
+      currentViewMode = 'players';
+      tabBtnPlayers.classList.add('active');
+      tabBtnCities.classList.remove('active');
+      renderList();
+    });
+
+    // データ読み込み
     async function loadData() {
       try {
-        const res = await fetch('/api/scores?mode=regional&t=' + Date.now());
-        if (!res.ok) throw new Error("API response error");
-        const regionalData = await res.json();
-        renderMapAndSidebar(regionalData);
+        const [regRes, allRes] = await Promise.all([
+          fetch('/api/scores?mode=regional&t=' + Date.now()),
+          fetch('/api/scores?t=' + Date.now())
+        ]);
+        if (!regRes.ok || !allRes.ok) throw new Error("API response error");
+        regionalData = await regRes.json();
+        playerScoresData = await allRes.json();
+        
+        renderMap(regionalData);
+        renderList();
       } catch (e) {
-        console.error("Failed to load regional data:", e);
+        console.error("Failed to load data:", e);
         document.getElementById('city-list').innerHTML = 
           `<div style="text-align:center; padding: 20px; color: #ff6b6b;">データ取得に失敗しました<br><button onclick="loadData()" class="btn" style="margin-top:10px;">再試行</button></div>`;
       }
     }
 
-    function renderMapAndSidebar(data) {
+    // 地図上のピン描画
+    function renderMap(data) {
       markersLayer.clearLayers();
-      const listEl = document.getElementById('city-list');
-      listEl.innerHTML = '';
-
-      let totalDives = 0;
       const bounds = [];
+      let totalDives = 0;
 
       data.forEach((item) => {
         totalDives += (item.count || 1);
         const coords = resolveCoords(item.city, item.country);
         const displayCity = formatCityLabel(item.city);
         const topPlayerName = item.topPlayer || 'DIVER';
-
-        // サイドバー要素
-        const div = document.createElement('div');
-        div.className = 'city-item';
-        div.innerHTML = `
-          <div class="city-item-left">
-            <div class="city-name">${item.country === 'JP' ? '🇯🇵 ' : (item.country === 'US' ? '🇺🇸 ' : (item.country === 'AU' ? '🇦🇺 ' : (item.country === 'SG' ? '🇸🇬 ' : '🌐 ')))}${item.city || 'Unknown'}</div>
-            <div class="city-sub">👑 <strong>${escapeHtml(topPlayerName)}</strong> (Avg: ${item.avg || 0}pt)</div>
-          </div>
-          <div class="city-item-right">
-            <div class="city-score">${item.best || 0}pt</div>
-            <div class="city-count">${item.count || 1} dives</div>
-          </div>
-        `;
+        const tele = item.telemetry || {};
 
         if (coords) {
           bounds.push(coords);
 
-          // 画面上に「プレイヤー名」と「地名」「スコア」を常時表示するカスタムHTMLピン
           const customIcon = L.divIcon({
             className: 'custom-diver-pin',
             html: `
@@ -787,6 +918,16 @@
 
           const marker = L.marker(coords, { icon: customIcon });
 
+          const ispText = tele.isp || "Cloudflare Edge";
+          const tzText = tele.timezone || "Asia/Tokyo";
+          const altText = tele.altitude != null ? `${tele.altitude} m` : "海抜0m付近";
+          const devText = tele.device || "PC / スマホ";
+          const osText = tele.os || "OS自動判別";
+          const brText = tele.browser || "ブラウザ";
+          const inText = tele.inputType || "タッチ / キーボード";
+          const batText = tele.battery || "AC給電 / 良好";
+          const connText = tele.connection || "高速回線";
+
           const popupContent = `
             <div class="popup-box">
               <div class="popup-city">
@@ -809,29 +950,130 @@
                 <span>累計潜水回数:</span>
                 <span class="val">${item.count} 回</span>
               </div>
+
+              <div class="popup-telemetry-sec">
+                <div class="popup-tele-title">📡 TELEMETRY (回線・環境情報)</div>
+                <div class="popup-row"><span>🏢 回線/プロバイダ:</span><span class="val" style="font-size:0.7rem;">${escapeHtml(ispText)}</span></div>
+                <div class="popup-row"><span>🌐 タイムゾーン:</span><span class="val">${escapeHtml(tzText)}</span></div>
+                <div class="popup-row"><span>⛰️ 標高 (高度):</span><span class="val">${escapeHtml(altText)}</span></div>
+                <div class="popup-row"><span>📱 端末・OS:</span><span class="val">${escapeHtml(devText)} / ${escapeHtml(osText)}</span></div>
+                <div class="popup-row"><span>🧭 ブラウザ:</span><span class="val">${escapeHtml(brText)}</span></div>
+                <div class="popup-row"><span>🎮 操作デバイス:</span><span class="val">${escapeHtml(inText)}</span></div>
+                <div class="popup-row"><span>🔋 バッテリー:</span><span class="val">${escapeHtml(batText)}</span></div>
+                <div class="popup-row"><span>📶 接続回線:</span><span class="val">${escapeHtml(connText)}</span></div>
+              </div>
             </div>
           `;
 
           marker.bindPopup(popupContent, { offset: [0, -32] });
           markersLayer.addLayer(marker);
-
-          div.addEventListener('click', () => {
-            map.flyTo(coords, Math.max(map.getZoom(), 11), { duration: 1.2 });
-            marker.openPopup();
-            document.querySelectorAll('.city-item').forEach(el => el.classList.remove('active'));
-            div.classList.add('active');
-          });
         }
-
-        listEl.appendChild(div);
       });
 
       document.getElementById('total-cities').textContent = data.length;
       document.getElementById('total-dives').textContent = totalDives;
 
-      // 初回表示: 横須賀・横浜・東京など主要地点が見渡せるようフィット
       if (bounds.length > 0) {
         map.fitBounds(bounds, { padding: [60, 60], maxZoom: 9 });
+      }
+    }
+
+    // リストの描画（地域別 or プレイヤー個別）
+    function renderList() {
+      const listEl = document.getElementById('city-list');
+      listEl.innerHTML = '';
+
+      if (currentViewMode === 'cities') {
+        regionalData.forEach(item => {
+          const tele = item.telemetry || {};
+          const coords = resolveCoords(item.city, item.country);
+          const div = document.createElement('div');
+          div.className = 'city-item';
+
+          const ispText = tele.isp || "Cloudflare Edge";
+          const tzText = tele.timezone || "Asia/Tokyo";
+          const altText = tele.altitude != null ? `${tele.altitude}m` : "平地/海抜近傍";
+          const devText = tele.device || "PC/スマホ";
+          const osText = tele.os || "OS自動検出";
+          const brText = tele.browser || "ブラウザ";
+          const inText = tele.inputType || "タッチ/キー";
+          const batText = tele.battery || "AC/良好";
+
+          div.innerHTML = `
+            <div class="city-item-top">
+              <span class="city-name">${item.country === 'JP' ? '🇯🇵 ' : '🌐 '}${escapeHtml(item.city)}</span>
+              <span class="city-score">${item.best} pt</span>
+            </div>
+            <div class="city-meta">
+              <span>👑 TOP: <strong>${escapeHtml(item.topPlayer || '-')}</strong></span>
+              <span>${item.count} dives (Avg: ${item.avg}pt)</span>
+            </div>
+            <div class="telemetry-badges">
+              <span class="tele-tag highlight">🏢 ${escapeHtml(ispText)}</span>
+              <span class="tele-tag">🌐 ${escapeHtml(tzText)}</span>
+              <span class="tele-tag">⛰️ ${escapeHtml(altText)}</span>
+              <span class="tele-tag">📱 ${escapeHtml(devText)} (${escapeHtml(osText)})</span>
+              <span class="tele-tag">🧭 ${escapeHtml(brText)}</span>
+              <span class="tele-tag">🎮 ${escapeHtml(inText)}</span>
+              <span class="tele-tag">🔋 ${escapeHtml(batText)}</span>
+            </div>
+          `;
+
+          if (coords) {
+            div.addEventListener('click', () => {
+              map.flyTo(coords, Math.max(map.getZoom(), 11), { duration: 1.2 });
+              document.querySelectorAll('.city-item').forEach(el => el.classList.remove('active'));
+              div.classList.add('active');
+            });
+          }
+          listEl.appendChild(div);
+        });
+      } else {
+        // プレイヤー個人別
+        playerScoresData.slice(0, 60).forEach((entry, idx) => {
+          const tele = entry.telemetry || {};
+          const coords = resolveCoords(entry.city, entry.country);
+          const div = document.createElement('div');
+          div.className = 'city-item';
+
+          const ispText = tele.isp || "回線自動検出";
+          const tzText = tele.timezone || "Asia/Tokyo";
+          const altText = tele.altitude != null ? `${tele.altitude}m` : "平地";
+          const devText = tele.device || "端末自動判別";
+          const osText = tele.os || "OS";
+          const brText = tele.browser || "Browser";
+          const inText = tele.inputType || "操作デバイス";
+          const batText = tele.battery || "電源良好";
+
+          div.innerHTML = `
+            <div class="city-item-top">
+              <span class="city-name">#${idx+1} 🤿 <strong>${escapeHtml(entry.name)}</strong></span>
+              <span class="city-score">${entry.score} pt</span>
+            </div>
+            <div class="city-meta">
+              <span>📍 ${escapeHtml(entry.city || 'Japan')} [GAME ${entry.gameMode || 'A'}]</span>
+              <span>💰 宝: ${entry.bags || 0}個</span>
+            </div>
+            <div class="telemetry-badges">
+              <span class="tele-tag highlight">🏢 ${escapeHtml(ispText)}</span>
+              <span class="tele-tag">🌐 ${escapeHtml(tzText)}</span>
+              <span class="tele-tag">⛰️ 標高 ${escapeHtml(altText)}</span>
+              <span class="tele-tag">📱 ${escapeHtml(devText)} / ${escapeHtml(osText)}</span>
+              <span class="tele-tag">🧭 ${escapeHtml(brText)}</span>
+              <span class="tele-tag">🎮 ${escapeHtml(inText)}</span>
+              <span class="tele-tag">🔋 ${escapeHtml(batText)}</span>
+            </div>
+          `;
+
+          if (coords) {
+            div.addEventListener('click', () => {
+              map.flyTo(coords, Math.max(map.getZoom(), 11), { duration: 1.2 });
+              document.querySelectorAll('.city-item').forEach(el => el.classList.remove('active'));
+              div.classList.add('active');
+            });
+          }
+          listEl.appendChild(div);
+        });
       }
     }
 
@@ -845,26 +1087,11 @@
         .replace(/'/g, '&#39;');
     }
 
-    // 更新ボタン
     document.getElementById('refresh-btn').addEventListener('click', () => {
       document.getElementById('city-list').innerHTML = '<div style="text-align:center; padding: 20px; color: #8da2c0;">レーダー探査中...</div>';
       loadData();
     });
 
-    // モバイル用開閉
-    const sidebar = document.getElementById('sidebar');
-    const toggleBtn = document.getElementById('sidebar-toggle');
-    const closeBtn = document.getElementById('sidebar-close');
-
-    toggleBtn.addEventListener('click', () => {
-      sidebar.classList.toggle('collapsed');
-    });
-
-    closeBtn.addEventListener('click', () => {
-      sidebar.classList.add('collapsed');
-    });
-
-    // 初期ロード実行
     loadData();
   </script>
 </body>

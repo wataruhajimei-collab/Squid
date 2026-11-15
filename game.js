@@ -810,6 +810,9 @@ class SquidGameWatch {
         if (coords) {
           const lat = coords.latitude.toFixed(4);
           const lon = coords.longitude.toFixed(4);
+          if (coords.altitude !== null && coords.altitude !== undefined) {
+            this.detectedAltitude = Math.round(coords.altitude);
+          }
           // 逆ジオコーディング（OSM Nominatim）
           const revRes = await fetch(
             `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=12&accept-language=en`,
@@ -960,10 +963,85 @@ class SquidGameWatch {
     }
   }
 
+  async _gatherClientTelemetry() {
+    const nav = typeof navigator !== 'undefined' ? navigator : {};
+    const ua = nav.userAgent || '';
+
+    // 1. 端末種別 (Device Type)
+    let device = 'PC / Desktop';
+    if (/tablet|ipad|playbook|silk/i.test(ua) || (nav.maxTouchPoints > 1 && /macintosh/i.test(ua))) {
+      device = 'Tablet';
+    } else if (/mobile|iphone|ipod|android|blackberry|opera mini|iemobile/i.test(ua)) {
+      device = 'Smartphone';
+    }
+
+    // 2. OS
+    let os = 'Unknown OS';
+    if (/iphone|ipad|ipod/i.test(ua)) os = 'iOS';
+    else if (/android/i.test(ua)) os = 'Android';
+    else if (/windows nt 10/i.test(ua)) os = 'Windows 10/11';
+    else if (/windows/i.test(ua)) os = 'Windows';
+    else if (/macintosh|mac os x/i.test(ua)) os = 'macOS';
+    else if (/cros/i.test(ua)) os = 'ChromeOS';
+    else if (/linux/i.test(ua)) os = 'Linux';
+
+    // 3. ブラウザ (Browser)
+    let browser = 'Browser';
+    if (/edg\//i.test(ua)) browser = 'Edge';
+    else if (/chrome|crios/i.test(ua) && !/opr|opera/i.test(ua)) browser = 'Chrome';
+    else if (/safari/i.test(ua) && !/chrome|crios/i.test(ua)) browser = 'Safari';
+    else if (/firefox|fxios/i.test(ua)) browser = 'Firefox';
+    else if (/opr|opera/i.test(ua)) browser = 'Opera';
+
+    // 4. 操作デバイス (Input Device)
+    let inputType = 'キーボード / マウス';
+    if ('ontouchstart' in window || (nav.maxTouchPoints && nav.maxTouchPoints > 0)) {
+      inputType = device === 'PC / Desktop' ? 'タッチ + マウス' : 'タッチスクリーン';
+    }
+    if (nav.getGamepads && nav.getGamepads().filter(Boolean).length > 0) {
+      inputType = 'ゲームパッド';
+    }
+
+    // 5. タイムゾーン (Timezone)
+    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Tokyo';
+
+    // 6. 回線タイプ (Connection)
+    let connection = '高速回線 (Broadband)';
+    if (nav.connection) {
+      const conn = nav.connection;
+      connection = conn.effectiveType ? conn.effectiveType.toUpperCase() : (conn.type || 'Wi-Fi/4G');
+    }
+
+    // 7. バッテリー残量 (Battery Level & Charging)
+    let battery = null;
+    if (nav.getBattery) {
+      try {
+        const b = await nav.getBattery();
+        if (b && typeof b.level === 'number') {
+          const pct = Math.round(b.level * 100);
+          battery = `${pct}% ${b.charging ? '⚡充電中' : '🔋'}`;
+        }
+      } catch (_) {}
+    }
+
+    return {
+      device,
+      os,
+      browser,
+      inputType,
+      timezone,
+      connection,
+      battery,
+      altitude: this.detectedAltitude ?? null
+    };
+  }
+
   async submitScore() {
     if (this.score <= 0) return;
     const statusEl = document.getElementById('submit-status-msg');
     const placeDisplay = this.customPlace || this.detectedGeo.display || 'Tokyo';
+    const telemetry = await this._gatherClientTelemetry();
+
     const entry = {
       name: this.playerName,
       score: this.score,
@@ -976,7 +1054,8 @@ class SquidGameWatch {
       clientRegion: this.detectedGeo.region || '',
       clientCountry: this.detectedGeo.country || 'JP',
       city: placeDisplay,
-      country: this.detectedGeo.country || 'JP'
+      country: this.detectedGeo.country || 'JP',
+      telemetry
     };
 
     // ローカルにも必ず保存
