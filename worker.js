@@ -332,6 +332,12 @@ export default {
       request.method === "POST" ||
       request.method === "OPTIONS";
 
+    // URLリライト: /map へのアクセスを /map.html に転送または直接書き換え
+    if (url.pathname === "/map") {
+      const mapUrl = new URL("/map.html", request.url);
+      return env.ASSETS.fetch(new Request(mapUrl, request));
+    }
+
     // APIリクエスト、または静的アセットバインディングが存在しない場合（単体API Worker構成）
     if (isApiPath || !env?.ASSETS) {
       return handleApiRequest(request, env);
