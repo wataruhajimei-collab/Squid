@@ -185,11 +185,15 @@ export async function handleApiRequest(request, env) {
           const city = (rawCity && rawCity !== "Unknown") ? rawCity : null;
           if (!city) continue;
 
+          // 都市名を正規化（例: "Osaka, Osaka" -> "Osaka", "Kawasaki, Kanagawa" -> "Kawasaki"）
+          // 表記ゆれによって同一都市が複数レコードに分裂・重複ピン化するのを防止
+          const canonicalCity = city.split(",")[0].trim() || city;
+
           const loc = entry.location || {};
           const entryTz = loc.timezone || inferTimezoneByLocation(entry.location?.country || entry.country, entry.city || loc.city, loc.region);
-          if (!cityMap.has(city)) {
-            cityMap.set(city, {
-              city,
+          if (!cityMap.has(canonicalCity)) {
+            cityMap.set(canonicalCity, {
+              city: canonicalCity,
               total: 0,
               count: 0,
               best: 0,
@@ -209,7 +213,7 @@ export async function handleApiRequest(request, env) {
               lon: loc.lon || null
             });
           }
-          const rec = cityMap.get(city);
+          const rec = cityMap.get(canonicalCity);
           rec.total += entry.score;
           rec.count += 1;
           const entryDate = entry.lastDate || entry.date;

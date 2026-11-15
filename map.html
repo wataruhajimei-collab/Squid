@@ -427,6 +427,11 @@
       cursor: pointer;
       transform: translate(-50%, -100%);
       filter: drop-shadow(0 4px 6px rgba(0,0,0,0.45));
+      transition: z-index 0.1s;
+    }
+
+    .diver-pin-wrap:hover {
+      z-index: 9999 !important;
     }
 
     .diver-badge {
@@ -815,11 +820,11 @@
         else return null;
       }
 
-      // プレイヤーが重ならないようスパイラル（渦巻き状）にオフセット配置
-      // 同一都市・近隣都市のピン同士が完全に重なって隠れるのを防止
+      // プレイヤーやピンが重ならないようスパイラル（渦巻き状）に確実にオフセット配置
+      // 同一地点・近隣地点のピン同士が重なって隠れるのを防止（吹き出し幅を考慮して十分な間隔を確保）
       if (index === 0) return [baseCoords[0], baseCoords[1]];
       const angle = index * 2.39996; // 黄金角 (ラジアン)
-      const radius = 0.018 * Math.sqrt(index); // 緯度経度約1.5km〜3km間隔で整然と外側に分散
+      const radius = 0.045 * Math.sqrt(index); // 緯度経度約4〜5km離してバッジの被りを解消
       const latOffset = radius * Math.cos(angle);
       const lngOffset = (radius * Math.sin(angle)) / Math.cos(baseCoords[0] * Math.PI / 180);
       return [baseCoords[0] + latOffset, baseCoords[1] + lngOffset];
@@ -1081,14 +1086,20 @@
         maxTime = Date.now();
       }
 
-      // 同一地域ごとの出現数をカウントし、同一都市のピン同士が重ならないようにオフセット
-      const cityPinCounters = {};
+      // 同一座標・同一地域ごとの出現数をカウントし、同一都市のピン同士が重ならないようにオフセット
+      const coordCounters = {};
 
       data.forEach((item) => {
         totalDives += (item.count || 1);
-        const cityKey = (item.city || 'Unknown').toLowerCase();
-        const pinIdx = cityPinCounters[cityKey] || 0;
-        cityPinCounters[cityKey] = pinIdx + 1;
+        
+        // 基準座標を取得して、同一座標に重なるピンのインデックスを追跡
+        const base = resolveCoords(item.city, item.country, 0);
+        let pinIdx = 0;
+        if (base) {
+          const coordKey = `${base[0].toFixed(2)},${base[1].toFixed(2)}`;
+          pinIdx = coordCounters[coordKey] || 0;
+          coordCounters[coordKey] = pinIdx + 1;
+        }
 
         const coords = resolveCoords(item.city, item.country, pinIdx);
         const displayCity = formatCityLabel(item.city);
