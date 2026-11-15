@@ -804,10 +804,13 @@
       };
     }
 
-    // Leaflet 初期化
+    // Leaflet 初期化（日本列島全体が中央に美しく収まる位置とズーム倍率）
+    const JAPAN_CENTER = [36.2048, 138.2529];
+    const JAPAN_DEFAULT_ZOOM = 6;
+
     const map = L.map('map', {
-      center: [35.45, 139.65],
-      zoom: 8,
+      center: JAPAN_CENTER,
+      zoom: JAPAN_DEFAULT_ZOOM,
       minZoom: 2,
       maxZoom: 18,
       zoomControl: true
@@ -1051,9 +1054,8 @@
       document.getElementById('total-cities').textContent = data.length;
       document.getElementById('total-dives').textContent = totalDives;
 
-      if (bounds.length > 0) {
-        map.fitBounds(bounds, { padding: [60, 60], maxZoom: 9 });
-      }
+      // ユーザー指示: 初期表示時は日本を中心に表示（全米や豪州など海外ピンによってズームアウトしすぎないよう日本をセンターに設定）
+      map.setView(JAPAN_CENTER, JAPAN_DEFAULT_ZOOM);
     }
 
     // リストの描画（地域別 or プレイヤー個別）
