@@ -1506,11 +1506,14 @@ class SquidGameWatch {
     const crossed200 = !this.bonus200Triggered && prev < 200 && this.score >= 200;
     const crossedEvery500 = Math.floor(prev / 500) < Math.floor(this.score / 500);
 
-    // 200点刻み（200, 400, 600, 800...）でイカが激怒して海中に大量の濃黒・セピア墨をブシャーッと吐き出す！
-    const current200Step = Math.floor(this.score / 200);
-    const prev200Step = Math.floor(prev / 200);
-    if (current200Step > prev200Step && current200Step > 0) {
-      this._triggerSquidInkBlast(current200Step * 200);
+    // GAME C のみ: 200点刻み（200, 400, 600, 800...）でリアルイカが激怒して海中に大量の墨を吐き出す
+    // ※ GAME A / GAME B は本家ゲーム＆ウォッチの仕様を厳格に保持するため墨吐きを行わない
+    if (this.gameMode === 'C') {
+      const current200Step = Math.floor(this.score / 200);
+      const prev200Step = Math.floor(prev / 200);
+      if (current200Step > prev200Step && current200Step > 0) {
+        this._triggerSquidInkBlast(current200Step * 200);
+      }
     }
 
     if (crossed200 || crossedEvery500) {
@@ -1525,8 +1528,9 @@ class SquidGameWatch {
     }
   }
 
-  // 200点刻み（200, 400, 600, 800...）でイカが激怒して海中に大量の濃黒・セピア墨をブシャーッと吐き出す！
+  // GAME C 専用: 200点刻み（200, 400, 600, 800...）でイカが激怒して海中に大量の濃黒・セピア墨をブシャーッと吐き出す！
   _triggerSquidInkBlast(pts = 200) {
+    if (this.gameMode !== 'C') return;
     this.squidInkBlastTimer = 4.2;
     this.squidFlushBoost = 1.0; // 激怒して外套膜と触腕の色素胞が深紅・赤茶に最大発色
     this.sound.squidInkBlast();
