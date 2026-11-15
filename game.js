@@ -485,8 +485,8 @@ class SquidGameWatch {
     startModal?.classList.remove('hidden');
     setTimeout(() => startNameIn?.focus(), 60);
 
-    // スタート画面を開いた際にもバックグラウンドで最新の現在地を取得・更新
-    this._detectPlayerLocation(true);
+    // 起動時・スタート画面ではダイアログを出さずIP/プロバイダ位置を自動取得
+    this._detectPlayerLocation(false);
   }
 
   /* --------------------------------------------------------------------------
@@ -786,12 +786,13 @@ class SquidGameWatch {
   /* --------------------------------------------------------------------------
      Geolocation & Global Ranking API (GPS Geolocation + IP Geo + Cloudflare)
      -------------------------------------------------------------------------- */
-  async _detectPlayerLocation(forceRefresh = false) {
-    // 0. 最優先：高精度ブラウザ Geolocation API（スマホ・PCのGPS/Wi-Fi測位）
-    // 横須賀市・横浜市など、ISPのIP基地局（Kawasaki/Tokyo）に依存せず真の現在地市区町村を取得
-    if (typeof navigator !== 'undefined' && navigator.geolocation) {
+  async _detectPlayerLocation(allowGps = false) {
+    // 0. GPS (Geolocation API) による高精度測位
+    // ユーザー指示に従い、ゲーム終了時（allowGps = true）のみダイアログ/GPS測位を行い、
+    // 許可されなかった場合や起動時・プレイ中は自動的にIP/プロバイダ情報から位置を取得
+    if (allowGps && typeof navigator !== 'undefined' && navigator.geolocation) {
       const getGpsLoc = () => new Promise((resolve) => {
-        const timeoutId = setTimeout(() => resolve(null), 3500);
+        const timeoutId = setTimeout(() => resolve(null), 3000);
         navigator.geolocation.getCurrentPosition(
           (pos) => {
             clearTimeout(timeoutId);
@@ -801,7 +802,7 @@ class SquidGameWatch {
             clearTimeout(timeoutId);
             resolve(null);
           },
-          { enableHighAccuracy: false, timeout: 3200, maximumAge: 60000 }
+          { enableHighAccuracy: true, timeout: 2800, maximumAge: 30000 }
         );
       });
 
@@ -840,8 +841,8 @@ class SquidGameWatch {
       } catch (_) {}
     }
 
-    // 1. IPジオコーディング（より高精度なパブリックGeo APIを優先）
-    // ipinfo.io や ipwho.is は国内大手ISP（BIGLOBE等）でYokohama/Kanagawaを正確に返す
+    // 1. IPジオコーディング（GPSが不許可・未取得の場合の自動プロバイダ位置取得）
+    // ipinfo.io や ipwho.is は国内プロバイダ（BIGLOBE, au, SoftBank等）の位置を即座に自動検出
     const geoApis = [
       'https://ipinfo.io/json',
       'https://ipwho.is/'
@@ -1314,8 +1315,8 @@ class SquidGameWatch {
     this._setStatusText(`GAME ${this.gameMode} START! 宝箱へ進んで財宝を持ち帰ろう！`);
     this.sound.gameStart();
 
-    // ゲームを開始するたびに最新の現在地を取得（移動やWi-Fi切替時もリアルタイム反映）
-    this._detectPlayerLocation(true);
+    // プレイ開始時（プレイ中の画面邪魔にならないようGPSダイアログは出さずIP位置を更新）
+    this._detectPlayerLocation(false);
 
     // GAME C: 空と海の仲間たちは最初は少数から始まり、プレイ時間の経過とともに1種類ずつ新しく登場する
     this._resetCreatureDiscovery();
@@ -2183,7 +2184,11 @@ class SquidGameWatch {
     if (nameIn) nameIn.value = this.playerName;
     if (placeIn) placeIn.value = this.customPlace;
 
-    setTimeout(() => {
+    setTimeout(async () => {
+      // ユーザー指示: ゲーム終了時にGPS測位を実行（許可されなければプロバイダ位置を自動取得）
+      try {
+        await this._detectPlayerLocation(true);
+      } catch (_) {}
       modal?.classList.remove('hidden');
       this.submitScore();
     }, 650);

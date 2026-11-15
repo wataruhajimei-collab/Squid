@@ -740,23 +740,34 @@
       "western australia": [-31.9505, 115.8605]
     };
 
-    function resolveCoords(cityName, countryCode) {
+    function resolveCoords(cityName, countryCode, index = 0) {
       if (!cityName) return null;
       const lower = cityName.toLowerCase();
+      let baseCoords = null;
       
       for (const [key, coords] of Object.entries(KNOWN_COORDS)) {
         if (lower.includes(key.toLowerCase()) || key.toLowerCase().includes(lower)) {
-          const jitterLat = (Math.random() - 0.5) * 0.005;
-          const jitterLng = (Math.random() - 0.5) * 0.005;
-          return [coords[0] + jitterLat, coords[1] + jitterLng];
+          baseCoords = coords;
+          break;
         }
       }
 
-      if (countryCode === "JP") return [35.6895 + (Math.random() - 0.5) * 0.4, 139.6917 + (Math.random() - 0.5) * 0.4];
-      if (countryCode === "US") return [29.7604, -95.3698];
-      if (countryCode === "SG") return [1.3521, 103.8198];
-      if (countryCode === "AU") return [-32.0461, 115.7672];
-      return null;
+      if (!baseCoords) {
+        if (countryCode === "JP") baseCoords = [35.6895, 139.6917];
+        else if (countryCode === "US") baseCoords = [29.7604, -95.3698];
+        else if (countryCode === "SG") baseCoords = [1.3521, 103.8198];
+        else if (countryCode === "AU") baseCoords = [-32.0461, 115.7672];
+        else return null;
+      }
+
+      // プレイヤーが重ならないようスパイラル（渦巻き状）にオフセット配置
+      // 同一都市・近隣都市のピン同士が完全に重なって隠れるのを防止
+      if (index === 0) return [baseCoords[0], baseCoords[1]];
+      const angle = index * 2.39996; // 黄金角 (ラジアン)
+      const radius = 0.018 * Math.sqrt(index); // 緯度経度約1.5km〜3km間隔で整然と外側に分散
+      const latOffset = radius * Math.cos(angle);
+      const lngOffset = (radius * Math.sin(angle)) / Math.cos(baseCoords[0] * Math.PI / 180);
+      return [baseCoords[0] + latOffset, baseCoords[1] + lngOffset];
     }
 
     function formatCityLabel(rawCity) {
@@ -942,9 +953,16 @@
       const bounds = [];
       let totalDives = 0;
 
+      // 同一地域ごとの出現数をカウントし、同一都市のピン同士が重ならないようにオフセット
+      const cityPinCounters = {};
+
       data.forEach((item) => {
         totalDives += (item.count || 1);
-        const coords = resolveCoords(item.city, item.country);
+        const cityKey = (item.city || 'Unknown').toLowerCase();
+        const pinIdx = cityPinCounters[cityKey] || 0;
+        cityPinCounters[cityKey] = pinIdx + 1;
+
+        const coords = resolveCoords(item.city, item.country, pinIdx);
         const displayCity = formatCityLabel(item.city);
         const topPlayerName = item.topPlayer || 'DIVER';
         const rawTele = item.telemetry || {};
@@ -1044,9 +1062,9 @@
       listEl.innerHTML = '';
 
       if (currentViewMode === 'cities') {
-        regionalData.forEach(item => {
+        regionalData.forEach((item, idx) => {
           const rawTele = item.telemetry || {};
-          const coords = resolveCoords(item.city, item.country);
+          const coords = resolveCoords(item.city, item.country, idx % 5);
           const tele = formatTelemetry(rawTele);
           const div = document.createElement('div');
           div.className = 'city-item';
@@ -1093,7 +1111,7 @@
         // プレイヤー個人別
         playerScoresData.slice(0, 60).forEach((entry, idx) => {
           const rawTele = entry.telemetry || {};
-          const coords = resolveCoords(entry.city, entry.country);
+          const coords = resolveCoords(entry.city, entry.country, idx % 6);
           const tele = formatTelemetry(rawTele);
           const div = document.createElement('div');
           div.className = 'city-item';
