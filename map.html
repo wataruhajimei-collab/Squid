@@ -14,11 +14,10 @@
     :root {
       --gold: #d4af37;
       --gold-light: #f3e5ab;
-      --lcd-bg: #8ba888;
-      --lcd-ink: #1b261b;
       --radar-cyan: #00ffcc;
+      --radar-cyan-glow: rgba(0, 255, 204, 0.4);
       --radar-blue: #0a192f;
-      --panel-bg: rgba(10, 25, 47, 0.92);
+      --panel-bg: rgba(10, 25, 47, 0.94);
       --font-digital: 'Courier New', 'Consolas', monospace;
     }
 
@@ -137,8 +136,38 @@
     #map {
       flex: 1;
       height: 100%;
-      background: #06111f;
+      background: #e6edf5;
       z-index: 1;
+    }
+
+    /* Map Mode Controller Floating Bar */
+    .map-style-bar {
+      position: absolute;
+      top: 14px;
+      left: 60px;
+      z-index: 1000;
+      display: flex;
+      background: rgba(10, 25, 47, 0.9);
+      border: 1px solid var(--gold);
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+    }
+
+    .map-style-btn {
+      background: transparent;
+      border: none;
+      color: #c0d0e6;
+      padding: 6px 12px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .map-style-btn.active {
+      background: var(--gold);
+      color: #071322;
     }
 
     /* Sidebar / Drawer */
@@ -147,7 +176,7 @@
       top: 12px;
       right: 12px;
       bottom: 12px;
-      width: 340px;
+      width: 360px;
       background: var(--panel-bg);
       backdrop-filter: blur(8px);
       border: 1px solid rgba(212, 175, 55, 0.4);
@@ -289,8 +318,8 @@
     /* Mobile Toggle Button */
     #sidebar-toggle {
       position: absolute;
-      top: 12px;
-      right: 12px;
+      top: 14px;
+      right: 14px;
       z-index: 1002;
       background: var(--panel-bg);
       border: 1px solid var(--gold);
@@ -304,10 +333,12 @@
       display: none;
     }
 
-    /* Custom Leaflet Marker */
+    /* ============================================================
+       常時画面上に表示されるプレイヤーピン＆地名ラベル
+       ============================================================ */
     .custom-diver-pin {
-      background: transparent;
-      border: none;
+      background: transparent !important;
+      border: none !important;
     }
 
     .diver-pin-wrap {
@@ -317,36 +348,76 @@
       align-items: center;
       cursor: pointer;
       transform: translate(-50%, -100%);
+      filter: drop-shadow(0 4px 6px rgba(0,0,0,0.45));
     }
 
+    /* 常時表示のメインバッジ（地名・プレイヤー名・スコア・人数） */
     .diver-badge {
-      background: linear-gradient(135deg, #10243d 0%, #081423 100%);
+      background: linear-gradient(135deg, #10243d 0%, #071526 100%);
       border: 2px solid var(--radar-cyan);
-      border-radius: 20px;
-      padding: 3px 8px;
-      box-shadow: 0 0 12px rgba(0, 255, 204, 0.4), 0 4px 8px rgba(0, 0, 0, 0.6);
+      border-radius: 8px;
+      padding: 3px 7px;
       display: flex;
-      align-items: center;
-      gap: 5px;
+      flex-direction: column;
+      gap: 1px;
       white-space: nowrap;
       color: #fff;
       font-size: 0.75rem;
       font-weight: 700;
+      box-shadow: 0 0 10px rgba(0, 255, 204, 0.4);
+      transition: transform 0.15s ease;
     }
 
-    .diver-badge .score {
+    .diver-pin-wrap:hover .diver-badge {
+      transform: scale(1.08);
+      border-color: var(--gold);
+      box-shadow: 0 0 14px rgba(212, 175, 55, 0.6);
+    }
+
+    .diver-badge-top {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .diver-badge-top .loc-title {
+      font-weight: 800;
+      color: #ffffff;
+      font-size: 0.8rem;
+    }
+
+    .diver-badge-top .score {
       color: var(--gold-light);
       font-family: var(--font-digital);
       font-weight: 800;
     }
 
-    .diver-badge .count-tag {
+    .diver-badge-top .count-tag {
       background: var(--radar-cyan);
       color: #071322;
-      border-radius: 10px;
-      padding: 0 5px;
-      font-size: 0.68rem;
+      border-radius: 4px;
+      padding: 0 4px;
+      font-size: 0.65rem;
       font-weight: 900;
+    }
+
+    .diver-badge-bottom {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 0.7rem;
+      color: var(--radar-cyan);
+      border-top: 1px solid rgba(255, 255, 255, 0.12);
+      padding-top: 1px;
+      margin-top: 1px;
+    }
+
+    .diver-badge-bottom .player-name {
+      color: #e6f1ff;
+      font-weight: 700;
+      max-width: 140px;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     .diver-pin-tip {
@@ -361,8 +432,8 @@
     .diver-pin-pulse {
       position: absolute;
       bottom: -6px;
-      width: 14px;
-      height: 14px;
+      width: 12px;
+      height: 12px;
       background: rgba(0, 255, 204, 0.6);
       border-radius: 50%;
       animation: pinRadar 2s infinite ease-out;
@@ -370,7 +441,7 @@
 
     @keyframes pinRadar {
       0% { transform: scale(0.5); opacity: 1; }
-      100% { transform: scale(3.5); opacity: 0; }
+      100% { transform: scale(3.2); opacity: 0; }
     }
 
     /* Popup Custom Style */
@@ -390,7 +461,7 @@
 
     .popup-box {
       padding: 8px 10px;
-      min-width: 180px;
+      min-width: 200px;
     }
 
     .popup-city {
@@ -423,20 +494,24 @@
       margin-top: 6px;
       padding-top: 4px;
       border-top: 1px dashed rgba(255, 255, 255, 0.15);
-      font-size: 0.78rem;
+      font-size: 0.8rem;
       color: var(--radar-cyan);
       display: flex;
       justify-content: space-between;
     }
 
     @media (max-width: 768px) {
+      .map-style-bar {
+        left: 10px;
+        top: 60px;
+      }
       #sidebar {
-        width: 280px;
+        width: auto;
         top: auto;
         bottom: 12px;
         right: 12px;
         left: 12px;
-        max-height: 45vh;
+        max-height: 40vh;
       }
       #sidebar-toggle {
         display: block;
@@ -459,7 +534,15 @@
 
   <div id="main-container">
     <div id="map"></div>
-    <button id="sidebar-toggle">📋 プレイヤー地域</button>
+
+    <!-- 地図スタイル切り替えバー（日本地図がクッキリ出る日本語標準地図 / 海洋ダーク） -->
+    <div class="map-style-bar">
+      <button class="map-style-btn active" id="btn-tile-osm">🇯🇵 日本地図 (標準)</button>
+      <button class="map-style-btn" id="btn-tile-gsi">🗺️ 地理院地図</button>
+      <button class="map-style-btn" id="btn-tile-dark">🌊 海底ダーク</button>
+    </div>
+
+    <button id="sidebar-toggle">📋 潜水士一覧</button>
 
     <aside id="sidebar">
       <div class="sidebar-header">
@@ -483,38 +566,62 @@
   </div>
 
   <script>
-    // 既知の都市・地域の正確な座標マスター（OpenStreetMap / Cloudflare IPロケーション対応）
+    // 既知の都市・地域の正確な座標マスター（OpenStreetMap / GSI / IPロケーション照合）
     const KNOWN_COORDS = {
-      // 日本
+      // 神奈川・横須賀・横浜・川崎
       "yokosuka": [35.2815, 139.6722],
+      "横須賀": [35.2815, 139.6722],
       "yokohama": [35.4437, 139.6380],
+      "横浜": [35.4437, 139.6380],
       "kawasaki": [35.5308, 139.7029],
+      "川崎": [35.5308, 139.7029],
+      // 東京・各区
       "tokyo": [35.6895, 139.6917],
       "東京": [35.6895, 139.6917],
       "東京で": [35.6895, 139.6917],
-      "minato city": [35.6580, 139.7514],
+      "minato": [35.6580, 139.7514],
+      "港区": [35.6580, 139.7514],
+      "kichijoji": [35.7031, 139.5798],
+      "吉祥寺": [35.7031, 139.5798],
+      "ねりま": [35.7356, 139.6517],
+      "練馬": [35.7356, 139.6517],
+      "nerima": [35.7356, 139.6517],
+      // 埼玉
       "saitama": [35.8617, 139.6455],
       "埼玉": [35.8617, 139.6455],
       "tokorozawa": [35.7994, 139.4687],
+      "所沢": [35.7994, 139.4687],
       "kukichūō": [36.0625, 139.6672],
+      "久喜": [36.0625, 139.6672],
       "kuki": [36.0625, 139.6672],
+      // 千葉
       "chiba": [35.6073, 140.1063],
+      "千葉": [35.6073, 140.1063],
       "kisarazu": [35.3817, 139.9272],
+      "木更津": [35.3817, 139.9272],
       "matsudo": [35.7879, 139.9038],
+      "松戸": [35.7879, 139.9038],
       "narita": [35.7767, 140.3188],
+      "成田": [35.7767, 140.3188],
       "御宿": [35.1852, 140.3547],
       "onjuku": [35.1852, 140.3547],
-      "kichijoji": [35.7031, 139.5798],
-      "ねりま": [35.7356, 139.6517],
-      "nerima": [35.7356, 139.6517],
+      // 関西・西日本
       "osaka": [34.6937, 135.5023],
+      "大阪": [34.6937, 135.5023],
       "yao": [34.6273, 135.6008],
+      "八尾": [34.6273, 135.6008],
       "toyonaka": [34.7813, 135.4691],
+      "豊中": [34.7813, 135.4691],
       "ehime": [33.8416, 132.7657],
+      "愛媛": [33.8416, 132.7657],
+      // 北日本・その他
       "sapporo": [43.0618, 141.3545],
+      "札幌": [43.0618, 141.3545],
       "hokkaido": [43.0618, 141.3545],
+      "北海道": [43.0618, 141.3545],
       "nagano": [36.6513, 138.1810],
       "ながの": [36.6513, 138.1810],
+      "長野": [36.6513, 138.1810],
       "にほん": [35.6895, 139.6917],
       "japan": [35.6895, 139.6917],
       // 海外
@@ -523,67 +630,98 @@
       "singapore": [1.3521, 103.8198],
       "east fremantle": [-32.0461, 115.7672],
       "fremantle": [-32.0569, 115.7485],
-      "western australia": [-31.9505, 115.8605],
-      "australia": [-25.2744, 133.7751],
-      "united states": [37.0902, -95.7129],
-      "uk": [51.5074, -0.1278],
-      "london": [51.5074, -0.1278]
+      "western australia": [-31.9505, 115.8605]
     };
 
     function resolveCoords(cityName, countryCode) {
       if (!cityName) return null;
       const lower = cityName.toLowerCase();
       
-      // キーワード照合（部分一致）
       for (const [key, coords] of Object.entries(KNOWN_COORDS)) {
         if (lower.includes(key.toLowerCase()) || key.toLowerCase().includes(lower)) {
-          // 同じ都市に複数ピンが重なりすぎないようにごく微小なジッター(±0.003度)を付与
-          const jitterLat = (Math.random() - 0.5) * 0.008;
-          const jitterLng = (Math.random() - 0.5) * 0.008;
+          // 同じ都市に複数ピンが重なりすぎないよう微小ジッター
+          const jitterLat = (Math.random() - 0.5) * 0.005;
+          const jitterLng = (Math.random() - 0.5) * 0.005;
           return [coords[0] + jitterLat, coords[1] + jitterLng];
         }
       }
 
-      // 国コードごとのフォールバック
       if (countryCode === "JP") {
-        return [35.6895 + (Math.random() - 0.5) * 0.5, 139.6917 + (Math.random() - 0.5) * 0.5];
+        return [35.6895 + (Math.random() - 0.5) * 0.4, 139.6917 + (Math.random() - 0.5) * 0.4];
       }
       if (countryCode === "US") {
-        return [37.7749 + (Math.random() - 0.5) * 2, -122.4194 + (Math.random() - 0.5) * 2];
+        return [29.7604, -95.3698];
       }
       if (countryCode === "SG") {
         return [1.3521, 103.8198];
       }
       if (countryCode === "AU") {
-        return [-33.8688, 151.2093];
+        return [-32.0461, 115.7672];
       }
       return null;
     }
 
-    // Leaflet 初期化
+    // 地名表示用の短いフォーマット
+    function formatCityLabel(rawCity) {
+      if (!rawCity) return 'Unknown';
+      // "Kawasaki, Kanagawa" -> "川崎 / Kawasaki" 風に短縮
+      const parts = rawCity.split(',');
+      return parts[0].trim();
+    }
+
+    // Leaflet 初期化（初期表示は日本全域・関東が見やすい位置）
     const map = L.map('map', {
-      center: [35.5, 139.7],
-      zoom: 6,
+      center: [35.45, 139.65],
+      zoom: 8,
       minZoom: 2,
       maxZoom: 18,
       zoomControl: true
     });
 
-    // 暗色系の地図タイル (CartoDB DarkMatter)
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-      attribution: '&copy; <a href="https://carto.com/">CARTO</a>, &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    // タイルレイヤー定義
+    // 1. OpenStreetMap Japan（確実・高精細な日本語地図）
+    const osmLayer = L.tileLayer('https://tile.openstreetmap.jp/{z}/{x}/{y}.png', {
+      attribution: '&copy; <a href="https://openstreetmap.jp">OpenStreetMap Japan</a> contributors',
+      maxZoom: 18
+    });
+
+    // 2. 国土地理院 標準地図
+    const gsiLayer = L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png', {
+      attribution: '&copy; <a href="https://maps.gsi.go.jp/development/ichiran.html">国土地理院</a>',
+      maxZoom: 18
+    });
+
+    // 3. CartoDB DarkMatter (海底ダーク)
+    const darkLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+      attribution: '&copy; CARTO, &copy; OpenStreetMap',
       subdomains: 'abcd',
       maxZoom: 19
-    }).addTo(map);
+    });
+
+    // デフォルトは日本の道路・海岸線・地名がくっきり出る「日本語標準地図」
+    osmLayer.addTo(map);
+    let currentTileLayer = osmLayer;
+
+    // スタイル切り替えボタン
+    function switchTile(layer, btnId) {
+      map.removeLayer(currentTileLayer);
+      layer.addTo(map);
+      currentTileLayer = layer;
+      document.querySelectorAll('.map-style-btn').forEach(b => b.classList.remove('active'));
+      document.getElementById(btnId).classList.add('active');
+    }
+
+    document.getElementById('btn-tile-osm').addEventListener('click', () => switchTile(osmLayer, 'btn-tile-osm'));
+    document.getElementById('btn-tile-gsi').addEventListener('click', () => switchTile(gsiLayer, 'btn-tile-gsi'));
+    document.getElementById('btn-tile-dark').addEventListener('click', () => switchTile(darkLayer, 'btn-tile-dark'));
 
     let markersLayer = L.layerGroup().addTo(map);
-    let regionalData = [];
 
     async function loadData() {
       try {
         const res = await fetch('/api/scores?mode=regional&t=' + Date.now());
         if (!res.ok) throw new Error("API response error");
-        regionalData = await res.json();
+        const regionalData = await res.json();
         renderMapAndSidebar(regionalData);
       } catch (e) {
         console.error("Failed to load regional data:", e);
@@ -598,20 +736,21 @@
       listEl.innerHTML = '';
 
       let totalDives = 0;
-      let validLocations = 0;
       const bounds = [];
 
-      data.forEach((item, index) => {
+      data.forEach((item) => {
         totalDives += (item.count || 1);
         const coords = resolveCoords(item.city, item.country);
+        const displayCity = formatCityLabel(item.city);
+        const topPlayerName = item.topPlayer || 'DIVER';
 
-        // Sidebar Item
+        // サイドバー要素
         const div = document.createElement('div');
         div.className = 'city-item';
         div.innerHTML = `
           <div class="city-item-left">
             <div class="city-name">${item.country === 'JP' ? '🇯🇵 ' : (item.country === 'US' ? '🇺🇸 ' : (item.country === 'AU' ? '🇦🇺 ' : (item.country === 'SG' ? '🇸🇬 ' : '🌐 ')))}${item.city || 'Unknown'}</div>
-            <div class="city-sub">👑 ${escapeHtml(item.topPlayer || '-')} (Avg: ${item.avg || 0}pt)</div>
+            <div class="city-sub">👑 <strong>${escapeHtml(topPlayerName)}</strong> (Avg: ${item.avg || 0}pt)</div>
           </div>
           <div class="city-item-right">
             <div class="city-score">${item.best || 0}pt</div>
@@ -620,19 +759,24 @@
         `;
 
         if (coords) {
-          validLocations++;
           bounds.push(coords);
 
-          // Custom Marker Icon
+          // 画面上に「プレイヤー名」と「地名」「スコア」を常時表示するカスタムHTMLピン
           const customIcon = L.divIcon({
             className: 'custom-diver-pin',
             html: `
               <div class="diver-pin-wrap">
                 <div class="diver-pin-pulse"></div>
                 <div class="diver-badge">
-                  <span>🤿</span>
-                  <span class="score">${item.best}pt</span>
-                  <span class="count-tag">${item.count}</span>
+                  <div class="diver-badge-top">
+                    <span class="loc-title">📍 ${escapeHtml(displayCity)}</span>
+                    <span class="score">${item.best}pt</span>
+                    <span class="count-tag">${item.count}</span>
+                  </div>
+                  <div class="diver-badge-bottom">
+                    <span>🤿</span>
+                    <span class="player-name">${escapeHtml(topPlayerName)}</span>
+                  </div>
                 </div>
                 <div class="diver-pin-tip"></div>
               </div>
@@ -646,8 +790,12 @@
           const popupContent = `
             <div class="popup-box">
               <div class="popup-city">
-                <span>${item.city}</span>
+                <span>📍 ${escapeHtml(item.city)}</span>
                 <span style="font-size:0.75rem; color:var(--radar-cyan);">${item.country || 'JP'}</span>
+              </div>
+              <div class="popup-top-player" style="margin-bottom:6px; font-size:0.9rem;">
+                <span>👑 代表プレイヤー:</span>
+                <strong style="color:#fff;">${escapeHtml(topPlayerName)}</strong>
               </div>
               <div class="popup-row">
                 <span>最高スコア:</span>
@@ -658,17 +806,13 @@
                 <span class="val">${item.avg} pt</span>
               </div>
               <div class="popup-row">
-                <span>潜水回数:</span>
+                <span>累計潜水回数:</span>
                 <span class="val">${item.count} 回</span>
-              </div>
-              <div class="popup-top-player">
-                <span>TOP潜水士:</span>
-                <strong>${escapeHtml(item.topPlayer || '-')}</strong>
               </div>
             </div>
           `;
 
-          marker.bindPopup(popupContent, { offset: [0, -28] });
+          marker.bindPopup(popupContent, { offset: [0, -32] });
           markersLayer.addLayer(marker);
 
           div.addEventListener('click', () => {
@@ -685,9 +829,9 @@
       document.getElementById('total-cities').textContent = data.length;
       document.getElementById('total-dives').textContent = totalDives;
 
-      // 初回表示時にピン全体が見えるよう調整
+      // 初回表示: 横須賀・横浜・東京など主要地点が見渡せるようフィット
       if (bounds.length > 0) {
-        map.fitBounds(bounds, { padding: [50, 50], maxZoom: 10 });
+        map.fitBounds(bounds, { padding: [60, 60], maxZoom: 9 });
       }
     }
 
@@ -701,13 +845,13 @@
         .replace(/'/g, '&#39;');
     }
 
-    // Refresh button
+    // 更新ボタン
     document.getElementById('refresh-btn').addEventListener('click', () => {
       document.getElementById('city-list').innerHTML = '<div style="text-align:center; padding: 20px; color: #8da2c0;">レーダー探査中...</div>';
       loadData();
     });
 
-    // Mobile sidebar toggle
+    // モバイル用開閉
     const sidebar = document.getElementById('sidebar');
     const toggleBtn = document.getElementById('sidebar-toggle');
     const closeBtn = document.getElementById('sidebar-close');
@@ -720,7 +864,7 @@
       sidebar.classList.add('collapsed');
     });
 
-    // 初回ロード
+    // 初期ロード実行
     loadData();
   </script>
 </body>
