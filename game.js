@@ -1436,10 +1436,10 @@ class SquidGameWatch {
   _getSeaWaveHeight(x) {
     if (!this._isRealColor()) return 96;
     const t = this.bioTime;
-    // 3つの異なる周波数・波長の進行波を合成したリアルな海洋重力波
-    const w1 = Math.sin(t * 2.2 + x * 0.038) * 4.6;
-    const w2 = Math.sin(t * 3.4 - x * 0.065 + 1.2) * 2.5;
-    const w3 = Math.cos(t * 1.5 + x * 0.022 - 0.7) * 2.0;
+    // 3つの異なる周波数・波長の進行波を合成したリアルで迫力ある海洋重力波
+    const w1 = Math.sin(t * 2.4 + x * 0.032) * 6.8;
+    const w2 = Math.sin(t * 3.8 - x * 0.058 + 1.2) * 3.8;
+    const w3 = Math.cos(t * 1.6 + x * 0.018 - 0.7) * 2.8;
     return 101 + w1 + w2 + w3;
   }
 
@@ -1448,24 +1448,24 @@ class SquidGameWatch {
     if (!this._isRealColor()) return { yOff: 0, pitch: 0, rollX: 0 };
     // 船体中央(x=125)とその前後の喫水点における海面高さをサンプリング
     const yCenter = this._getSeaWaveHeight(125);
-    const yBow = this._getSeaWaveHeight(190);
-    const yStern = this._getSeaWaveHeight(60);
-    const yOff = yCenter - 101; // 基準海面からの上下浮沈変位
-    const pitch = Math.max(-0.09, Math.min(0.09, (yBow - yStern) / 130)); // 前後トリム（傾き角ラジアン）
-    const rollX = Math.sin(this.bioTime * 1.8) * 1.8; // 微小な左右ローリング変位
+    const yBow = this._getSeaWaveHeight(200);
+    const yStern = this._getSeaWaveHeight(50);
+    const yOff = yCenter - 101; // 基準海面からの上下浮沈変位（しっかり波に乗る）
+    const pitch = Math.max(-0.16, Math.min(0.16, (yBow - yStern) / 110)); // 前後トリム（波に合わせたダイナミックな傾き）
+    const rollX = Math.sin(this.bioTime * 2.2) * 3.2; // 左右ローリング変位
     return { yOff, pitch, rollX };
   }
 
   // GAME C: 水中オブジェクトの光学的屈折によるゆらぎ変位（深さと水面波に連動）
   _getWaterRefractionOffset(x, y) {
     if (!this._isRealColor() || y <= 108) return { dx: 0, dy: 0 };
-    const depthRatio = Math.min(1.0, (y - 108) / 320);
+    const depthRatio = Math.min(1.0, (y - 108) / 300);
     const t = this.bioTime;
-    // 水面波の屈折によって生じる横揺れ・縦揺れの多重ハーモニクス
-    const dx = (Math.sin(t * 2.8 + y * 0.042 + x * 0.028) * 2.8
-              + Math.cos(t * 4.2 - y * 0.075) * 1.4) * depthRatio;
-    const dy = (Math.sin(t * 3.1 - x * 0.052) * 1.6
-              + Math.cos(t * 2.1 + y * 0.035) * 1.0) * depthRatio;
+    // 水面波の屈折によって生じる揺らめきの多重ハーモニクス（はっきり認識できる自然なゆらめき）
+    const dx = (Math.sin(t * 2.6 + y * 0.038 + x * 0.024) * 4.8
+              + Math.cos(t * 3.9 - y * 0.062) * 2.5) * depthRatio;
+    const dy = (Math.sin(t * 2.9 - x * 0.045) * 2.8
+              + Math.cos(t * 1.9 + y * 0.030) * 1.8) * depthRatio;
     return { dx, dy };
   }
 
@@ -4679,20 +4679,30 @@ class SquidGameWatch {
 
     if (real && ltReef) {
       // 海底の砂地・岩肌のリアルな陰影ハイライトと、光の強さに連動する海底コースティクス
+      // ゴツゴツした岩肌・海底の地形ラインに沿って砂地グラデーションをブレンド
       const sandGrad = ctx.createLinearGradient(
         380 - ltReef.nx * 220,
         385,
         380 + ltReef.nx * 220,
         480
       );
-      sandGrad.addColorStop(0, ltReef.rimColor(0.32 * ltReef.rimPower));
-      sandGrad.addColorStop(0.45, 'rgba(136, 118, 90, 0.34)');
-      sandGrad.addColorStop(1, 'rgba(15, 23, 42, 0.45)');
+      sandGrad.addColorStop(0, ltReef.rimColor(0.28 * ltReef.rimPower));
+      sandGrad.addColorStop(0.35, 'rgba(128, 110, 82, 0.28)');
+      sandGrad.addColorStop(0.70, 'rgba(45, 55, 72, 0.35)');
+      sandGrad.addColorStop(1, 'rgba(10, 16, 28, 0.50)');
       ctx.fillStyle = sandGrad;
       ctx.beginPath();
-      ctx.moveTo(150, 382);
-      ctx.lineTo(265, 420);
-      ctx.lineTo(465, 434);
+      ctx.moveTo(142, 376);
+      ctx.lineTo(164, 386);
+      ctx.lineTo(195, 396);
+      ctx.lineTo(228, 408);
+      ctx.lineTo(265, 418);
+      ctx.lineTo(310, 424);
+      ctx.lineTo(365, 429);
+      ctx.lineTo(425, 431);
+      ctx.lineTo(495, 434);
+      ctx.lineTo(570, 436);
+      ctx.lineTo(650, 437);
       ctx.lineTo(720, 438);
       ctx.lineTo(720, 480);
       ctx.lineTo(120, 480);
@@ -4706,11 +4716,27 @@ class SquidGameWatch {
         ctx.lineWidth = 2.0;
         ctx.beginPath();
         ctx.moveTo(0, 195);
-        ctx.quadraticCurveTo(68, 205, 86, 260);
-        ctx.quadraticCurveTo(118, 330, 150, 382);
-        ctx.lineTo(265, 420);
-        ctx.lineTo(465, 434);
-        ctx.lineTo(610, 437);
+        ctx.lineTo(28, 198);
+        ctx.lineTo(46, 204);
+        ctx.lineTo(62, 222);
+        ctx.lineTo(76, 232);
+        ctx.lineTo(72, 248);
+        ctx.lineTo(84, 265);
+        ctx.lineTo(98, 290);
+        ctx.lineTo(112, 312);
+        ctx.lineTo(108, 334);
+        ctx.lineTo(126, 355);
+        ctx.lineTo(142, 376);
+        ctx.lineTo(164, 386);
+        ctx.lineTo(195, 396);
+        ctx.lineTo(228, 408);
+        ctx.lineTo(265, 418);
+        ctx.lineTo(310, 424);
+        ctx.lineTo(365, 429);
+        ctx.lineTo(425, 431);
+        ctx.lineTo(495, 434);
+        ctx.lineTo(570, 436);
+        ctx.lineTo(650, 437);
         ctx.stroke();
       }
 
