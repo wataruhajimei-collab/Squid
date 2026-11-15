@@ -679,7 +679,6 @@
       <div class="map-style-bar">
         <button class="map-style-btn active" id="btn-tile-osm">🇯🇵 日本地図</button>
         <button class="map-style-btn" id="btn-tile-gsi">🗺️ 地理院</button>
-        <button class="map-style-btn" id="btn-tile-dark">🌊 海底ダーク</button>
       </div>
 
       <!-- 吹き出し表示/非表示（On/Off）トグルボタン -->
@@ -864,6 +863,22 @@
       };
     }
 
+    function formatPlayDate(dateStr) {
+      if (!dateStr) return '未記録';
+      try {
+        const d = new Date(dateStr);
+        if (isNaN(d.getTime())) return String(dateStr);
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        const h = String(d.getHours()).padStart(2, '0');
+        const min = String(d.getMinutes()).padStart(2, '0');
+        return `${y}/${m}/${day} ${h}:${min}`;
+      } catch (_) {
+        return String(dateStr);
+      }
+    }
+
     // Leaflet 初期化（日本列島全体が中央に美しく収まる位置とズーム倍率）
     const JAPAN_CENTER = [36.2048, 138.2529];
     const JAPAN_DEFAULT_ZOOM = 6;
@@ -886,12 +901,6 @@
       maxZoom: 18
     });
 
-    const darkLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-      attribution: '&copy; CARTO, &copy; OpenStreetMap',
-      subdomains: 'abcd',
-      maxZoom: 19
-    });
-
     osmLayer.addTo(map);
     let currentTileLayer = osmLayer;
 
@@ -900,12 +909,14 @@
       layer.addTo(map);
       currentTileLayer = layer;
       document.querySelectorAll('.map-style-btn').forEach(b => b.classList.remove('active'));
-      document.getElementById(btnId).classList.add('active');
+      const activeBtn = document.getElementById(btnId);
+      if (activeBtn) activeBtn.classList.add('active');
     }
 
-    document.getElementById('btn-tile-osm').addEventListener('click', () => switchTile(osmLayer, 'btn-tile-osm'));
-    document.getElementById('btn-tile-gsi').addEventListener('click', () => switchTile(gsiLayer, 'btn-tile-gsi'));
-    document.getElementById('btn-tile-dark').addEventListener('click', () => switchTile(darkLayer, 'btn-tile-dark'));
+    const osmBtn = document.getElementById('btn-tile-osm');
+    if (osmBtn) osmBtn.addEventListener('click', () => switchTile(osmLayer, 'btn-tile-osm'));
+    const gsiBtn = document.getElementById('btn-tile-gsi');
+    if (gsiBtn) gsiBtn.addEventListener('click', () => switchTile(gsiLayer, 'btn-tile-gsi'));
 
     let markersLayer = L.layerGroup().addTo(map);
     let regionalData = [];
@@ -1125,6 +1136,7 @@
                   <div class="diver-badge-bottom">
                     <span>🤿</span>
                     <span class="player-name">${escapeHtml(topPlayerName)}</span>
+                    <span style="font-size:0.65rem; color:#8da2c0; margin-left:auto;">🕒 ${formatPlayDate(item.lastDate || item.date)}</span>
                   </div>
                 </div>
                 <div class="diver-pin-tip" style="border-top-color: ${dotColor};"></div>
@@ -1155,6 +1167,10 @@
               <div class="popup-top-player" style="margin-bottom:6px; font-size:0.9rem;">
                 <span>👑 代表プレイヤー:</span>
                 <strong style="color:#fff;">${escapeHtml(topPlayerName)}</strong>
+              </div>
+              <div class="popup-row">
+                <span>🕒 最終プレイ日時:</span>
+                <span class="val" style="color:var(--radar-cyan); font-weight:bold;">${formatPlayDate(item.lastDate || item.date)}</span>
               </div>
               <div class="popup-row">
                 <span>最高スコア:</span>
@@ -1226,6 +1242,9 @@
               <span>👑 TOP: <strong>${escapeHtml(item.topPlayer || '-')}</strong></span>
               <span>${item.count} dives (Avg: ${item.avg}pt)</span>
             </div>
+            <div class="city-meta" style="margin-top:2px;">
+              <span>🕒 最終プレイ: <strong style="color:var(--radar-cyan);">${formatPlayDate(item.lastDate || item.date)}</strong></span>
+            </div>
             <div class="telemetry-badges">
               <span class="tele-tag highlight">🏢 ${escapeHtml(ispText)}</span>
               <span class="tele-tag">🌐 ${escapeHtml(tzText)}</span>
@@ -1272,6 +1291,9 @@
             <div class="city-meta">
               <span>📍 ${escapeHtml(entry.city || 'Japan')} [GAME ${entry.gameMode || 'A'}]</span>
               <span>💰 宝: ${entry.bags || 0}個</span>
+            </div>
+            <div class="city-meta" style="margin-top:2px;">
+              <span>🕒 最終プレイ: <strong style="color:var(--radar-cyan);">${formatPlayDate(entry.date || entry.lastDate)}</strong></span>
             </div>
             <div class="telemetry-badges">
               <span class="tele-tag highlight">🏢 ${escapeHtml(ispText)}</span>
