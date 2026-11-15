@@ -841,13 +841,6 @@ class SquidGameWatch {
         }
       } catch (_) {}
     }
-              this._updateProfilePill();
-              return;
-            }
-          }
-        }
-      } catch (_) {}
-    }
 
     // 1. IPジオコーディング（GPSが不許可・未取得の場合の自動プロバイダ位置取得）
     // ipinfo.io や ipwho.is は国内プロバイダ（BIGLOBE, au, SoftBank等）の位置を即座に自動検出
