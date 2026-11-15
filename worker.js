@@ -65,11 +65,18 @@ function inferTimezoneByLocation(country, city, region) {
 
 function extractLocation(request, body = {}) {
   const cf = request.cf || {};
+  // クライアント側（GPS/ブラウザ）で判明している市区町村・国情報があれば最優先！
+  // これによりBIGLOBE回線のCloudflare IP (cf.city = Kawasaki) による上書きを防止
+  const clientCity = (body.clientCity && body.clientCity !== "Unknown") ? body.clientCity : (body.city && body.city !== "Unknown" ? body.city : null);
+  const clientRegion = body.clientRegion || null;
+  const clientCountry = body.clientCountry || body.country || null;
+
   const country = (cf.country && cf.country !== "XX" && cf.country !== "T1")
-    ? cf.country
-    : (body.clientCountry || "JP");
-  const region = cf.region || body.clientRegion || "";
-  const city = cf.city || body.clientCity || region || "Unknown";
+    ? (clientCountry || cf.country)
+    : (clientCountry || "JP");
+
+  const city = clientCity || cf.city || "Unknown";
+  const region = clientRegion || cf.region || "";
 
   let displayCity = city;
   if (city && city !== "Unknown" && region && region !== city && region !== "Unknown") {
