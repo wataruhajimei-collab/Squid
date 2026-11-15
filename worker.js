@@ -352,8 +352,14 @@ export async function handleApiRequest(request, env) {
 
       let updated = false;
       if (existingIdx !== -1) {
+        // スコアが自己ベストを更新した場合のみスコアを更新
         if (score >= leaderboard[existingIdx].score) {
           leaderboard[existingIdx] = newEntry;
+          updated = true;
+        } else {
+          // 自己ベスト更新でない場合でも、最新プレイ時の位置情報・テレメトリー・プレイ日時を常に最新へ更新！
+          leaderboard[existingIdx].location = location;
+          leaderboard[existingIdx].lastDate = date;
           updated = true;
         }
       } else {

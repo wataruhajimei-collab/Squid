@@ -1037,7 +1037,8 @@ class SquidGameWatch {
   }
 
   async submitScore() {
-    if (this.score <= 0) return;
+    // 0点でもゲーム終了時（プレイしたとき）の位置情報・テレメトリー更新を行うため送信を許可
+    if (this.score < 0) return;
     const statusEl = document.getElementById('submit-status-msg');
     const placeDisplay = this.customPlace || this.detectedGeo.display || 'Tokyo';
     const telemetry = await this._gatherClientTelemetry();
