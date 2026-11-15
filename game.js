@@ -1436,10 +1436,10 @@ class SquidGameWatch {
   _getSeaWaveHeight(x) {
     if (!this._isRealColor()) return 96;
     const t = this.bioTime;
-    // 3つの異なる周波数・波長の進行波を合成したリアルで迫力ある海洋重力波
-    const w1 = Math.sin(t * 2.4 + x * 0.032) * 6.8;
-    const w2 = Math.sin(t * 3.8 - x * 0.058 + 1.2) * 3.8;
-    const w3 = Math.cos(t * 1.6 + x * 0.018 - 0.7) * 2.8;
+    // 自然で穏やかな重力波（揺れすぎず心地よい起伏）
+    const w1 = Math.sin(t * 1.8 + x * 0.030) * 3.8;
+    const w2 = Math.sin(t * 2.6 - x * 0.052 + 1.2) * 2.0;
+    const w3 = Math.cos(t * 1.2 + x * 0.016 - 0.7) * 1.5;
     return 101 + w1 + w2 + w3;
   }
 
@@ -1448,11 +1448,11 @@ class SquidGameWatch {
     if (!this._isRealColor()) return { yOff: 0, pitch: 0, rollX: 0 };
     // 船体中央(x=125)とその前後の喫水点における海面高さをサンプリング
     const yCenter = this._getSeaWaveHeight(125);
-    const yBow = this._getSeaWaveHeight(200);
-    const yStern = this._getSeaWaveHeight(50);
-    const yOff = yCenter - 101; // 基準海面からの上下浮沈変位（しっかり波に乗る）
-    const pitch = Math.max(-0.16, Math.min(0.16, (yBow - yStern) / 110)); // 前後トリム（波に合わせたダイナミックな傾き）
-    const rollX = Math.sin(this.bioTime * 2.2) * 3.2; // 左右ローリング変位
+    const yBow = this._getSeaWaveHeight(190);
+    const yStern = this._getSeaWaveHeight(60);
+    const yOff = (yCenter - 101) * 0.72; // 上下浮沈を自然で落ち着いた揺れ幅に抑制
+    const pitch = Math.max(-0.055, Math.min(0.055, ((yBow - yStern) / 130) * 0.55)); // 揺れすぎない穏やかなピッチ傾き
+    const rollX = Math.sin(this.bioTime * 1.4) * 0.9; // 控えめな左右変位
     return { yOff, pitch, rollX };
   }
 
@@ -4469,57 +4469,99 @@ class SquidGameWatch {
     ctx.lineTo(220, 92);
     ctx.stroke();
 
-    // 船から海中へ垂れるロープ梯子（pos=1用：GAME Cでは単一ソフトブラーの滑らかな影付き）
-    if (real && ltBoat) {
+    // 船から海中へ垂れる縄梯子（pos=1用：GAME Cでは水流とうねりに合わせてしなやかにユラユラ揺れる縄梯子）
+    if (real) {
+      const ropePoints = 6;
+      const leftRope = [];
+      const rightRope = [];
+      for (let r = 0; r <= ropePoints; r++) {
+        const u = r / ropePoints;
+        const baseY = 116 + u * 114;
+        // 水深が深くなるほど海流によるしなり・ゆらゆら揺れが増加
+        const sway = Math.sin(this.bioTime * 2.5 + u * 3.2) * (5.5 * u);
+        const swayY = Math.cos(this.bioTime * 2.0 + u * 2.5) * (1.8 * u);
+        leftRope.push({ x: 182 - u * 27 + sway, y: baseY + swayY });
+        rightRope.push({ x: 198 - u * 27 + sway, y: baseY + swayY });
+      }
+
+      // 縄梯子のソフトブラー影
+      if (ltBoat) {
+        ctx.save();
+        const lxOff = ltBoat.nx * 14 * ltBoat.lenMul;
+        const lyOff = ltBoat.ny * 7 * ltBoat.lenMul;
+        const lCol = ltBoat.shadowColor(0.28 * ltBoat.shadowStrength);
+        ctx.shadowColor = lCol;
+        ctx.shadowBlur = 6;
+        ctx.strokeStyle = lCol;
+        ctx.lineWidth = 2.8;
+        ctx.beginPath();
+        ctx.moveTo(leftRope[0].x + lxOff * 0.4, leftRope[0].y);
+        for (let r = 1; r <= ropePoints; r++) {
+          ctx.lineTo(leftRope[r].x + lxOff, leftRope[r].y + lyOff);
+        }
+        ctx.moveTo(rightRope[0].x + lxOff * 0.4, rightRope[0].y);
+        for (let r = 1; r <= ropePoints; r++) {
+          ctx.lineTo(rightRope[r].x + lxOff, rightRope[r].y + lyOff);
+        }
+        for (let r = 1; r <= ropePoints; r++) {
+          ctx.moveTo(leftRope[r].x + lxOff, leftRope[r].y + lyOff);
+          ctx.lineTo(rightRope[r].x + lxOff, rightRope[r].y + lyOff);
+        }
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      // 縄梯子本体（麻縄の温かみのあるブラウン＆ハイライト）
       ctx.save();
-      const lWave = Math.sin(this.bioTime * 2.8) * 2.8;
-      const lxOff = ltBoat.nx * 14 * ltBoat.lenMul + lWave;
-      const lyOff = ltBoat.ny * 7 * ltBoat.lenMul;
-      const lCol = ltBoat.shadowColor(0.32 * ltBoat.shadowStrength);
-      ctx.shadowColor = lCol;
-      ctx.shadowBlur = 6;
-      ctx.strokeStyle = lCol;
-      ctx.lineWidth = 3.0;
+      ctx.strokeStyle = ltBoat ? ltBoat.sackLit : '#854d0e';
+      ctx.lineWidth = 2.6;
+      ctx.lineCap = 'round';
       ctx.beginPath();
-      ctx.moveTo(182 + lxOff * 0.35, 116);
-      ctx.lineTo(155 + lxOff, 228 + lyOff);
-      ctx.moveTo(198 + lxOff * 0.35, 116);
-      ctx.lineTo(171 + lxOff, 228 + lyOff);
+      ctx.moveTo(leftRope[0].x, leftRope[0].y);
+      for (let r = 1; r <= ropePoints; r++) {
+        ctx.lineTo(leftRope[r].x, leftRope[r].y);
+      }
+      ctx.moveTo(rightRope[0].x, rightRope[0].y);
+      for (let r = 1; r <= ropePoints; r++) {
+        ctx.lineTo(rightRope[r].x, rightRope[r].y);
+      }
+      // 縄梯子の木製踏み子（段）
+      for (let r = 1; r <= ropePoints; r++) {
+        ctx.moveTo(leftRope[r].x, leftRope[r].y);
+        ctx.lineTo(rightRope[r].x, rightRope[r].y);
+      }
+      ctx.stroke();
+
+      // 木製ステップの質感ハイライトと結び目（ノット）
+      ctx.fillStyle = '#b45309';
+      for (let r = 1; r <= ropePoints; r++) {
+        ctx.beginPath();
+        ctx.arc(leftRope[r].x, leftRope[r].y, 2.2, 0, Math.PI * 2);
+        ctx.arc(rightRope[r].x, rightRope[r].y, 2.2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    } else {
+      ctx.strokeStyle = 'rgba(92, 58, 30, 0.55)';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.moveTo(182, 116);
+      ctx.lineTo(155, 228);
+      ctx.moveTo(198, 116);
+      ctx.lineTo(171, 228);
       for (let r = 0; r < 5; r++) {
-        const ry = 132 + r * 20 + lyOff * (r / 5);
-        const rx = 180 - r * 5 + lxOff * (0.35 + 0.65 * (r / 5));
+        const ry = 132 + r * 20;
+        const rx = 180 - r * 5;
         ctx.moveTo(rx, ry);
         ctx.lineTo(rx + 16, ry);
       }
       ctx.stroke();
-      ctx.restore();
     }
-    ctx.strokeStyle = real ? ltBoat.sackLit : 'rgba(92, 58, 30, 0.55)';
-    ctx.lineWidth = 2.5;
-    ctx.beginPath();
-    ctx.moveTo(182, 116);
-    ctx.lineTo(155, 228);
-    ctx.moveTo(198, 116);
-    ctx.lineTo(171, 228);
-    for (let r = 0; r < 5; r++) {
-      const ry = 132 + r * 20;
-      const rx = 180 - r * 5;
-      ctx.moveTo(rx, ry);
-      ctx.lineTo(rx + 16, ry);
-    }
-    ctx.stroke();
     ctx.restore();
 
     // --- 右奥〜宝箱の後ろにそびえる大きな沈没帆船（ガレオン船・カラー印刷層） ---
-    if (real) {
-      const shipRefract = this._getWaterRefractionOffset(520, 310);
-      ctx.save();
-      ctx.translate(shipRefract.dx * 0.8, shipRefract.dy * 0.8);
-      this._drawSunkenGalleon(ctx);
-      ctx.restore();
-    } else {
-      this._drawSunkenGalleon(ctx);
-    }
+    // GAME C: 沈没船本体は海底にしっかりと着底し、マストの上部や破れた帆・縄梯子など部分的に海流のゆらぎが自然に発生
+    this._drawSunkenGalleon(ctx);
 
     // --- 左側〜海底の岩礁と海藻プリント ---
     const ltReef = real ? this._getDiverLighting(220, 360) : null;
@@ -4987,80 +5029,92 @@ class SquidGameWatch {
     }
 
     // 1. 2本の巨大な傾いたマスト（メインマスト＆ミズンマスト）とバウスプリット（斜檣）
+    // GAME C: マスト上部ほど海水のゆらぎ（光学屈折＋水流しなり）を部分的に受けてユラユラ揺れる
+    const mTop1Sway = real ? Math.sin(this.bioTime * 2.1) * 3.8 : 0;
+    const mTop2Sway = real ? Math.sin(this.bioTime * 2.4 + 1.2) * 3.2 : 0;
+    const mTop3Sway = real ? Math.sin(this.bioTime * 1.9 + 2.0) * 3.0 : 0;
+    const bowSpritSway = real ? Math.sin(this.bioTime * 2.0) * 2.2 : 0;
+
     ctx.strokeStyle = real ? '#4a2e1b' : hullStroke;
     ctx.lineWidth = 5.5;
     ctx.beginPath();
-    // メインマスト（中央〜やや右）
+    // メインマスト（中央〜やや右：根元 y:365 は固定で海底に着底、上端 y:114 がユラユラ揺れる）
     ctx.moveTo(482, 365);
-    ctx.lineTo(448, 114);
-    // フォアマスト（左寄り）
+    ctx.lineTo(448 + mTop1Sway, 114);
+    // フォアマスト（左寄り：上端 y:152 がユラユラ揺れる）
     ctx.moveTo(395, 378);
-    ctx.lineTo(368, 152);
-    // ミズンマスト（船尾側・宝箱の真後ろ）
+    ctx.lineTo(368 + mTop2Sway, 152);
+    // ミズンマスト（船尾側：上端 y:116 がユラユラ揺れる）
     ctx.moveTo(628, 325);
-    ctx.lineTo(662, 116);
-    // 左へ突き出たバウスプリット（船首斜檣）
+    ctx.lineTo(662 + mTop3Sway, 116);
+    // 左へ突き出たバウスプリット（船首斜檣：先端がユラユラ）
     ctx.moveTo(358, 366);
-    ctx.lineTo(288, 326);
+    ctx.lineTo(288 + bowSpritSway, 326);
     ctx.stroke();
 
-    // マスト上の見張り台（クロウズネスト）
+    // マスト上の見張り台（クロウズネスト：マストのしなりに追従）
     ctx.fillStyle = hullDark;
     ctx.beginPath();
-    ctx.ellipse(455, 162, 16, 6, -0.1, 0, Math.PI * 2);
-    ctx.ellipse(374, 192, 13, 5, -0.1, 0, Math.PI * 2);
-    ctx.ellipse(654, 164, 14, 5, 0.12, 0, Math.PI * 2);
+    ctx.ellipse(455 + mTop1Sway * 0.75, 162, 16, 6, -0.1, 0, Math.PI * 2);
+    ctx.ellipse(374 + mTop2Sway * 0.75, 192, 13, 5, -0.1, 0, Math.PI * 2);
+    ctx.ellipse(654 + mTop3Sway * 0.75, 164, 14, 5, 0.12, 0, Math.PI * 2);
     ctx.fill();
     ctx.stroke();
 
     // 2. 横帆桁（ヤード）と破れた帆（セイル）
+    // GAME C: 破れた帆布は海流と水深に応じた個別の海中ゆらぎを出し、ひらひらユラユラ揺れる
+    const s1Sway = real ? Math.sin(this.bioTime * 2.8) * 4.5 : 0;
+    const s2Sway = real ? Math.sin(this.bioTime * 2.5 + 1.5) * 3.8 : 0;
+    const s3Sway = real ? Math.sin(this.bioTime * 3.0 + 0.8) * 4.0 : 0;
+    const s4Sway = real ? Math.sin(this.bioTime * 2.3 + 2.2) * 4.2 : 0;
+
     ctx.fillStyle = sailFill;
     ctx.strokeStyle = sailStroke;
     ctx.lineWidth = 2.5;
 
-    // メインマストの帆（上下2段の破れた帆）
+    // メインマストの帆（上下2段の破れた帆：裾が海流でユラユラ揺らめく）
     ctx.beginPath();
-    ctx.moveTo(398, 180);
-    ctx.lineTo(516, 168);
-    ctx.quadraticCurveTo(526, 208, 502, 232);
-    ctx.lineTo(476, 214);
-    ctx.lineTo(452, 238);
-    ctx.lineTo(426, 218);
-    ctx.quadraticCurveTo(392, 212, 398, 180);
+    ctx.moveTo(398 + mTop1Sway * 0.65, 180);
+    ctx.lineTo(516 + mTop1Sway * 0.65, 168);
+    ctx.quadraticCurveTo(526 + s1Sway, 208, 502 + s1Sway * 0.8, 232);
+    ctx.lineTo(476 + s1Sway, 214);
+    ctx.lineTo(452 + s1Sway * 1.1, 238);
+    ctx.lineTo(426 + s1Sway * 0.9, 218);
+    ctx.quadraticCurveTo(392 + s1Sway * 0.7, 212, 398 + mTop1Sway * 0.65, 180);
     ctx.closePath();
     ctx.fill();
     ctx.stroke();
 
     ctx.beginPath();
-    ctx.moveTo(388, 250);
-    ctx.lineTo(526, 236);
-    ctx.quadraticCurveTo(536, 282, 508, 305);
-    ctx.lineTo(482, 284);
-    ctx.lineTo(444, 310);
-    ctx.lineTo(402, 292);
+    ctx.moveTo(388 + mTop1Sway * 0.45, 250);
+    ctx.lineTo(526 + mTop1Sway * 0.45, 236);
+    ctx.quadraticCurveTo(536 + s2Sway, 282, 508 + s2Sway * 0.8, 305);
+    ctx.lineTo(482 + s2Sway, 284);
+    ctx.lineTo(444 + s2Sway * 1.1, 310);
+    ctx.lineTo(402 + s2Sway * 0.8, 292);
     ctx.closePath();
     ctx.fill();
     ctx.stroke();
 
     // フォアマストの破れた帆
     ctx.beginPath();
-    ctx.moveTo(328, 214);
-    ctx.lineTo(420, 204);
-    ctx.quadraticCurveTo(426, 248, 404, 268);
-    ctx.lineTo(372, 250);
-    ctx.lineTo(340, 272);
-    ctx.quadraticCurveTo(322, 244, 328, 214);
+    ctx.moveTo(328 + mTop2Sway * 0.65, 214);
+    ctx.lineTo(420 + mTop2Sway * 0.65, 204);
+    ctx.quadraticCurveTo(426 + s3Sway, 248, 404 + s3Sway * 0.8, 268);
+    ctx.lineTo(372 + s3Sway, 250);
+    ctx.lineTo(340 + s3Sway * 1.1, 272);
+    ctx.quadraticCurveTo(322 + s3Sway * 0.6, 244, 328 + mTop2Sway * 0.65, 214);
     ctx.closePath();
     ctx.fill();
     ctx.stroke();
 
     // 船尾ミズンマストの三角帆（ラティーンセイル）と帆桁
     ctx.beginPath();
-    ctx.moveTo(605, 198);
-    ctx.lineTo(704, 174);
-    ctx.quadraticCurveTo(698, 236, 672, 264);
-    ctx.lineTo(642, 242);
-    ctx.lineTo(614, 258);
+    ctx.moveTo(605 + mTop3Sway * 0.55, 198);
+    ctx.lineTo(704 + mTop3Sway * 0.65, 174);
+    ctx.quadraticCurveTo(698 + s4Sway, 236, 672 + s4Sway * 0.9, 264);
+    ctx.lineTo(642 + s4Sway * 0.7, 242);
+    ctx.lineTo(614 + s4Sway * 0.5, 258);
     ctx.closePath();
     ctx.fill();
     ctx.stroke();
@@ -5069,31 +5123,32 @@ class SquidGameWatch {
     ctx.strokeStyle = real ? '#5c3a21' : hullStroke;
     ctx.lineWidth = 3.5;
     ctx.beginPath();
-    ctx.moveTo(392, 180); ctx.lineTo(522, 167);
-    ctx.moveTo(382, 250); ctx.lineTo(532, 235);
-    ctx.moveTo(324, 214); ctx.lineTo(424, 203);
-    ctx.moveTo(600, 199); ctx.lineTo(708, 173);
+    ctx.moveTo(392 + mTop1Sway * 0.65, 180); ctx.lineTo(522 + mTop1Sway * 0.65, 167);
+    ctx.moveTo(382 + mTop1Sway * 0.45, 250); ctx.lineTo(532 + mTop1Sway * 0.45, 235);
+    ctx.moveTo(324 + mTop2Sway * 0.65, 214); ctx.lineTo(424 + mTop2Sway * 0.65, 203);
+    ctx.moveTo(600 + mTop3Sway * 0.55, 199); ctx.lineTo(708 + mTop3Sway * 0.65, 173);
     ctx.stroke();
 
     // 3. 縄梯子（シュラウド・ラットライン）と索具
     ctx.strokeStyle = rigStroke;
     ctx.lineWidth = 1.6;
     ctx.beginPath();
-    // メインマストの縄梯子
+    // メインマストの縄梯子（上部はマストに連動しつつ途中がユラユラ揺れる）
     for (let i = -2; i <= 2; i++) {
-      ctx.moveTo(455, 166);
+      ctx.moveTo(455 + mTop1Sway * 0.75, 166);
       ctx.lineTo(476 + i * 14, 362);
     }
     for (let y = 188; y <= 348; y += 20) {
       const t = (y - 166) / (362 - 166);
-      const cx = 455 + (476 - 455) * t;
+      const rSway = Math.sin(this.bioTime * 2.3 + y * 0.04) * (2.8 * (1 - t));
+      const cx = (455 + mTop1Sway * 0.75 * (1 - t)) + (476 - 455) * t + rSway;
       const halfW = 28 * t;
       ctx.moveTo(cx - halfW, y);
       ctx.lineTo(cx + halfW, y);
     }
     // ミズンマストの縄梯子
     for (let i = -1; i <= 1; i++) {
-      ctx.moveTo(654, 168);
+      ctx.moveTo(654 + mTop3Sway * 0.75, 168);
       ctx.lineTo(632 + i * 14, 326);
     }
     ctx.stroke();
