@@ -1504,15 +1504,23 @@ class SquidGameWatch {
     }
   }
 
-  // GAME C: リアルな波浪シミュレーションによる海面高(y)と法線勾配を算出
+  // GAME C: 写真のようにリアルな海洋波浪シミュレーションによる海面高(y)と法線勾配を算出
   _getSeaWaveHeight(x) {
     if (!this._isRealColor()) return 96;
     const t = this.bioTime;
-    // 自然で穏やかな重力波（揺れすぎず心地よい起伏）
-    const w1 = Math.sin(t * 1.8 + x * 0.030) * 3.8;
-    const w2 = Math.sin(t * 2.6 - x * 0.052 + 1.2) * 2.0;
-    const w3 = Math.cos(t * 1.2 + x * 0.016 - 0.7) * 1.5;
-    return 101 + w1 + w2 + w3;
+    // 複数の異なる波長・周期・位相が重なり合うトロコイド風の海洋波（重力波・風波・細かな波紋）
+    const w1 = Math.sin(t * 1.8 + x * 0.026) * 3.4;
+    const w2 = Math.sin(t * 2.7 - x * 0.048 + 1.2) * 2.0;
+    const w3 = Math.cos(t * 1.1 + x * 0.014 - 0.7) * 1.4;
+    const w4 = Math.sin(t * 4.2 + x * 0.092) * 0.8;
+    const w5 = Math.sin(t * 6.5 - x * 0.16) * 0.45;
+    return 101 + w1 + w2 + w3 + w4 + w5;
+  }
+
+  // 海面波の局所傾斜（法線ベクトル計算用: dy/dx）
+  _getSeaWaveSlope(x) {
+    const eps = 2.0;
+    return (this._getSeaWaveHeight(x + eps) - this._getSeaWaveHeight(x - eps)) / (2 * eps);
   }
 
   // GAME C: 波の起伏と連動するボートの浮沈・ピッチング（傾き）揺れ
@@ -4408,7 +4416,7 @@ class SquidGameWatch {
     ctx.moveTo(0, 108);
     if (real) {
       // リアルな多重海洋波シミュレーションによる曲面
-      for (let x = 0; x <= 720; x += 16) {
+      for (let x = 0; x <= 720; x += 8) {
         ctx.lineTo(x, this._getSeaWaveHeight(x));
       }
     } else {
@@ -4493,25 +4501,118 @@ class SquidGameWatch {
       }
       ctx.restore();
 
-      // リアルな白波の輝きライン（太陽・月光の反射きらめき付き）
-      ctx.strokeStyle = `rgba(${rayCol[0]}, ${rayCol[1]}, ${rayCol[2]}, 0.88)`;
-      ctx.lineWidth = 3.5;
+      // =========================================================================
+      // 海の写真のようにリアルな海面（フレネル水面光・多層波・サンピラー・白波の泡）
+      // =========================================================================
+
+      // 1. 水面直下の浅瀬フレネル・アンダーグロー（空と光が透き通るエメラルド/ターコイズ層）
+      ctx.save();
+      for (let x = 0; x < 720; x += 4) {
+        const yTop = this._getSeaWaveHeight(x);
+        const yBot = yTop + 14 + Math.sin(x * 0.04 + this.bioTime * 2.2) * 4;
+        const gUnder = ctx.createLinearGradient(x, yTop, x, yBot);
+        gUnder.addColorStop(0, `rgba(${rayCol[0]}, ${rayCol[1]}, ${rayCol[2]}, 0.55)`);
+        gUnder.addColorStop(0.45, `rgba(${Math.min(255, rayCol[0] + 30)}, ${Math.min(255, rayCol[1] + 30)}, 255, 0.22)`);
+        gUnder.addColorStop(1, 'rgba(6, 182, 212, 0)');
+        ctx.fillStyle = gUnder;
+        ctx.fillRect(x, yTop, 4.5, yBot - yTop);
+      }
+      ctx.restore();
+
+      // 2. 太陽・月の直接光が水面に落とす写真特有の「サンピラー（縦長の光柱グリッター）」
+      const sunLt = this._getDiverLighting(360, 80);
+      const sunCenterX = sunLt.lightX;
+      if (sunLt.directStrength > 0.1) {
+        ctx.save();
+        for (let i = 0; i < 28; i++) {
+          const u = (i - 14) / 14;
+          const gx = sunCenterX + u * 130 + Math.sin(this.bioTime * 3.4 + i * 1.3) * 12;
+          if (gx >= 0 && gx <= 720) {
+            const gy = this._getSeaWaveHeight(gx);
+            const gAlpha = (1.0 - Math.abs(u)) * (0.45 + 0.55 * Math.sin(this.bioTime * 8.0 + i * 2.7)) * sunLt.directStrength;
+            if (gAlpha > 0.05) {
+              const spGrad = ctx.createRadialGradient(gx, gy, 1, gx, gy, 14);
+              spGrad.addColorStop(0, `rgba(255, 255, 240, ${(gAlpha * 0.95).toFixed(3)})`);
+              spGrad.addColorStop(0.35, `rgba(${rayCol[0]}, ${rayCol[1]}, ${rayCol[2]}, ${(gAlpha * 0.65).toFixed(3)})`);
+              spGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+              ctx.fillStyle = spGrad;
+              ctx.beginPath();
+              ctx.ellipse(gx, gy, 12, 3.2, 0, 0, Math.PI * 2);
+              ctx.fill();
+            }
+          }
+        }
+        ctx.restore();
+      }
+
+      // 3. 水面法線勾配に応じたフレネル反射（斜面が空を強く反射する水面リフレクションライン）
+      ctx.save();
       ctx.beginPath();
       ctx.moveTo(0, this._getSeaWaveHeight(0));
-      for (let x = 16; x <= 720; x += 16) {
+      for (let x = 4; x <= 720; x += 4) {
         ctx.lineTo(x, this._getSeaWaveHeight(x));
       }
+      const fresnelGrad = ctx.createLinearGradient(0, 96, 720, 108);
+      fresnelGrad.addColorStop(0, `rgba(${rayCol[0]}, ${rayCol[1]}, ${rayCol[2]}, 0.85)`);
+      fresnelGrad.addColorStop(0.5, 'rgba(255, 255, 255, 0.95)');
+      fresnelGrad.addColorStop(1, `rgba(${rayCol[0]}, ${rayCol[1]}, ${rayCol[2]}, 0.85)`);
+      ctx.strokeStyle = fresnelGrad;
+      ctx.lineWidth = 2.4;
       ctx.stroke();
+      ctx.restore();
 
-      // 波頭の細やかな白い泡しぶきライン
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.65)';
-      ctx.lineWidth = 1.6;
+      // 4. 第二水面波（波頭のうねり・立体感を作るセカンダリ・クレストライン）
+      ctx.save();
       ctx.beginPath();
-      ctx.moveTo(0, this._getSeaWaveHeight(0) - 0.8);
-      for (let x = 20; x <= 720; x += 20) {
-        ctx.lineTo(x, this._getSeaWaveHeight(x) - 0.8);
+      ctx.moveTo(0, this._getSeaWaveHeight(0) + 2.2);
+      for (let x = 6; x <= 720; x += 6) {
+        const slope = this._getSeaWaveSlope(x);
+        const yOff = 2.2 - slope * 3.5;
+        ctx.lineTo(x, this._getSeaWaveHeight(x) + yOff);
       }
+      ctx.strokeStyle = `rgba(${Math.max(0, rayCol[0] - 40)}, ${Math.max(0, rayCol[1] - 30)}, ${rayCol[2]}, 0.45)`;
+      ctx.lineWidth = 1.6;
       ctx.stroke();
+      ctx.restore();
+
+      // 5. 波頭のレース状の白泡・シーフォーム（風と波で砕ける写真のような細かい気泡列）
+      ctx.save();
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.88)';
+      for (let x = 8; x <= 712; x += 11) {
+        const wy = this._getSeaWaveHeight(x);
+        const slope = this._getSeaWaveSlope(x);
+        // 波の頂上（勾配が反転する crest 付近）に白い泡だまりが集まる
+        const isCrest = Math.abs(slope) < 0.12 && wy < 101.5;
+        if (isCrest || (x % 33 === 0)) {
+          const foamA = 0.55 + 0.45 * Math.sin(x * 0.14 + this.bioTime * 3.5);
+          ctx.fillStyle = `rgba(255, 255, 255, ${foamA.toFixed(3)})`;
+          ctx.beginPath();
+          ctx.ellipse(x, wy - 0.4, 3.8 + Math.sin(x) * 1.5, 1.2, slope * 0.5, 0, Math.PI * 2);
+          ctx.fill();
+          // 小さな飛沫微粒子
+          ctx.fillStyle = `rgba(224, 242, 254, ${(foamA * 0.7).toFixed(3)})`;
+          ctx.fillRect(x + 2.5, wy - 2.0, 1.2, 1.2);
+          ctx.fillRect(x - 3.2, wy - 1.5, 1.0, 1.0);
+        }
+      }
+      ctx.restore();
+
+      // 6. 水面のマイクロ・グリッターきらめき（微細な表面張力波による光のスパークル）
+      ctx.save();
+      for (let i = 0; i < 18; i++) {
+        const u = ((i * 47 + Math.floor(this.bioTime * 6.5)) % 100) / 100;
+        const gx = 20 + u * 680;
+        const gy = this._getSeaWaveHeight(gx) + (Math.sin(i * 1.7) * 1.5);
+        const sparkle = Math.sin(this.bioTime * 12.0 + i * 2.3);
+        if (sparkle > 0.4) {
+          const sA = (sparkle - 0.4) / 0.6;
+          ctx.fillStyle = `rgba(255, 255, 255, ${(sA * 0.95).toFixed(3)})`;
+          ctx.beginPath();
+          ctx.arc(gx, gy, 1.4, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+      ctx.restore();
     } else {
       ctx.strokeStyle = 'rgba(26, 112, 138, 0.58)';
       ctx.fillStyle = 'rgba(34, 132, 160, 0.16)';
