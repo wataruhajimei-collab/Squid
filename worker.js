@@ -45,6 +45,24 @@ function getStorage(env) {
   };
 }
 
+function inferTimezoneByLocation(country, city, region) {
+  const c = String(country || '').toUpperCase();
+  const cityStr = String(city || '').toLowerCase();
+  const regStr = String(region || '').toLowerCase();
+
+  if (c === "US" || cityStr.includes("houston") || regStr.includes("texas")) return "America/Chicago";
+  if (cityStr.includes("new york")) return "America/New_York";
+  if (cityStr.includes("los angeles") || cityStr.includes("california")) return "America/Los_Angeles";
+  if (c === "SG" || cityStr.includes("singapore")) return "Asia/Singapore";
+  if (c === "AU" || cityStr.includes("fremantle") || regStr.includes("western australia") || cityStr.includes("perth")) return "Australia/Perth";
+  if (cityStr.includes("sydney") || cityStr.includes("melbourne")) return "Australia/Sydney";
+  if (c === "GB" || c === "UK" || cityStr.includes("london")) return "Europe/London";
+  if (c === "FR" || cityStr.includes("paris")) return "Europe/Paris";
+  if (c === "DE" || cityStr.includes("berlin")) return "Europe/Berlin";
+  if (c === "JP") return "Asia/Tokyo";
+  return null;
+}
+
 function extractLocation(request, body = {}) {
   const cf = request.cf || {};
   const country = (cf.country && cf.country !== "XX" && cf.country !== "T1")
@@ -63,7 +81,8 @@ function extractLocation(request, body = {}) {
   // 拡張テレメトリー情報 (回線・ISP・タイムゾーン・標高・端末等)
   const clientTelemetry = body.telemetry || {};
   const isp = cf.asOrganization || cf.asn ? `${cf.asOrganization || ''} (AS${cf.asn || ''})`.trim() : (clientTelemetry.isp || null);
-  const timezone = cf.timezone || clientTelemetry.timezone || "Asia/Tokyo";
+  const inferredTz = inferTimezoneByLocation(country, city, region);
+  const timezone = cf.timezone || clientTelemetry.timezone || inferredTz || (country === "JP" ? "Asia/Tokyo" : null);
   const latitude = typeof cf.latitude === "number" ? cf.latitude : (clientTelemetry.lat || null);
   const longitude = typeof cf.longitude === "number" ? cf.longitude : (clientTelemetry.lon || null);
   const altitude = (typeof clientTelemetry.altitude === "number") ? clientTelemetry.altitude : null;
@@ -74,7 +93,7 @@ function extractLocation(request, body = {}) {
     city: String(city || "Unknown").substring(0, 40),
     display: String(displayCity || "Unknown").substring(0, 60),
     isp: isp ? String(isp).substring(0, 80) : null,
-    timezone: String(timezone).substring(0, 40),
+    timezone: timezone ? String(timezone).substring(0, 40) : null,
     lat: latitude,
     lon: longitude,
     altitude: altitude,
@@ -160,6 +179,7 @@ export async function handleApiRequest(request, env) {
           if (!city) continue;
 
           const loc = entry.location || {};
+          const entryTz = loc.timezone || inferTimezoneByLocation(entry.location?.country || entry.country, entry.city || loc.city, loc.region);
           if (!cityMap.has(city)) {
             cityMap.set(city, {
               city,
@@ -169,7 +189,7 @@ export async function handleApiRequest(request, env) {
               topPlayer: entry.name,
               country: entry.location?.country || entry.country || "JP",
               isp: loc.isp || null,
-              timezone: loc.timezone || "Asia/Tokyo",
+              timezone: entryTz,
               altitude: loc.altitude ?? null,
               device: loc.device || null,
               os: loc.os || null,
@@ -188,7 +208,7 @@ export async function handleApiRequest(request, env) {
             rec.best = entry.score;
             rec.topPlayer = entry.name;
             if (loc.isp) rec.isp = loc.isp;
-            if (loc.timezone) rec.timezone = loc.timezone;
+            if (entryTz) rec.timezone = entryTz;
             if (loc.altitude != null) rec.altitude = loc.altitude;
             if (loc.device) rec.device = loc.device;
             if (loc.os) rec.os = loc.os;
@@ -242,6 +262,7 @@ export async function handleApiRequest(request, env) {
         const cityDisplay = (loc.display && loc.display !== "Unknown")
           ? loc.display
           : ((loc.city && loc.city !== "Unknown") ? loc.city : (entry.city || null));
+        const entryTz = loc.timezone || inferTimezoneByLocation(loc.country || entry.country, loc.city || entry.city, loc.region);
         return {
           name: entry.name,
           score: entry.score,
@@ -253,7 +274,7 @@ export async function handleApiRequest(request, env) {
           country: loc.country || entry.country || "JP",
           telemetry: {
             isp: loc.isp || null,
-            timezone: loc.timezone || "Asia/Tokyo",
+            timezone: entryTz,
             altitude: loc.altitude ?? null,
             device: loc.device || null,
             os: loc.os || null,
