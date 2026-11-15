@@ -506,14 +506,56 @@
       margin-top: -1px;
     }
 
-    .diver-pin-pulse {
-      position: absolute;
-      bottom: -6px;
-      width: 12px;
-      height: 12px;
-      background: rgba(0, 255, 204, 0.6);
+    /* ドットスタイル（吹き出しOff時） */
+    .diver-pin-wrap.bubble-off .diver-badge,
+    .diver-pin-wrap.bubble-off .diver-pin-tip {
+      display: none !important;
+    }
+
+    .diver-pin-wrap.bubble-off {
+      transform: translate(-50%, -50%) !important;
+    }
+
+    .diver-dot-core {
+      width: 14px;
+      height: 14px;
       border-radius: 50%;
-      animation: pinRadar 2s infinite ease-out;
+      border: 2px solid #ffffff;
+      box-shadow: 0 0 10px rgba(0,0,0,0.8), 0 0 8px currentColor;
+      transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      z-index: 2;
+      display: block;
+    }
+
+    .diver-pin-wrap:hover .diver-dot-core {
+      transform: scale(1.6);
+      box-shadow: 0 0 16px currentColor;
+    }
+
+    .diver-pin-wrap.bubble-on .diver-dot-core {
+      display: none;
+    }
+
+    /* 凡例バー */
+    .recency-legend-bar {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(10, 25, 47, 0.85);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(0, 255, 204, 0.3);
+      border-radius: 8px;
+      padding: 4px 10px;
+      font-size: 0.72rem;
+      color: #ccd6f6;
+    }
+
+    .legend-gradient-line {
+      width: 80px;
+      height: 8px;
+      border-radius: 4px;
+      background: linear-gradient(to right, #7950f2, #339af0, #20c997, #ffd43b, #ff7a00, #ff2b43);
+      box-shadow: 0 0 6px rgba(0,0,0,0.5);
     }
 
     @keyframes pinRadar {
@@ -633,6 +675,19 @@
         <button class="map-style-btn active" id="btn-tile-osm">🇯🇵 日本地図</button>
         <button class="map-style-btn" id="btn-tile-gsi">🗺️ 地理院</button>
         <button class="map-style-btn" id="btn-tile-dark">🌊 海底ダーク</button>
+      </div>
+
+      <!-- 吹き出し表示/非表示（On/Off）トグルボタン -->
+      <button class="toggle-list-btn active" id="btn-toggle-bubble">
+        <span id="bubble-toggle-icon">💬</span>
+        <span id="bubble-toggle-text">吹き出し: ON</span>
+      </button>
+
+      <!-- プレイ日時凡例（最新=赤 ↔ 過去=寒色） -->
+      <div class="recency-legend-bar" title="プレイヤーの最終プレイ日時による色分け">
+        <span>🟣 過去</span>
+        <div class="legend-gradient-line"></div>
+        <span>最新 🔴</span>
       </div>
 
       <!-- リストの表示/非表示（On/Off）トグルボタン -->
@@ -861,6 +916,37 @@
     const sidebarToggleMobile = document.getElementById('sidebar-toggle');
 
     let isListOn = true;
+    let isBubbleOn = true;
+
+    // 吹き出し On/Off トグル管理
+    const toggleBubbleBtn = document.getElementById('btn-toggle-bubble');
+    const toggleBubbleIcon = document.getElementById('bubble-toggle-icon');
+    const toggleBubbleText = document.getElementById('bubble-toggle-text');
+
+    function setBubbleVisible(visible) {
+      isBubbleOn = visible;
+      if (isBubbleOn) {
+        toggleBubbleBtn.classList.add('active');
+        toggleBubbleIcon.textContent = '💬';
+        toggleBubbleText.textContent = '吹き出し: ON';
+      } else {
+        toggleBubbleBtn.classList.remove('active');
+        toggleBubbleIcon.textContent = '⚪';
+        toggleBubbleText.textContent = '吹き出し: OFF';
+      }
+      // 地図上の全ピンのスタイルを即座に切り替え
+      document.querySelectorAll('.diver-pin-wrap').forEach(el => {
+        if (isBubbleOn) {
+          el.classList.remove('bubble-off');
+          el.classList.add('bubble-on');
+        } else {
+          el.classList.remove('bubble-on');
+          el.classList.add('bubble-off');
+        }
+      });
+    }
+
+    toggleBubbleBtn.addEventListener('click', () => setBubbleVisible(!isBubbleOn));
 
     function setListVisible(visible) {
       isListOn = visible;
@@ -899,7 +985,28 @@
       renderList();
     });
 
-    // API候補リスト（同一オリジン相対パス + workers.devフォールバック）
+    // 日時に応じたヒートマップカラー算出（最近プレイ＝赤、古い＝寒色）
+    function getRecencyColor(dateStr, minTime, maxTime) {
+      if (!dateStr) return '#4dabf7'; // デフォルト青
+      const t = new Date(dateStr).getTime();
+      if (isNaN(t)) return '#4dabf7';
+
+      let ratio = 0.5;
+      if (maxTime > minTime) {
+        ratio = (t - minTime) / (maxTime - minTime);
+      } else {
+        ratio = 1.0;
+      }
+      ratio = Math.max(0, Math.min(1, ratio));
+
+      // 寒色（紫・青） -> 緑 -> 黄 -> 暖色・赤 (ratio 0.0 -> 1.0)
+      if (ratio > 0.85) return '#ff2b43'; // 最新：鮮烈な赤
+      if (ratio > 0.65) return '#ff7a00'; // 準最新：オレンジ
+      if (ratio > 0.45) return '#ffd43b'; // 中間：黄色
+      if (ratio > 0.25) return '#20c997'; // やや前：緑・青緑
+      if (ratio > 0.10) return '#339af0'; // 古い：シアン・青
+      return '#7950f2'; // 最も古い：ディープパープル（深青紫）
+    }
     const API_BASES = [
       '/api/scores',
       'https://squid.wataruhajimei.workers.dev/api/scores',
@@ -956,6 +1063,24 @@
       const bounds = [];
       let totalDives = 0;
 
+      // プレイ日時の最小値・最大値を算出して色相グラデーションの基準とする
+      let minTime = Infinity;
+      let maxTime = -Infinity;
+      data.forEach(item => {
+        const dStr = item.lastDate || item.date;
+        if (dStr) {
+          const t = new Date(dStr).getTime();
+          if (!isNaN(t)) {
+            if (t < minTime) minTime = t;
+            if (t > maxTime) maxTime = t;
+          }
+        }
+      });
+      if (minTime === Infinity) {
+        minTime = Date.now() - 86400000;
+        maxTime = Date.now();
+      }
+
       // 同一地域ごとの出現数をカウントし、同一都市のピン同士が重ならないようにオフセット
       const cityPinCounters = {};
 
@@ -970,6 +1095,7 @@
         const topPlayerName = item.topPlayer || 'DIVER';
         const rawTele = item.telemetry || {};
         const tele = formatTelemetry(rawTele);
+        const dotColor = getRecencyColor(item.lastDate || item.date, minTime, maxTime);
 
         if (coords) {
           bounds.push(coords);
@@ -977,12 +1103,12 @@
           const customIcon = L.divIcon({
             className: 'custom-diver-pin',
             html: `
-              <div class="diver-pin-wrap">
-                <div class="diver-pin-pulse"></div>
-                <div class="diver-badge">
+              <div class="diver-pin-wrap ${isBubbleOn ? 'bubble-on' : 'bubble-off'}">
+                <div class="diver-dot-core" style="background-color: ${dotColor}; color: ${dotColor}; box-shadow: 0 0 10px ${dotColor}, 0 0 4px #fff;"></div>
+                <div class="diver-badge" style="border-color: ${dotColor}; box-shadow: 0 0 12px ${dotColor}88;">
                   <div class="diver-badge-top">
                     <span class="loc-title">📍 ${escapeHtml(displayCity)}</span>
-                    <span class="score">${item.best}pt</span>
+                    <span class="score" style="color: ${dotColor};">${item.best}pt</span>
                     <span class="count-tag">${item.count}</span>
                   </div>
                   <div class="diver-badge-bottom">
@@ -990,7 +1116,7 @@
                     <span class="player-name">${escapeHtml(topPlayerName)}</span>
                   </div>
                 </div>
-                <div class="diver-pin-tip"></div>
+                <div class="diver-pin-tip" style="border-top-color: ${dotColor};"></div>
               </div>
             `,
             iconSize: [0, 0],

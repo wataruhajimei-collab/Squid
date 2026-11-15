@@ -194,6 +194,7 @@ export async function handleApiRequest(request, env) {
               count: 0,
               best: 0,
               topPlayer: entry.name,
+              lastDate: entry.lastDate || entry.date || null,
               country: entry.location?.country || entry.country || "JP",
               isp: loc.isp || null,
               timezone: entryTz,
@@ -211,6 +212,10 @@ export async function handleApiRequest(request, env) {
           const rec = cityMap.get(city);
           rec.total += entry.score;
           rec.count += 1;
+          const entryDate = entry.lastDate || entry.date;
+          if (entryDate && (!rec.lastDate || new Date(entryDate) > new Date(rec.lastDate))) {
+            rec.lastDate = entryDate;
+          }
           if (entry.score > rec.best) {
             rec.best = entry.score;
             rec.topPlayer = entry.name;
@@ -234,6 +239,7 @@ export async function handleApiRequest(request, env) {
             count: r.count,
             best: r.best,
             topPlayer: r.topPlayer,
+            lastDate: r.lastDate,
             telemetry: {
               isp: r.isp,
               timezone: r.timezone,
@@ -275,7 +281,7 @@ export async function handleApiRequest(request, env) {
           score: entry.score,
           gameMode: entry.gameMode || "A",
           bags: entry.bags || 0,
-          date: entry.date,
+          date: entry.lastDate || entry.date,
           city: cityDisplay,
           region: (loc.region && loc.region !== "Unknown") ? loc.region : null,
           country: loc.country || entry.country || "JP",
