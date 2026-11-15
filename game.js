@@ -788,21 +788,22 @@ class SquidGameWatch {
      -------------------------------------------------------------------------- */
   async _detectPlayerLocation(allowGps = false) {
     // 0. GPS (Geolocation API) による高精度測位
-    // ユーザー指示に従い、ゲーム終了時（allowGps = true）のみダイアログ/GPS測位を行い、
-    // 許可されなかった場合や起動時・プレイ中は自動的にIP/プロバイダ情報から位置を取得
+    // ユーザー指示に従い、ゲーム終了時（allowGps = true）にGPS測位を実行
     if (allowGps && typeof navigator !== 'undefined' && navigator.geolocation) {
       const getGpsLoc = () => new Promise((resolve) => {
-        const timeoutId = setTimeout(() => resolve(null), 3000);
+        // ユーザーがブラウザの許可ダイアログを押すまでの待機時間を十分に確保 (10秒)
+        const timeoutId = setTimeout(() => resolve(null), 10000);
         navigator.geolocation.getCurrentPosition(
           (pos) => {
             clearTimeout(timeoutId);
             resolve(pos.coords);
           },
-          () => {
+          (err) => {
+            console.warn('Geolocation permission denied or error:', err);
             clearTimeout(timeoutId);
             resolve(null);
           },
-          { enableHighAccuracy: true, timeout: 2800, maximumAge: 30000 }
+          { enableHighAccuracy: true, timeout: 9500, maximumAge: 0 }
         );
       });
 
@@ -822,7 +823,7 @@ class SquidGameWatch {
           if (revRes.ok) {
             const data = await revRes.json();
             const addr = data.address || {};
-            const city = addr.city || addr.town || addr.municipality || addr.village || addr.county || '';
+            const city = addr.city || addr.town || addr.municipality || addr.village || addr.county || addr.suburb || '';
             const region = addr.province || addr.state || '';
             const country = (addr.country_code || 'jp').toUpperCase();
             if (city) {
@@ -833,6 +834,13 @@ class SquidGameWatch {
                 country,
                 display: disp
               };
+              this._updateProfilePill();
+              return;
+            }
+          }
+        }
+      } catch (_) {}
+    }
               this._updateProfilePill();
               return;
             }
@@ -2188,14 +2196,15 @@ class SquidGameWatch {
     if (nameIn) nameIn.value = this.playerName;
     if (placeIn) placeIn.value = this.customPlace;
 
-    setTimeout(async () => {
-      // ユーザー指示: ゲーム終了時にGPS測位を実行（許可されなければプロバイダ位置を自動取得）
+    // ゲーム終了時：即座に結果モーダルを表示し、同時にGPS位置情報取得を実行
+    modal?.classList.remove('hidden');
+
+    (async () => {
       try {
         await this._detectPlayerLocation(true);
       } catch (_) {}
-      modal?.classList.remove('hidden');
       this.submitScore();
-    }, 650);
+    })();
   }
 
   /* --------------------------------------------------------------------------
